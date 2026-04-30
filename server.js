@@ -13,7 +13,11 @@ try {
 } catch (e) { console.warn('.env not loaded:', e.message); }
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ strict: false }));
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // Serve Mini App static files
 app.use(express.static(path.join(__dirname)));
@@ -53,9 +57,10 @@ app.post('/chat', async (req, res) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SUVVY_TOKEN}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json; charset=utf-8',
       },
-      body: JSON.stringify(payload),
+      body: Buffer.from(JSON.stringify(payload), 'utf8'),
     });
 
     const suvvyBody = await suvvyRes.text();
