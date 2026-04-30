@@ -13,11 +13,7 @@ try {
 } catch (e) { console.warn('.env not loaded:', e.message); }
 
 const app = express();
-app.use(express.json({ strict: false }));
-app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  next();
-});
+app.use(express.json());
 
 // Serve Mini App static files
 app.use(express.static(path.join(__dirname)));
