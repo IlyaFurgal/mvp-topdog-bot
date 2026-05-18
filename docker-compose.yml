@@ -41,13 +41,13 @@ services:
       dockerfile: Dockerfile.bot
     restart: unless-stopped
     env_file: .env
-    ports:
-      - "8080:8080"
+    environment:
+      # Override DATABASE_URL: bot uses host network so db resolves as 127.0.0.1
+      DATABASE_URL: postgresql+asyncpg://topdog:topdog123@127.0.0.1:5432/topdog
+    network_mode: host
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - topdog_net
 
   frontend:
     build:
@@ -67,7 +67,6 @@ services:
     depends_on:
       - frontend
       - api
-      - bot
     networks:
       - topdog_net
 
