@@ -14,7 +14,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 WEBHOOK_PATH = "/webhook/bot"
-WEBHOOK_URL = f"{settings.MINI_APP_URL.rstrip('/')}{WEBHOOK_PATH}"
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -24,16 +23,31 @@ dp.include_router(menu.router)
 
 
 async def on_startup(app: web.Application) -> None:
-    await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-    logger.info("Webhook set: %s", WEBHOOK_URL)
-
-    await bot.set_chat_menu_button(
-        menu_button=MenuButtonWebApp(
-            text="Открыть MVP",
-            web_app=WebAppInfo(url=settings.MINI_APP_URL),
+    # Webhook registration is done manually from the host with curl,
+    # because the Docker network blocks outgoing connections to api.telegram.org.
+    # We still try here in case networking is fixed later — errors are non-fatal.
+    webhook_url = f"{settings.MINI_APP_URL.rstrip('/')}{WEBHOOK_PATH}"
+    try:
+        await bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+        logger.info("Webhook set: %s", webhook_url)
+    except Exception as e:
+        logger.warning(
+            "Could not register webhook automatically (outgoing blocked?): %s. "
+            "Register manually: curl 'https://api.telegram.org/bot%s/setWebhook"
+            "?url=%s'",
+            e, settings.BOT_TOKEN, webhook_url,
         )
-    )
-    logger.info("Menu button set: %s", settings.MINI_APP_URL)
+
+    try:
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="Открыть MVP",
+                web_app=WebAppInfo(url=settings.MINI_APP_URL),
+            )
+        )
+        logger.info("Menu button set")
+    except Exception as e:
+        logger.warning("Could not set menu button: %s", e)
 
     scheduler = setup_scheduler(bot)
     scheduler.start()
@@ -45,8 +59,11 @@ async def on_shutdown(app: web.Application) -> None:
     scheduler = app.get("scheduler")
     if scheduler:
         scheduler.shutdown()
-    await bot.delete_webhook()
-    logger.info("Webhook deleted")
+    try:
+        await bot.delete_webhook()
+    except Exception:
+        pass
+    logger.info("Bot shutdown complete")
 
 
 def main() -> None:
