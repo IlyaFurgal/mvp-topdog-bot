@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.suvvy_queue import push
 from core.config import settings
 from database.models import User
 from database.session import get_session
@@ -65,4 +67,36 @@ async def getcourse_webhook(
         logger.warning("GC webhook: unknown event=%s", event)
 
     await session.commit()
+    return {"status": "ok"}
+
+
+@router.post("/suvvy")
+async def suvvy_webhook(request: Request) -> dict:
+    """
+    Receive AI replies from Suvvy and store them in the in-memory queue.
+    The frontend polls GET /api/suvvy/messages to pick them up.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return {"status": "ok"}
+
+    event_type = data.get("event_type", "")
+
+    if event_type == "test_request":
+        return {"status": "ok"}
+
+    chat_id = str(data.get("chat_id", ""))
+    new_messages = data.get("new_messages", [])
+
+    texts = [
+        m["text"]
+        for m in new_messages
+        if isinstance(m, dict) and m.get("type") == "text" and m.get("text")
+    ]
+
+    if texts and chat_id:
+        push(chat_id, texts)
+        logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts), chat_id)
+
     return {"status": "ok"}

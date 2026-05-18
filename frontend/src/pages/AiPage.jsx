@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import client from '../api/client'
 import { useProfile } from '../context/ProfileContext'
 
 const GREETING = {
@@ -6,43 +7,78 @@ const GREETING = {
   aggressive: 'Готов работать. Задавай вопросы — отвечу по делу.',
 }
 
+const POLL_INTERVAL_MS = 1500
+const POLL_MAX_ATTEMPTS = 13  // ~20 секунд
+
 export default function AiPage() {
   const { tone, profile } = useProfile()
   const name = profile?.preferred_name || ''
   const greeting = GREETING[tone] ?? GREETING.soft
 
   const [messages, setMessages] = useState([
-    { id: 1, from: 'ai', text: name ? `${greeting.replace('Привет!', `Привет, ${name}!`)}` : greeting },
+    { id: 1, from: 'ai', text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting },
   ])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const bottomRef = useRef(null)
+  const pollRef = useRef(null)
 
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
+  function addMessage(from, text) {
+    setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text }])
+    scrollToBottom()
+  }
+
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  async function startPolling() {
+    let attempts = 0
+
+    pollRef.current = setInterval(async () => {
+      attempts++
+      try {
+        const { data } = await client.get('/suvvy/messages')
+        if (data.messages && data.messages.length > 0) {
+          stopPolling()
+          setTyping(false)
+          data.messages.forEach((text) => addMessage('ai', text))
+          return
+        }
+      } catch (_) {}
+
+      if (attempts >= POLL_MAX_ATTEMPTS) {
+        stopPolling()
+        setTyping(false)
+        addMessage('ai', 'Ассистент не ответил. Попробуй ещё раз.')
+      }
+    }, POLL_INTERVAL_MS)
+  }
+
   async function handleSend() {
     const text = input.trim()
-    if (!text) return
+    if (!text || typing) return
     setInput('')
-
-    const userMsg = { id: Date.now(), from: 'user', text }
-    setMessages((m) => [...m, userMsg])
-    scrollToBottom()
+    addMessage('user', text)
 
     setTyping(true)
-    // TODO: replace with real Suvvy API call
-    await new Promise((r) => setTimeout(r, 1200))
-    setTyping(false)
-
-    const reply = {
-      id: Date.now() + 1,
-      from: 'ai',
-      text: 'ИИ-ассистент скоро будет подключён. Пока отслеживай прогресс в трекерах и не пропускай чекины.',
+    try {
+      await client.post('/suvvy/message', { text })
+      startPolling()
+    } catch (e) {
+      setTyping(false)
+      const detail = e?.response?.data?.detail
+      addMessage('ai', detail === 'Suvvy not configured'
+        ? 'ИИ-ассистент ещё не подключён.'
+        : 'Не удалось отправить сообщение. Попробуй позже.')
     }
-    setMessages((m) => [...m, reply])
-    scrollToBottom()
   }
 
   function handleKey(e) {
