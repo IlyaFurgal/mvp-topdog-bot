@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content \"C:\\\\Users\\\\fura1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-fura1-PycharmProjects-TOPDOG\\\\dc09b9e4-49a6-491d-a6a5-394f74b7ff4f\\\\tasks\\\\b3xoym1vp.output\" -Wait)",
+      "Bash(Select-String -Pattern \"error|Error|ERROR|Built|Started|exited|done|DONE\")"
+    ]
+  }
+}
