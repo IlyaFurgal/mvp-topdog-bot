@@ -14,12 +14,14 @@ from bot.keyboards.inline import (
     kb_lifestyle, kb_sport, kb_start, kb_tone,
     kb_workout_days, kb_workout_hours,
 )
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from bot.states import RegistrationForm
 from core.config import settings
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
-from database.models import ActivityLevel, FitnessLevel, Gender, Goal, Profile, Tone, User
+from database.models import ActivityLevel, FitnessLevel, Gender, Goal, Profile, SubscriptionStatus, Tone, User
 from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -406,17 +408,46 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
 
     display_name = preferred_name or callback.from_user.first_name or "друг"
 
-    if tone_key == "aggressive":
-        finish_text = f"Профиль настроен, {display_name}. Работаем. 💪"
+    # Re-fetch user to get current subscription state after possible updates
+    async with AsyncSessionLocal() as session:
+        fresh_user = await get_user_by_telegram_id(session, callback.from_user.id)
+        has_sub = _user_has_subscription(fresh_user) if fresh_user else False
+
+    if has_sub:
+        if tone_key == "aggressive":
+            finish_text = f"Профиль настроен, {display_name}. Открывай приложение и работаем. 💪"
+        else:
+            finish_text = f"Всё готово, {display_name}! Твой личный кабинет ждёт тебя 🙌"
+        reply_kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="🚀 Открыть приложение",
+                web_app=WebAppInfo(url=settings.MINI_APP_URL),
+            )
+        ]])
     else:
-        finish_text = f"Отлично, {display_name}! Всё готово — я рядом и помогу тебе достичь цели 🙌"
+        finish_text = (
+            f"Профиль создан, {display_name}! "
+            "Выбери тариф чтобы получить доступ к AI-ассистенту и всем функциям."
+        )
+        buttons = []
+        if settings.GC_PAYMENT_URL_MVP:
+            buttons.append([InlineKeyboardButton(text="💳 Выбрать тариф MVP", url=settings.GC_PAYMENT_URL_MVP)])
+        if settings.GC_PAYMENT_URL_AI:
+            buttons.append([InlineKeyboardButton(text="ℹ️ Тариф AI — подробнее", url=settings.GC_PAYMENT_URL_AI)])
+        if not buttons:
+            buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
+        reply_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await callback.message.edit_text(finish_text)
-    # После анкеты — freemium меню (подписки ещё нет)
     await callback.message.answer(
-        "Выбери тариф и получи доступ к приложению 👇",
-        reply_markup=freemium_menu_kb(),
+        "👇" if has_sub else "Оформи подписку 👇",
+        reply_markup=reply_kb,
     )
+    if not has_sub:
+        await callback.message.answer(
+            "После оплаты нажми /start — бот сразу покажет кнопку приложения.",
+            reply_markup=freemium_menu_kb(),
+        )
     await callback.answer()
 
 
