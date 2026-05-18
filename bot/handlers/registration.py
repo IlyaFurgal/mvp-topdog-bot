@@ -14,6 +14,7 @@ from bot.keyboards.inline import (
     kb_lifestyle, kb_sport, kb_start, kb_tone,
     kb_workout_days, kb_workout_hours,
 )
+from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from bot.states import RegistrationForm
 from core.config import settings
@@ -130,13 +131,27 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     async with AsyncSessionLocal() as session:
         user = await get_user_by_telegram_id(session, message.from_user.id)
         if user:
-            has_sub = user.subscription_active == "active" and user.subscription_type is not None
-            kb = main_menu_kb() if has_sub else freemium_menu_kb()
+            has_sub = _user_has_subscription(user)
             name = user.first_name or "друг"
-            await message.answer(
-                f"Добро пожаловать обратно, {name}! 👊",
-                reply_markup=kb,
+            logger.info(
+                "/start uid=%s has_sub=%s sub_type=%r sub_active=%r sub_status=%r",
+                user.telegram_id,
+                has_sub,
+                user.subscription_type,
+                user.subscription_active,
+                user.subscription_status,
             )
+            if has_sub:
+                await message.answer(
+                    f"Добро пожаловать обратно, {name}! 👊\n"
+                    "Открой приложение 👇",
+                    reply_markup=_webapp_kb(),
+                )
+            else:
+                await message.answer(
+                    f"Добро пожаловать обратно, {name}! 👊",
+                    reply_markup=freemium_menu_kb(),
+                )
             return
         await create_user(
             session,

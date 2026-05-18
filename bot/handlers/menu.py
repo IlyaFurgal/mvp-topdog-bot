@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, W
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from core.config import settings
 from database.crud import get_user_by_telegram_id
+from database.models import SubscriptionStatus
 from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -33,13 +34,39 @@ def _plans_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def _user_has_subscription(user) -> bool:
+    """
+    Return True if the user has an active paid subscription.
+
+    Checks two independent signals so that manually set or webhook-set
+    subscriptions are both recognised:
+      1. subscription_active == "active"  (set by GC webhook)
+      2. subscription_status == premium   (legacy / manual flag)
+    """
+    by_active = (
+        user.subscription_active == "active"
+        and user.subscription_type is not None
+    )
+    by_status = user.subscription_status == SubscriptionStatus.premium
+    has = by_active or by_status
+    logger.debug(
+        "sub check uid=%s type=%r active=%r status=%r → %s",
+        user.telegram_id,
+        user.subscription_type,
+        user.subscription_active,
+        user.subscription_status,
+        has,
+    )
+    return has
+
+
 async def _has_subscription(telegram_id: int) -> bool:
-    """Check if the user has an active subscription."""
+    """Async wrapper used by menu handlers."""
     async with AsyncSessionLocal() as session:
         user = await get_user_by_telegram_id(session, telegram_id)
         if not user:
             return False
-        return user.subscription_active == "active" and user.subscription_type is not None
+        return _user_has_subscription(user)
 
 
 # ── Freemium handlers ──────────────────────────────────────────────────────────
