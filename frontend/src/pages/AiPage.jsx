@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { useProfile } from '../context/ProfileContext'
 
@@ -7,21 +8,53 @@ const GREETING = {
   aggressive: 'Готов работать. Задавай вопросы — отвечу по делу.',
 }
 
+const MAX_MESSAGES = 50
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_ATTEMPTS = 13  // ~20 секунд
 
+function storageKey(telegramId) {
+  return `topdog_ai_messages_${telegramId}`
+}
+
+function loadHistory(telegramId) {
+  if (!telegramId) return null
+  try {
+    const raw = localStorage.getItem(storageKey(telegramId))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveHistory(telegramId, messages) {
+  if (!telegramId) return
+  try {
+    const trimmed = messages.slice(-MAX_MESSAGES)
+    localStorage.setItem(storageKey(telegramId), JSON.stringify(trimmed))
+  } catch {}
+}
+
 export default function AiPage() {
   const { tone, profile } = useProfile()
+  const telegramId = profile?.telegram_id
   const name = profile?.preferred_name || ''
   const greeting = GREETING[tone] ?? GREETING.soft
 
-  const [messages, setMessages] = useState([
-    { id: 1, from: 'ai', text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting },
-  ])
+  const [messages, setMessages] = useState(() => {
+    const history = loadHistory(telegramId)
+    if (history && history.length > 0) return history
+    return [
+      { id: 1, from: 'ai', text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting },
+    ]
+  })
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const bottomRef = useRef(null)
   const pollRef = useRef(null)
+
+  useEffect(() => {
+    saveHistory(telegramId, messages)
+  }, [messages, telegramId])
 
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -97,7 +130,11 @@ export default function AiPage() {
       <div className="ai-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`ai-msg ai-msg--${msg.from}`}>
-            <div className="ai-msg__bubble">{msg.text}</div>
+            <div className="ai-msg__bubble">
+              {msg.from === 'ai'
+                ? <ReactMarkdown>{msg.text}</ReactMarkdown>
+                : msg.text}
+            </div>
           </div>
         ))}
         {typing && (
