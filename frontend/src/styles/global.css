@@ -1,12 +1,16 @@
 :root {
-  --bg: #1a1a1a;
-  --surface: #242424;
-  --accent: #aaff00;
-  --text: #ffffff;
+  /* Brand palette */
+  --bg: #111111;
+  --surface: #1e1e1e;
+  --surface-2: #252525;
+  --accent: #C8FF00;
+  --accent-text: #000000;
+  --text: #FFFFFF;
   --text-muted: #888888;
-  --danger: #ff4444;
+  --danger: #FF4444;
+  --border: #2a2a2a;
   --warning: #f59e0b;
-  --nav-height: 62px;
+  --nav-height: 68px;
 }
 
 * {
@@ -73,16 +77,18 @@ html, body {
 
 .page-title {
   font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1;
+  color: #FFFFFF;
 }
 
 .page-subtitle {
-  font-size: 0.8rem;
+  font-size: 11px;
   color: var(--text-muted);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 4px;
   margin-bottom: 20px;
@@ -92,7 +98,8 @@ html, body {
 
 .card {
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
   padding: 16px;
   margin-bottom: 12px;
 }
@@ -109,13 +116,14 @@ html, body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 16px 24px;
+  height: 52px;
+  padding: 0 24px;
   border: none;
-  border-radius: 10px;
+  border-radius: 4px;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
   margin-top: 8px;
@@ -139,9 +147,10 @@ html, body {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: var(--nav-height);
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--surface);
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
   display: flex;
   z-index: 100;
 }
@@ -154,23 +163,25 @@ html, body {
   justify-content: center;
   text-decoration: none;
   color: var(--text-muted);
-  gap: 3px;
-  transition: color 0.15s;
+  gap: 4px;
+  border-top: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .nav-tab.active {
   color: var(--accent);
+  border-top-color: var(--accent);
 }
 
 .nav-icon {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
 .nav-label {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -186,8 +197,8 @@ html, body {
   flex: 1;
   padding: 10px 0;
   background: var(--surface);
-  border: 1px solid #333;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
   color: var(--text-muted);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.8rem;
@@ -225,13 +236,13 @@ html, body {
 }
 
 .avatar {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--accent);
   color: #000;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,6 +271,12 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-row:last-child {
+  border-bottom: none;
 }
 
 .profile-label {
@@ -320,14 +337,14 @@ html, body {
   align-items: center;
   justify-content: space-between;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 14px 16px;
   border: 1px solid transparent;
 }
 
 .checkin-card--empty {
   cursor: pointer;
-  border-color: #333;
+  border-color: var(--border);
 }
 
 .checkin-card--empty:active {
@@ -463,8 +480,8 @@ html, body {
   width: 100%;
   padding: 18px 20px;
   background: var(--surface);
-  border: 1px solid #333;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1.15rem;
@@ -654,8 +671,9 @@ html, body {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  background: #1e1e1e;
-  border-radius: 20px 20px 0 0;
+  background: var(--surface);
+  border-radius: 12px 12px 0 0;
+  border-top: 1px solid var(--border);
   padding: 20px 16px 32px;
   display: flex;
   flex-direction: column;
@@ -1011,22 +1029,22 @@ html, body {
 }
 
 .sub-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   letter-spacing: 0.1em;
-  padding: 3px 7px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 2px;
   text-transform: uppercase;
 }
 
-.badge--ai  { background: #1a2e1a; color: var(--accent); border: 1px solid #aaff0055; }
-.badge--mvp { background: #2a1a00; color: #f59e0b;       border: 1px solid #f59e0b55; }
+.badge--ai  { background: var(--accent); color: #000; }
+.badge--mvp { background: var(--accent); color: #000; }
 
 /* ── Support button ───────────────────────────────────── */
 
 .btn-support {
-  background: #1e1e1e;
-  border: 1px solid #444;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -1041,18 +1059,19 @@ html, body {
 
 .btn-outline {
   background: transparent;
-  border: 1px solid #555;
+  border: 1px solid var(--border);
   color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  padding: 16px 24px;
-  border-radius: 10px;
+  padding: 0 24px;
+  height: 52px;
+  border-radius: 4px;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
   margin-top: 8px;
@@ -1164,11 +1183,11 @@ html, body {
 /* ── 6-tab BottomNav ──────────────────────────────────── */
 
 .bottom-nav .nav-label {
-  font-size: 0.5rem;
+  font-size: 9px;
 }
 
 .bottom-nav .nav-icon {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 /* ── AiPage ───────────────────────────────────────────── */
@@ -1232,7 +1251,7 @@ html, body {
 .ai-msg__bubble {
   max-width: 78%;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 0.95rem;
   line-height: 1.45;
   letter-spacing: 0.02em;
@@ -1240,22 +1259,22 @@ html, body {
 
 .ai-msg--ai .ai-msg__bubble {
   background: var(--surface);
-  border-bottom-left-radius: 4px;
+  border-radius: 4px 12px 12px 12px;
   color: var(--text);
 }
 
 .ai-msg--user .ai-msg__bubble {
-  background: #1a2e00;
-  border: 1px solid #aaff0033;
-  border-bottom-right-radius: 4px;
-  color: var(--text);
+  background: var(--accent);
+  border-radius: 12px 4px 12px 12px;
+  color: #000;
 }
 
 .ai-msg__bubble p      { margin: 0 0 6px 0; }
 .ai-msg__bubble ul,
 .ai-msg__bubble ol     { margin: 4px 0 6px 16px; padding: 0; }
 .ai-msg__bubble li     { margin-bottom: 4px; }
-.ai-msg__bubble strong { font-weight: 700; color: var(--accent); }
+.ai-msg--ai .ai-msg__bubble strong  { font-weight: 700; color: var(--accent); }
+.ai-msg--user .ai-msg__bubble strong { font-weight: 700; color: #000; }
 .ai-msg__bubble > *:last-child,
 .ai-msg__bubble p:last-child { margin-bottom: 0; }
 
@@ -1296,8 +1315,8 @@ html, body {
 .ai-input {
   flex: 1;
   background: var(--surface);
-  border: 1px solid #444;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1rem;
@@ -1315,12 +1334,12 @@ html, body {
 .ai-send {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 4px;
   background: var(--accent);
   border: none;
   color: #000;
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 900;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1330,7 +1349,7 @@ html, body {
 }
 
 .ai-send:disabled {
-  background: #2a2a2a;
+  background: var(--border);
   color: #555;
   cursor: default;
 }
@@ -1348,8 +1367,8 @@ html, body {
   align-items: center;
   gap: 14px;
   background: var(--surface);
-  border: 1px solid #333;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 16px;
   text-decoration: none;
   color: var(--text);
