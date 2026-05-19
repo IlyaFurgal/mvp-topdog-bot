@@ -1,18 +1,35 @@
 import logging
 from datetime import datetime, timezone
-from typing import Any
 
 from fastapi import APIRouter, Depends, Form, Request
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.suvvy_queue import push
 from core.config import settings
-from database.models import User
+from database.models import AiMessage, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+MAX_HISTORY = 20
+
+
+async def _trim_history(session: AsyncSession, user_id: int) -> None:
+    await session.execute(
+        text(
+            "DELETE FROM ai_messages "
+            "WHERE user_id = :user_id "
+            "AND id NOT IN ("
+            "  SELECT id FROM ai_messages "
+            "  WHERE user_id = :user_id "
+            "  ORDER BY created_at DESC "
+            "  LIMIT :limit"
+            ")"
+        ),
+        {"user_id": user_id, "limit": MAX_HISTORY},
+    )
 
 
 @router.post("/getcourse")
@@ -35,13 +52,11 @@ async def getcourse_webhook(
         return {"status": "ok", "message": "user not found"}
 
     if event == "payment":
-        # Determine subscription type by offer_code
         if settings.GC_OFFER_CODE_MVP and offer_code == settings.GC_OFFER_CODE_MVP:
             sub_type = "mvp"
         elif settings.GC_OFFER_CODE_AI and offer_code == settings.GC_OFFER_CODE_AI:
             sub_type = "ai"
         else:
-            # Unknown offer code — default to AI tier
             logger.warning("GC webhook: unknown offer_code=%s, defaulting to ai", offer_code)
             sub_type = "ai"
 
@@ -71,10 +86,13 @@ async def getcourse_webhook(
 
 
 @router.post("/suvvy")
-async def suvvy_webhook(request: Request) -> dict:
+async def suvvy_webhook(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     """
-    Receive AI replies from Suvvy and store them in the in-memory queue.
-    The frontend polls GET /api/suvvy/messages to pick them up.
+    Receive AI replies from Suvvy.
+    Stores them in the in-memory queue (for polling) and saves to DB.
     """
     try:
         data = await request.json()
@@ -82,7 +100,6 @@ async def suvvy_webhook(request: Request) -> dict:
         return {"status": "ok"}
 
     event_type = data.get("event_type", "")
-
     if event_type == "test_request":
         return {"status": "ok"}
 
@@ -95,8 +112,26 @@ async def suvvy_webhook(request: Request) -> dict:
         if isinstance(m, dict) and m.get("type") == "text" and m.get("text")
     ]
 
-    if texts and chat_id:
-        push(chat_id, texts)
-        logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts), chat_id)
+    if not texts or not chat_id:
+        return {"status": "ok"}
+
+    # Push to in-memory queue for polling
+    push(chat_id, texts)
+    logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts), chat_id)
+
+    # Save to DB — find user by telegram_id
+    result = await session.execute(
+        select(User).where(User.telegram_id == int(chat_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        for text_body in texts:
+            session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
+        await session.flush()
+        await _trim_history(session, user.id)
+        await session.commit()
+    else:
+        logger.warning("Suvvy webhook: user not found for chat_id=%s, messages not persisted", chat_id)
 
     return {"status": "ok"}

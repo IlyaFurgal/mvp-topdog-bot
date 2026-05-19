@@ -8,53 +8,67 @@ const GREETING = {
   aggressive: 'Готов работать. Задавай вопросы — отвечу по делу.',
 }
 
-const MAX_MESSAGES = 50
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_ATTEMPTS = 13  // ~20 секунд
 
-function storageKey(telegramId) {
-  return `topdog_ai_messages_${telegramId}`
-}
-
-function loadHistory(telegramId) {
-  if (!telegramId) return null
-  try {
-    const raw = localStorage.getItem(storageKey(telegramId))
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
-function saveHistory(telegramId, messages) {
-  if (!telegramId) return
-  try {
-    const trimmed = messages.slice(-MAX_MESSAGES)
-    localStorage.setItem(storageKey(telegramId), JSON.stringify(trimmed))
-  } catch {}
-}
-
 export default function AiPage() {
   const { tone, profile } = useProfile()
-  const telegramId = profile?.telegram_id
   const name = profile?.preferred_name || ''
   const greeting = GREETING[tone] ?? GREETING.soft
 
-  const [messages, setMessages] = useState(() => {
-    const history = loadHistory(telegramId)
-    if (history && history.length > 0) return history
-    return [
-      { id: 1, from: 'ai', text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting },
-    ]
-  })
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const bottomRef = useRef(null)
   const pollRef = useRef(null)
 
+  // Загружаем историю при монтировании
   useEffect(() => {
-    saveHistory(telegramId, messages)
-  }, [messages, telegramId])
+    async function fetchHistory() {
+      try {
+        const { data } = await client.get('/suvvy/history')
+        const history = data.messages ?? []
+        if (history.length > 0) {
+          setMessages(
+            history.map((m) => ({
+              id: m.id,
+              from: m.role,   // "user" | "ai"
+              text: m.text,
+            }))
+          )
+        } else {
+          // История пустая — показываем приветствие
+          setMessages([
+            {
+              id: 1,
+              from: 'ai',
+              text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting,
+            },
+          ])
+        }
+      } catch {
+        // Не удалось загрузить — показываем приветствие
+        setMessages([
+          {
+            id: 1,
+            from: 'ai',
+            text: name ? greeting.replace('Привет!', `Привет, ${name}!`) : greeting,
+          },
+        ])
+      } finally {
+        setHistoryLoaded(true)
+      }
+    }
+
+    fetchHistory()
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (historyLoaded) {
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    }
+  }, [historyLoaded])
 
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
