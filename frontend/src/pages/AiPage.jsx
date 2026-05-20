@@ -31,7 +31,7 @@ function buildGreeting(tone, name) {
 }
 
 const POLL_INTERVAL_MS = 1500
-const POLL_MAX_ATTEMPTS = 13  // ~20 секунд
+const POLL_MAX_ATTEMPTS = 40  // ~60 секунд
 
 export default function AiPage() {
   const { tone, profile } = useProfile()
