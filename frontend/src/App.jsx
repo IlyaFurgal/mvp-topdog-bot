@@ -28,7 +28,7 @@ function AppContent() {
       <OnboardingModal />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/ai" replace />} />
+          <Route path="/" element={<Navigate to="/profile" replace />} />
           <Route path="/ai"        element={<AiPage />} />
           <Route path="/trackers"  element={<TrackersPage />} />
           <Route path="/progress"  element={<ProgressPage />} />
