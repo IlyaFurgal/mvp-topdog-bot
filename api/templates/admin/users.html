@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<h1>
+  👥 Пользователи
+  <span style="color:#555;font-size:15px;font-weight:400;margin-left:8px">{{ total }} записей</span>
+</h1>
+
+<form method="get" class="filter-bar">
+  <select name="subscription_type">
+    <option value="">Все тарифы</option>
+    <option value="ai"  {% if filter_sub_type == 'ai' %}selected{% endif %}>AI</option>
+    <option value="mvp" {% if filter_sub_type == 'mvp' %}selected{% endif %}>MVP</option>
+  </select>
+  <select name="subscription_active">
+    <option value="">Любой статус</option>
+    <option value="true"  {% if filter_sub_active == 'true' %}selected{% endif %}>Активна</option>
+    <option value="false" {% if filter_sub_active == 'false' %}selected{% endif %}>Неактивна</option>
+  </select>
+  <select name="goal">
+    <option value="">Все цели</option>
+    {% for key, label in goals_list %}
+    <option value="{{ key }}" {% if filter_goal == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn">Применить</button>
+  <a href="/admin/users" style="color:#666;font-size:13px">Сбросить</a>
+  <a href="/admin/users/export" class="btn btn-outline" style="margin-left:auto">⬇ Выгрузить CSV</a>
+</form>
+
+<div style="overflow-x:auto">
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Имя</th>
+      <th>@username</th>
+      <th>Telegram ID</th>
+      <th>Тариф</th>
+      <th>Подписка</th>
+      <th>Истекает</th>
+      <th>Цель</th>
+      <th>Уровень</th>
+      <th>Вид спорта</th>
+      <th>Регистрация</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td><a href="/admin/users/{{ u.telegram_id }}">{{ u.id }}</a></td>
+      <td>{{ u.first_name }}</td>
+      <td style="color:#888">{{ u.username }}</td>
+      <td style="color:#666;font-size:12px">{{ u.telegram_id }}</td>
+      <td>
+        {% if u.subscription_type == 'ai' %}
+          <span class="badge badge--ai">AI</span>
+        {% elif u.subscription_type == 'mvp' %}
+          <span class="badge badge--mvp">MVP</span>
+        {% else %}
+          <span style="color:#555">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if u.subscription_active %}
+          <span class="badge badge--active">✓ Активна</span>
+        {% else %}
+          <span class="badge badge--inactive">✗</span>
+        {% endif %}
+      </td>
+      <td style="color:#888;font-size:12px">{{ u.subscription_expires_at }}</td>
+      <td>{{ u.goal }}</td>
+      <td style="color:#888">{{ u.fitness_level }}</td>
+      <td style="color:#888;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.sport_type }}</td>
+      <td style="color:#666;font-size:12px;white-space:nowrap">{{ u.created_at }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="11" style="text-align:center;color:#555;padding:32px">Пользователи не найдены</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

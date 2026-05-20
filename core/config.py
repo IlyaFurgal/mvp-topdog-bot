@@ -45,5 +45,9 @@ class Settings(BaseSettings):
     # Support
     SUPPORT_TG_URL: str = "https://t.me/topdog_support"
 
+    # Admin dashboard Basic Auth
+    ADMIN_LOGIN: str = "admin"
+    ADMIN_PASSWORD: str = "TopD0g#Adm1n25"
+
 
 settings = Settings()

@@ -1,0 +1,109 @@
+{% extends "admin/base.html" %}
+{% block title %}Статистика{% endblock %}
+{% block content %}
+<h1>📊 Общая статистика</h1>
+
+<div class="grid">
+  <div class="card">
+    <div class="card__label">Всего пользователей</div>
+    <div class="card__value">{{ total }}</div>
+  </div>
+  <div class="card">
+    <div class="card__label">Активных подписок</div>
+    <div class="card__value">{{ active_subs }}</div>
+    <div class="card__sub">AI: {{ ai_count }} &nbsp;·&nbsp; MVP: {{ mvp_count }}</div>
+  </div>
+  <div class="card">
+    <div class="card__label">Новых за 7 дней</div>
+    <div class="card__value">{{ new7 }}</div>
+  </div>
+  <div class="card">
+    <div class="card__label">Новых за 30 дней</div>
+    <div class="card__value">{{ new30 }}</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <div class="section">
+      <h2>🎯 Топ-5 целей</h2>
+      {% for label, cnt, pct in goals %}
+      <div class="bar">
+        <div class="bar__label">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>🏅 Топ-5 видов спорта</h2>
+      {% for label, cnt, pct in sports %}
+      <div class="bar">
+        <div class="bar__label" title="{{ label }}">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>🩺 Ограничения здоровья</h2>
+      {% for label, cnt, pct in healths %}
+      <div class="bar">
+        <div class="bar__label" title="{{ label }}">{{ label[:35] }}{% if label|length > 35 %}…{% endif %}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <div class="section">
+      <h2>💪 Уровень подготовки</h2>
+      {% for label, cnt, pct in fitness %}
+      <div class="bar">
+        <div class="bar__label">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>👤 Пол</h2>
+      {% for label, cnt, pct in genders %}
+      <div class="bar">
+        <div class="bar__label">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>🔥 Тон ассистента</h2>
+      {% for label, cnt, pct in tones %}
+      <div class="bar">
+        <div class="bar__label">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

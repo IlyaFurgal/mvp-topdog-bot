@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Admin{% endblock %} — TopDog</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#111;color:#e0e0e0;min-height:100vh;display:flex}
+  nav{width:200px;background:#1a1a1a;border-right:1px solid #2a2a2a;padding:0;flex-shrink:0;display:flex;flex-direction:column}
+  .logo{padding:20px;font-weight:700;font-size:15px;color:#C8FF00;border-bottom:1px solid #2a2a2a}
+  nav a{display:block;padding:11px 20px;color:#aaa;text-decoration:none;font-size:14px;border-left:3px solid transparent}
+  nav a:hover{color:#C8FF00;background:#222}
+  nav a.active{color:#C8FF00;border-left-color:#C8FF00;background:#1d1d1d}
+  main{flex:1;padding:32px;overflow-y:auto;max-width:1400px}
+  h1{font-size:22px;margin-bottom:24px;color:#fff;font-weight:700}
+  h2{font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#C8FF00;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+  .card{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:18px}
+  .card__label{font-size:12px;color:#888;margin-bottom:6px}
+  .card__value{font-size:30px;font-weight:700;color:#C8FF00;line-height:1}
+  .card__sub{font-size:12px;color:#555;margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:8px 12px;background:#161616;color:#777;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  td{padding:8px 12px;border-bottom:1px solid #1a1a1a;vertical-align:top}
+  tr:hover td{background:#1a1a1a}
+  a{color:#C8FF00;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+  .badge--ai{background:#1a3520;color:#4caf50}
+  .badge--mvp{background:#2a2800;color:#C8FF00}
+  .badge--active{background:#1a3520;color:#4caf50}
+  .badge--inactive{background:#2a2a2a;color:#666}
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+  .filter-bar select,.filter-bar input{background:#1e1e1e;border:1px solid #333;color:#e0e0e0;padding:7px 10px;border-radius:6px;font-size:13px;outline:none}
+  .filter-bar select:focus,.filter-bar input:focus{border-color:#C8FF00}
+  .btn{display:inline-block;background:#C8FF00;color:#111;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none}
+  .btn:hover{background:#d4ff1a;text-decoration:none}
+  .btn-outline{background:transparent;border:1px solid #333;color:#aaa}
+  .btn-outline:hover{border-color:#C8FF00;color:#C8FF00;background:transparent}
+  .section{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:20px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr}}
+  .bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+  .bar__label{width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ccc;flex-shrink:0}
+  .bar__track{flex:1;background:#2a2a2a;border-radius:3px;height:8px}
+  .bar__fill{background:#C8FF00;border-radius:3px;height:8px;transition:width .3s}
+  .bar__count{width:36px;text-align:right;color:#666;font-size:12px;flex-shrink:0}
+  .msg-row{border-bottom:1px solid #1a1a1a;padding:8px 0}
+  .msg-row:last-child{border-bottom:none}
+  .msg--user .msg-text{color:#aaa}
+  .msg--ai .msg-text{color:#e0e0e0}
+  .msg-meta{font-size:11px;color:#555;margin-bottom:3px}
+  .msg-role{font-weight:700;margin-right:6px}
+  .msg--user .msg-role{color:#888}
+  .msg--ai .msg-role{color:#C8FF00}
+  .back{display:inline-flex;align-items:center;gap:6px;color:#888;font-size:13px;margin-bottom:20px}
+  .back:hover{color:#C8FF00}
+  .kv-table td:first-child{color:#777;width:180px;font-size:12px;padding:6px 12px}
+  .kv-table td{padding:6px 12px;border-bottom:1px solid #1a1a1a}
+  .user-header{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+  .user-header h1{margin:0}
+  .user-tg{color:#666;font-size:14px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">🐶 TopDog Admin</div>
+  <a href="/admin" class="{% if active == 'stats' %}active{% endif %}">📊 Статистика</a>
+  <a href="/admin/users" class="{% if active == 'users' %}active{% endif %}">👥 Пользователи</a>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

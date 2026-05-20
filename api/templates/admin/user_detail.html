@@ -1,0 +1,122 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ user.first_name or user.telegram_id }}{% endblock %}
+{% block content %}
+
+<a href="/admin/users" class="back">← Пользователи</a>
+
+<div class="user-header">
+  <h1>{{ user.first_name or '—' }}</h1>
+  <span class="user-tg">@{{ user.username or '—' }}</span>
+  {% if user.subscription_type == 'ai' %}
+    <span class="badge badge--ai">AI</span>
+  {% elif user.subscription_type == 'mvp' %}
+    <span class="badge badge--mvp">MVP</span>
+  {% endif %}
+  {% if user.subscription_active == 'active' %}
+    <span class="badge badge--active">Активна</span>
+  {% else %}
+    <span class="badge badge--inactive">Неактивна</span>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div class="section">
+    <h2>👤 Аккаунт</h2>
+    <table class="kv-table">
+      <tr><td>Telegram ID</td><td>{{ user.telegram_id }}</td></tr>
+      <tr><td>Тариф</td><td>{{ user.subscription_type or '—' }}</td></tr>
+      <tr><td>Период</td><td>{{ user.subscription_period or '—' }}</td></tr>
+      <tr><td>Истекает</td>
+        <td>{{ user.subscription_expires_at.strftime('%d.%m.%Y %H:%M') if user.subscription_expires_at else '—' }}</td>
+      </tr>
+      <tr><td>Регистрация</td>
+        <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') if user.created_at else '—' }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>📋 Профиль</h2>
+    {% if profile_data %}
+    <table class="kv-table">
+      {% for key, val in profile_data.items() %}
+      <tr><td>{{ key }}</td><td>{{ val }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p style="color:#555;font-size:13px">Профиль не заполнен</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section">
+  <h2>💬 История ИИ
+    <span style="color:#555;font-weight:400;text-transform:none;font-size:12px;letter-spacing:0">
+      (последние {{ ai_messages | length }})
+    </span>
+  </h2>
+  {% if ai_messages %}
+  {% for msg in ai_messages %}
+  <div class="msg-row {% if msg.role == 'user' %}msg--user{% else %}msg--ai{% endif %}">
+    <div class="msg-meta">
+      <span class="msg-role">{{ 'ВЫ' if msg.role == 'user' else 'ИИ' }}</span>
+      {{ msg.created_at.strftime('%d.%m.%Y %H:%M') if msg.created_at else '' }}
+    </div>
+    <div class="msg-text">{{ msg.text }}</div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p style="color:#555;font-size:13px">Нет сообщений</p>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div class="section">
+    <h2>📊 Трекеры
+      <span style="color:#555;font-weight:400;text-transform:none;font-size:12px;letter-spacing:0">(30 дней)</span>
+    </h2>
+    {% if trackers %}
+    <table>
+      <thead>
+        <tr><th>Тип</th><th>Значение</th><th>Ед.</th><th>Дата</th></tr>
+      </thead>
+      <tbody>
+        {% for t in trackers %}
+        <tr>
+          <td>{{ t.type.value }}</td>
+          <td>{{ t.value }}</td>
+          <td style="color:#666">{{ t.unit }}</td>
+          <td style="color:#666;font-size:12px">{{ t.created_at.strftime('%d.%m %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#555;font-size:13px">Нет записей</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>✅ Чекины
+      <span style="color:#555;font-weight:400;text-transform:none;font-size:12px;letter-spacing:0">(последние {{ checkins | length }})</span>
+    </h2>
+    {% if checkins %}
+    <table>
+      <thead>
+        <tr><th>Тип</th><th>Дата</th></tr>
+      </thead>
+      <tbody>
+        {% for c in checkins %}
+        <tr>
+          <td>{{ c.type.value }}</td>
+          <td style="color:#666;font-size:12px">{{ c.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#555;font-size:13px">Нет чекинов</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

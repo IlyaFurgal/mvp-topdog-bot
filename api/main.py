@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.routers import auth, checkins, config, debug, insights, profile, suvvy, trackers, webhooks
+from api.routers import admin, auth, checkins, config, debug, insights, profile, suvvy, trackers, webhooks
 from database.models import User
 from database.session import get_session
 
@@ -25,6 +25,7 @@ app.include_router(webhooks.router, prefix="/api")
 app.include_router(suvvy.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
+app.include_router(admin.router)  # без prefix — пути /admin, /admin/users, ...
 
 
 @app.get("/health")
