@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import Profile, User
+from database.models import Profile, UpgradeIntent, User
 from database.session import get_session
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -34,3 +36,26 @@ async def get_my_profile(
         "subscription_period": user.subscription_period,
         "subscription_expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else None,
     }
+
+
+@router.post("/upgrade-intent")
+async def track_upgrade_intent(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """
+    Record that the user clicked an UPGRADE button.
+    One record per user (upsert). Resets remind_count to 0 on repeat click.
+    """
+    result = await session.execute(
+        select(UpgradeIntent).where(UpgradeIntent.user_id == user.id)
+    )
+    record = result.scalar_one_or_none()
+    if record:
+        record.clicked_at = datetime.now(timezone.utc)
+        record.remind_count = 0
+        record.reminded_at = None
+    else:
+        session.add(UpgradeIntent(user_id=user.id))
+    await session.commit()
+    return {"status": "ok"}

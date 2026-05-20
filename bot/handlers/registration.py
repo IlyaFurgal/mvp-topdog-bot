@@ -413,41 +413,50 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
         fresh_user = await get_user_by_telegram_id(session, callback.from_user.id)
         has_sub = _user_has_subscription(fresh_user) if fresh_user else False
 
-    if has_sub:
-        if tone_key == "aggressive":
-            finish_text = f"Профиль настроен, {display_name}. Открывай приложение и работаем. 💪"
-        else:
-            finish_text = f"Всё готово, {display_name}! Твой личный кабинет ждёт тебя 🙌"
-        reply_kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(
-                text="🚀 Открыть приложение",
-                web_app=WebAppInfo(url=settings.MINI_APP_URL),
-            )
-        ]])
-    else:
-        finish_text = (
-            f"Профиль создан, {display_name}! "
-            "Выбери тариф чтобы получить доступ к AI-ассистенту и всем функциям."
-        )
-        buttons = []
-        if settings.GC_PAYMENT_URL_MVP:
-            buttons.append([InlineKeyboardButton(text="💳 Выбрать тариф MVP", url=settings.GC_PAYMENT_URL_MVP)])
-        if settings.GC_PAYMENT_URL_AI:
-            buttons.append([InlineKeyboardButton(text="ℹ️ Тариф AI — подробнее", url=settings.GC_PAYMENT_URL_AI)])
-        if not buttons:
-            buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
-        reply_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+    # Confirm profile saved
+    await callback.message.edit_text(f"Профиль создан, {display_name}! 💪")
 
-    await callback.message.edit_text(finish_text)
-    await callback.message.answer(
-        "👇" if has_sub else "Оформи подписку 👇",
-        reply_markup=reply_kb,
+    # Welcome message — always sent to ALL new users
+    welcome_text = (
+        "Добро пожаловать в MVP by TopDog! 🔥\n\n"
+        "Ты в системе. Вот что тебе доступно:\n\n"
+        "🤖 ИИ-АССИСТЕНТ — задавай любые вопросы по тренировкам, питанию и восстановлению\n"
+        "📊 ТРЕКЕР — заполняй каждый день: утро, тренировка, вечер\n"
+        "📈 ПРОГРЕСС — следи за динамикой по неделям\n"
+        "💬 ЧАТ РЕЗИДЕНТОВ — общение и поддержка сообщества\n"
+        "📚 БАЗА ЗНАНИЙ — программы, нутрициология, записи эфиров\n"
+        "👤 ПРОФИЛЬ — твои данные и тариф\n\n"
+        "Открывай приложение и начинай 👇"
     )
+    welcome_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="ОТКРЫТЬ MVP APP",
+            web_app=WebAppInfo(url=settings.MINI_APP_URL),
+        )
+    ]])
+    await callback.message.answer(welcome_text, reply_markup=welcome_kb)
+
+    # If no subscription — additionally show payment options
     if not has_sub:
+        buttons = []
+        if settings.GETCOURSE_MVP_URL or settings.GC_PAYMENT_URL_MVP:
+            url = settings.GETCOURSE_MVP_URL or settings.GC_PAYMENT_URL_MVP
+            buttons.append([InlineKeyboardButton(text="MVP — от 2 990 ₽/мес", url=url)])
+        if settings.GETCOURSE_AI_URL or settings.GC_PAYMENT_URL_AI:
+            url = settings.GETCOURSE_AI_URL or settings.GC_PAYMENT_URL_AI
+            buttons.append([InlineKeyboardButton(text="AI — от 990 ₽/мес", url=url)])
+        if not buttons:
+            buttons = [[InlineKeyboardButton(text="Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
+        pay_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+        await callback.message.answer(
+            "Для доступа ко всем функциям оформи подписку:",
+            reply_markup=pay_kb,
+        )
         await callback.message.answer(
             "После оплаты нажми /start — бот сразу покажет кнопку приложения.",
             reply_markup=freemium_menu_kb(),
         )
+
     await callback.answer()
 
 

@@ -1,3 +1,4 @@
+import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
 
 const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || import.meta.env.VITE_GETCOURSE_MVP_URL || '#'
@@ -7,7 +8,7 @@ function LockedScreen() {
   return (
     <div className="locked-page">
       <h2 className="locked-title">ЧАТ РЕЗИДЕНТОВ</h2>
-      <p className="locked-sub" style={{ color: 'var(--text-muted)', textTransform: 'none', fontSize: '0.9rem', fontWeight: 400 }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
         Доступен на тарифе MVP
       </p>
 
@@ -31,6 +32,7 @@ function LockedScreen() {
         rel="noopener noreferrer"
         className="btn btn-accent"
         style={{ textDecoration: 'none', textAlign: 'center', width: '100%' }}
+        onClick={() => trackUpgradeIntent()}
       >
         UPGRADE →
       </a>

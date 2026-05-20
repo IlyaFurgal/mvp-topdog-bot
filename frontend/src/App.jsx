@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
+import LandingPage from './components/LandingPage'
+import OnboardingModal from './components/OnboardingModal'
 import SubscriptionWall from './components/SubscriptionWall'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { useTelegram } from './hooks/useTelegram'
@@ -23,6 +25,7 @@ function AppContent() {
 
   return (
     <>
+      <OnboardingModal />
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Navigate to="/ai" replace />} />
@@ -66,21 +69,9 @@ export default function App() {
       .catch(() => setError('auth-failed'))
   }, [])
 
-  if (error === 'no-telegram') {
-    return (
-      <div className="splash">
-        <p className="splash-text">Откройте в Telegram</p>
-      </div>
-    )
-  }
-
-  if (error === 'auth-failed') {
-    return (
-      <div className="splash">
-        <p className="splash-text">Ошибка авторизации</p>
-        <p className="splash-sub">Пройдите регистрацию в боте</p>
-      </div>
-    )
+  // No Telegram context — show marketing landing
+  if (error === 'no-telegram' || error === 'auth-failed') {
+    return <LandingPage />
   }
 
   if (!ready) {

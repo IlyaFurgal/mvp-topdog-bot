@@ -1,5 +1,6 @@
-import { useTelegram } from '../hooks/useTelegram'
+import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
+import { useTelegram } from '../hooks/useTelegram'
 
 const GOAL_LABELS = {
   weight_loss: 'Похудение',
@@ -19,22 +20,20 @@ const SUB_BADGE = {
   mvp: { label: 'MVP', cls: 'badge--mvp' },
 }
 
-// Цены в рублях
 const PRICES = {
   ai:  { monthly: 990,  biannual: 4990  },
   mvp: { monthly: 2990, biannual: 14990 },
 }
 
-// "4990" → "4 990 ₽"
 function fmtPrice(n) {
-  return new Intl.NumberFormat('ru-RU').format(n) + ' ₽'
+  return new Intl.NumberFormat('ru-RU').format(n) + ' ₽'
 }
 
 function SubInfo({ type, period }) {
   if (!type) return <span>Нет подписки</span>
 
   const typeLabel = type === 'mvp' ? 'MVP' : 'AI'
-  const periodLabel = period === 'biannual' ? '6 месяцев' : '1 месяц'
+  const periodLabel = period === 'biannual' ? '6 месяцев' : '1 месяц'
   const price = PRICES[type]?.[period ?? 'monthly']
   const isDiscount = period === 'biannual'
 
@@ -45,7 +44,7 @@ function SubInfo({ type, period }) {
       </span>
       {price != null && (
         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-          {fmtPrice(price)}{isDiscount ? ' (–16%)' : ''}
+          {fmtPrice(price)}{isDiscount ? ' (–16%)' : ''}
         </span>
       )}
     </span>
@@ -113,7 +112,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Upgrade button for AI users */}
       {subscriptionType === 'ai' && (
         <a
           href={MVP_URL}
@@ -121,12 +119,12 @@ export default function ProfilePage() {
           rel="noopener noreferrer"
           className="btn btn-accent"
           style={{ textDecoration: 'none', textAlign: 'center' }}
+          onClick={() => trackUpgradeIntent()}
         >
           УЛУЧШИТЬ ДО MVP
         </a>
       )}
 
-      {/* Support button — always visible */}
       <a
         href={SUPPORT_URL}
         target="_blank"

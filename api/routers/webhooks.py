@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.bot_sender import send_message, send_video_note, webapp_kb
 from api.suvvy_queue import push
 from core.config import settings
 from database.models import AiMessage, User
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 MAX_HISTORY = 20
 
 
-async def _trim_history(session: AsyncSession, user_id: int) -> None:
+async def _trim_ai_history(session: AsyncSession, user_id: int) -> None:
     await session.execute(
         text(
             "DELETE FROM ai_messages "
@@ -72,17 +73,41 @@ async def getcourse_webhook(
         user.subscription_expires_at = expires
         logger.info("GC webhook: activated %s for user %s", sub_type, user.telegram_id)
 
+        await session.commit()
+
+        # Send welcome message via bot
+        await _send_payment_welcome(user.telegram_id, sub_type)
+
     elif event == "refund":
         user.subscription_active = "inactive"
         user.subscription_type = None
         user.subscription_expires_at = None
         logger.info("GC webhook: refund — deactivated subscription for user %s", user.telegram_id)
+        await session.commit()
 
     else:
         logger.warning("GC webhook: unknown event=%s", event)
+        await session.commit()
 
-    await session.commit()
     return {"status": "ok"}
+
+
+async def _send_payment_welcome(telegram_id: int, sub_type: str) -> None:
+    """Send welcome message to user after successful payment."""
+    try:
+        text_msg = (
+            "Оплата прошла — добро пожаловать в клуб! 🏆\n\n"
+            "Ты теперь резидент MVP by TopDog.\n\n"
+            "Следующий шаг — открой приложение и познакомься с ИИ-ассистентом. "
+            "Он уже знает твой профиль и готов работать."
+        )
+        await send_message(telegram_id, text_msg, reply_markup=webapp_kb("ОТКРЫТЬ MVP APP →"))
+
+        if settings.WELCOME_VIDEO_NOTE_FILE_ID:
+            await send_video_note(telegram_id, settings.WELCOME_VIDEO_NOTE_FILE_ID)
+
+    except Exception as exc:
+        logger.error("Failed to send payment welcome to %s: %s", telegram_id, exc)
 
 
 @router.post("/suvvy")
@@ -115,11 +140,9 @@ async def suvvy_webhook(
     if not texts or not chat_id:
         return {"status": "ok"}
 
-    # Push to in-memory queue for polling
     push(chat_id, texts)
     logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts), chat_id)
 
-    # Save to DB — find user by telegram_id
     result = await session.execute(
         select(User).where(User.telegram_id == int(chat_id))
     )
@@ -129,9 +152,9 @@ async def suvvy_webhook(
         for text_body in texts:
             session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
         await session.flush()
-        await _trim_history(session, user.id)
+        await _trim_ai_history(session, user.id)
         await session.commit()
     else:
-        logger.warning("Suvvy webhook: user not found for chat_id=%s, messages not persisted", chat_id)
+        logger.warning("Suvvy webhook: user not found for chat_id=%s", chat_id)
 
     return {"status": "ok"}

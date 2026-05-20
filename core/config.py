@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     GC_OFFER_CODE_MVP: str = ""
     GC_PAYMENT_URL_AI: str = ""
     GC_PAYMENT_URL_MVP: str = ""
+    GETCOURSE_AI_URL: str = ""
+    GETCOURSE_MVP_URL: str = ""
+
+    # Bot welcome video note (video_note file_id, optional)
+    WELCOME_VIDEO_NOTE_FILE_ID: str = ""
 
     # Subscription prices (RUB)
     SUBSCRIPTION_AI_1M_PRICE: int = 990

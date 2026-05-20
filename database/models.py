@@ -153,3 +153,13 @@ class AiMessage(Base):
     role: Mapped[str] = mapped_column(String(16))   # "user" или "ai"
     text: Mapped[str] = mapped_column(String(4096))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UpgradeIntent(Base):
+    __tablename__ = "upgrade_intents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, unique=True)
+    clicked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    remind_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
