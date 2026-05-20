@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from datetime import date
@@ -137,6 +138,12 @@ async def send_message(
     }
     if attachments:
         payload["attachments"] = attachments
+
+    logger.info(
+        "Suvvy payload for user %s: %s",
+        user.telegram_id,
+        json.dumps(payload, ensure_ascii=False, default=str),
+    )
 
     async with httpx.AsyncClient(timeout=10) as http:
         try:
