@@ -4,7 +4,6 @@ import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
-import SubscriptionWall from './components/SubscriptionWall'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { useTelegram } from './hooks/useTelegram'
 import AiPage from './pages/AiPage'
@@ -20,7 +19,7 @@ function AppContent() {
   const { subscriptionType, profileLoading } = useProfile()
 
   if (!SKIP_AUTH && !profileLoading && subscriptionType === null) {
-    return <SubscriptionWall />
+    return <LandingPage />
   }
 
   return (
