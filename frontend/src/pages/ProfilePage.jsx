@@ -19,12 +19,45 @@ const SUB_BADGE = {
   mvp: { label: 'MVP', cls: 'badge--mvp' },
 }
 
+// Цены в рублях
+const PRICES = {
+  ai:  { monthly: 990,  biannual: 4990  },
+  mvp: { monthly: 2990, biannual: 14990 },
+}
+
+// "4990" → "4 990 ₽"
+function fmtPrice(n) {
+  return new Intl.NumberFormat('ru-RU').format(n) + ' ₽'
+}
+
+function SubInfo({ type, period }) {
+  if (!type) return <span>Нет подписки</span>
+
+  const typeLabel = type === 'mvp' ? 'MVP' : 'AI'
+  const periodLabel = period === 'biannual' ? '6 месяцев' : '1 месяц'
+  const price = PRICES[type]?.[period ?? 'monthly']
+  const isDiscount = period === 'biannual'
+
+  return (
+    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
+        {typeLabel} / {periodLabel}
+      </span>
+      {price != null && (
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+          {fmtPrice(price)}{isDiscount ? ' (–16%)' : ''}
+        </span>
+      )}
+    </span>
+  )
+}
+
 const SUPPORT_URL = import.meta.env.VITE_SUPPORT_TG_URL || 'https://t.me/topdog_support'
-const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || '#'
+const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || import.meta.env.VITE_GETCOURSE_MVP_URL || '#'
 
 export default function ProfilePage() {
   const { user } = useTelegram()
-  const { profile, subscriptionType } = useProfile()
+  const { profile, subscriptionType, subscriptionPeriod } = useProfile()
 
   const initials = user
     ? `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase() || 'TG'
@@ -58,43 +91,25 @@ export default function ProfilePage() {
       <div className="card">
         <div className="profile-row">
           <span className="profile-label">ЦЕЛЬ</span>
-          <span className="profile-value">
-            {GOAL_LABELS[profile?.goal] ?? '—'}
-          </span>
+          <span className="profile-value">{GOAL_LABELS[profile?.goal] ?? '—'}</span>
         </div>
-      </div>
-
-      <div className="card">
         <div className="profile-row">
           <span className="profile-label">УРОВЕНЬ</span>
-          <span className="profile-value">
-            {FITNESS_LABELS[profile?.fitness_level] ?? '—'}
-          </span>
+          <span className="profile-value">{FITNESS_LABELS[profile?.fitness_level] ?? '—'}</span>
         </div>
-      </div>
-
-      <div className="card">
         <div className="profile-row">
           <span className="profile-label">ВИД СПОРТА</span>
           <span className="profile-value">{profile?.sport_type ?? '—'}</span>
         </div>
-      </div>
-
-      <div className="card">
         <div className="profile-row">
           <span className="profile-label">ТОН ОБЩЕНИЯ</span>
           <span className="profile-value">
             {profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}
           </span>
         </div>
-      </div>
-
-      <div className="card">
         <div className="profile-row">
           <span className="profile-label">ТАРИФ</span>
-          <span className="profile-value">
-            {subscriptionType === 'mvp' ? 'MVP' : subscriptionType === 'ai' ? 'AI' : 'Нет подписки'}
-          </span>
+          <SubInfo type={subscriptionType} period={subscriptionPeriod} />
         </div>
       </div>
 

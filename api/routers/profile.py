@@ -31,5 +31,6 @@ async def get_my_profile(
         # Subscription
         "subscription_type": user.subscription_type,
         "subscription_active": user.subscription_active,
+        "subscription_period": user.subscription_period,
         "subscription_expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else None,
     }

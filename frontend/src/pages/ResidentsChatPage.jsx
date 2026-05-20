@@ -1,24 +1,38 @@
 import { useProfile } from '../context/ProfileContext'
 
-const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || '#'
+const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || import.meta.env.VITE_GETCOURSE_MVP_URL || '#'
 const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/topdog_residents'
 
 function LockedScreen() {
   return (
     <div className="locked-page">
       <h2 className="locked-title">ЧАТ РЕЗИДЕНТОВ</h2>
-      <p className="locked-sub">Доступно на тарифе MVP</p>
-      <p className="locked-desc">
-        Закрытое сообщество резидентов. Поддержка, обмен опытом и совместные активности.
+      <p className="locked-sub" style={{ color: 'var(--text-muted)', textTransform: 'none', fontSize: '0.9rem', fontWeight: 400 }}>
+        Доступен на тарифе MVP
       </p>
+
+      <div className="card" style={{ width: '100%', marginTop: 8 }}>
+        <div className="profile-row">
+          <span className="profile-label">1 месяц</span>
+          <span className="profile-value">2 990 ₽</span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">6 месяцев</span>
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <span className="profile-value">14 990 ₽</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>–16%</span>
+          </span>
+        </div>
+      </div>
+
       <a
         href={MVP_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn-accent"
-        style={{ textDecoration: 'none', textAlign: 'center' }}
+        style={{ textDecoration: 'none', textAlign: 'center', width: '100%' }}
       >
-        УЛУЧШИТЬ ДО MVP
+        UPGRADE →
       </a>
     </div>
   )
@@ -41,7 +55,6 @@ export default function ResidentsChatPage() {
       <p className="page-subtitle">РЕЗИДЕНТЫ MVP</p>
 
       <div className="card" style={{ textAlign: 'center', padding: '32px 16px' }}>
-        <div style={{ marginBottom: 16 }} />
         <p style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8, letterSpacing: '0.04em' }}>
           Telegram-группа резидентов
         </p>

@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     GC_PAYMENT_URL_AI: str = ""
     GC_PAYMENT_URL_MVP: str = ""
 
+    # Subscription prices (RUB)
+    SUBSCRIPTION_AI_1M_PRICE: int = 990
+    SUBSCRIPTION_AI_6M_PRICE: int = 4990
+    SUBSCRIPTION_MVP_1M_PRICE: int = 2990
+    SUBSCRIPTION_MVP_6M_PRICE: int = 14990
+
+    # GetCourse payment links
+    GETCOURSE_MVP_URL: str = ""
+
     # Support
     SUPPORT_TG_URL: str = "https://t.me/topdog_support"
 

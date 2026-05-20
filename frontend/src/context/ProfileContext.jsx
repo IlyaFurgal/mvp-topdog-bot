@@ -4,7 +4,8 @@ import client from '../api/client'
 const ProfileContext = createContext({
   profile: null,
   tone: 'soft',
-  subscriptionType: undefined, // undefined = loading, null = no sub, "ai"|"mvp" = active
+  subscriptionType: undefined,   // undefined = loading, null = no sub, "ai"|"mvp" = active
+  subscriptionPeriod: null,      // null | "monthly" | "biannual"
   profileLoading: true,
 })
 
@@ -26,6 +27,7 @@ export function ProfileProvider({ children }) {
         profile,
         tone: profile?.tone ?? 'soft',
         subscriptionType: profileLoading ? undefined : (profile?.subscription_type ?? null),
+        subscriptionPeriod: profile?.subscription_period ?? null,
         profileLoading,
       }}
     >

@@ -18,6 +18,11 @@ class SubscriptionStatus(str, enum.Enum):
     premium = "premium"
 
 
+class SubscriptionPeriod(str, enum.Enum):
+    monthly = "monthly"    # 1 месяц
+    biannual = "biannual"  # 6 месяцев
+
+
 class Gender(str, enum.Enum):
     male = "male"
     female = "female"
@@ -79,8 +84,9 @@ class User(Base):
     )
 
     # Billing fields
-    subscription_type: Mapped[str | None] = mapped_column(String(16), nullable=True)   # null / "ai" / "mvp"
+    subscription_type: Mapped[str | None] = mapped_column(String(16), nullable=True)    # null / "ai" / "mvp"
     subscription_active: Mapped[str | None] = mapped_column(String(16), nullable=True)  # null / "active" / "inactive"
+    subscription_period: Mapped[str | None] = mapped_column(String(16), nullable=True)  # null / "monthly" / "biannual"
     subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     profile: Mapped["Profile | None"] = relationship(back_populates="user", uselist=False)
