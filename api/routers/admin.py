@@ -186,22 +186,25 @@ async def admin_stats(
         .order_by(func.count().desc())
     )).all()
 
-    return templates.TemplateResponse("admin/stats.html", {
-        "request":    request,
-        "active":     "stats",
-        "total":      total,
-        "active_subs": active_subs,
-        "ai_count":   ai_count,
-        "mvp_count":  mvp_count,
-        "new7":       new7,
-        "new30":      new30,
-        "goals":      _to_bars(goal_rows, GOAL_DISPLAY),
-        "sports":     _to_bars(sport_rows),
-        "healths":    _to_bars(health_rows),
-        "fitness":    _to_bars(fitness_rows, FITNESS_DISPLAY),
-        "genders":    _to_bars(gender_rows, GENDER_DISPLAY),
-        "tones":      _to_bars(tone_rows, TONE_DISPLAY),
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/stats.html",
+        context={
+            "active":     "stats",
+            "total":      total,
+            "active_subs": active_subs,
+            "ai_count":   ai_count,
+            "mvp_count":  mvp_count,
+            "new7":       new7,
+            "new30":      new30,
+            "goals":      _to_bars(goal_rows, GOAL_DISPLAY),
+            "sports":     _to_bars(sport_rows),
+            "healths":    _to_bars(health_rows),
+            "fitness":    _to_bars(fitness_rows, FITNESS_DISPLAY),
+            "genders":    _to_bars(gender_rows, GENDER_DISPLAY),
+            "tones":      _to_bars(tone_rows, TONE_DISPLAY),
+        },
+    )
 
 
 # ── CSV export — must be defined BEFORE /{telegram_id} ────────────────────────
@@ -301,16 +304,19 @@ async def admin_users(
             "created_at":    user.created_at.strftime("%d.%m.%Y") if user.created_at else "—",
         })
 
-    return templates.TemplateResponse("admin/users.html", {
-        "request":          request,
-        "active":           "users",
-        "users":            users,
-        "filter_sub_type":  subscription_type,
-        "filter_sub_active": subscription_active,
-        "filter_goal":      goal,
-        "total":            len(users),
-        "goals_list":       list(GOAL_DISPLAY.items()),
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/users.html",
+        context={
+            "active":           "users",
+            "users":            users,
+            "filter_sub_type":  subscription_type,
+            "filter_sub_active": subscription_active,
+            "filter_goal":      goal,
+            "total":            len(users),
+            "goals_list":       list(GOAL_DISPLAY.items()),
+        },
+    )
 
 
 # ── Page 3: /admin/users/{telegram_id} — user detail ──────────────────────────
@@ -374,12 +380,15 @@ async def admin_user_detail(
             "Тон ассистента":     _label(profile.tone, TONE_DISPLAY),
         }
 
-    return templates.TemplateResponse("admin/user_detail.html", {
-        "request":     request,
-        "active":      "users",
-        "user":        user,
-        "profile_data": profile_data,
-        "checkins":    checkins,
-        "trackers":    trackers,
-        "ai_messages": list(reversed(ai_messages_desc)),
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/user_detail.html",
+        context={
+            "active":       "users",
+            "user":         user,
+            "profile_data": profile_data,
+            "checkins":     checkins,
+            "trackers":     trackers,
+            "ai_messages":  list(reversed(ai_messages_desc)),
+        },
+    )
