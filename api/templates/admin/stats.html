@@ -104,6 +104,32 @@
       <p style="color:#555;font-size:13px">Нет данных</p>
       {% endfor %}
     </div>
+
+    <div class="section">
+      <h2>🎂 Возраст</h2>
+      {% for label, cnt, pct in ages %}
+      <div class="bar">
+        <div class="bar__label">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных</p>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>🌍 Часовой пояс</h2>
+      {% for label, cnt, pct in timezones %}
+      <div class="bar">
+        <div class="bar__label" title="{{ label }}">{{ label }}</div>
+        <div class="bar__track"><div class="bar__fill" style="width:{{ pct }}%"></div></div>
+        <div class="bar__count">{{ cnt }}</div>
+      </div>
+      {% else %}
+      <p style="color:#555;font-size:13px">Нет данных (поле появится после анкеты)</p>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}

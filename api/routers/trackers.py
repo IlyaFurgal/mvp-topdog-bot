@@ -59,9 +59,11 @@ async def get_today_trackers(
     )
     trackers = result.scalars().all()
 
-    out: dict = {"weight": None, "water": None, "sleep": None}
+    out: dict = {"weight": None, "water": None, "sleep": None, "calories": None}
     water_total = 0.0
     has_water = False
+    cal_total = 0.0
+    has_calories = False
 
     for t in trackers:
         if t.type == TrackerType.weight:
@@ -71,9 +73,14 @@ async def get_today_trackers(
             has_water = True
         elif t.type == TrackerType.sleep:
             out["sleep"] = {"value": t.value, "unit": t.unit}
+        elif t.type == TrackerType.calories:
+            cal_total += t.value
+            has_calories = True
 
     if has_water:
         out["water"] = {"value": water_total, "unit": "ml"}
+    if has_calories:
+        out["calories"] = {"value": cal_total, "unit": "kcal"}
 
     return out
 
@@ -132,9 +139,10 @@ async def get_tracker_stats(
     )
     all_trackers = result.scalars().all()
 
-    weights = [t for t in all_trackers if t.type == TrackerType.weight]
-    waters = [t for t in all_trackers if t.type == TrackerType.water]
-    sleeps = [t for t in all_trackers if t.type == TrackerType.sleep]
+    weights   = [t for t in all_trackers if t.type == TrackerType.weight]
+    waters    = [t for t in all_trackers if t.type == TrackerType.water]
+    sleeps    = [t for t in all_trackers if t.type == TrackerType.sleep]
+    cal_list  = [t for t in all_trackers if t.type == TrackerType.calories]
 
     # Weight
     weight_stat = None
@@ -179,4 +187,16 @@ async def get_tracker_stats(
             "goal": 8,
         }
 
-    return {"weight": weight_stat, "water": water_stat, "sleep": sleep_stat}
+    # Calories
+    cal_stat = None
+    if cal_list:
+        by_date_cal: dict = {}
+        for t in cal_list:
+            d = t.created_at.date()
+            by_date_cal[d] = by_date_cal.get(d, 0) + t.value
+        today_cal = sum(t.value for t in cal_list if t.created_at >= today)
+        last7_cal = {d: v for d, v in by_date_cal.items() if d >= (date.today() - timedelta(days=7))}
+        avg7_cal = round(sum(last7_cal.values()) / len(last7_cal)) if last7_cal else 0
+        cal_stat = {"today": round(today_cal), "avg_7days": avg7_cal, "goal": 2000}
+
+    return {"weight": weight_stat, "water": water_stat, "sleep": sleep_stat, "calories": cal_stat}

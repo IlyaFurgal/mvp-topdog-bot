@@ -4,9 +4,10 @@ import { saveTracker } from '../api/trackers'
 const GOAL_WATER = 2000
 
 const TITLES = {
-  weight: 'ЗАПИСАТЬ ВЕС',
-  water: 'ЗАПИСАТЬ ВОДУ',
-  sleep: 'ЗАПИСАТЬ СОН',
+  weight:   'ЗАПИСАТЬ ВЕС',
+  water:    'ЗАПИСАТЬ ВОДУ',
+  sleep:    'ЗАПИСАТЬ СОН',
+  calories: 'ЗАПИСАТЬ КАЛОРИИ',
 }
 
 export default function TrackerModal({ type, todayData, onClose, onSaved }) {
@@ -15,6 +16,7 @@ export default function TrackerModal({ type, todayData, onClose, onSaved }) {
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
   const [waterAmount, setWaterAmount] = useState(200)
+  const [caloriesAmount, setCaloriesAmount] = useState(0)
   const [sleepHours, setSleepHours] = useState(() => {
     if (todayData?.value) return Math.floor(todayData.value)
     return 8
@@ -25,6 +27,7 @@ export default function TrackerModal({ type, todayData, onClose, onSaved }) {
   })
 
   const waterTotal = todayData?.value ?? 0
+  const caloriesTotal = todayData?.value ?? 0
 
   async function handleSave() {
     setSaving(true)
@@ -33,6 +36,8 @@ export default function TrackerModal({ type, todayData, onClose, onSaved }) {
         await saveTracker('weight', parseFloat(weight.toFixed(1)), 'kg')
       } else if (type === 'water') {
         await saveTracker('water', waterAmount, 'ml')
+      } else if (type === 'calories') {
+        await saveTracker('calories', caloriesAmount, 'kcal')
       } else {
         const val = sleepHours + sleepMinutes / 60
         await saveTracker('sleep', parseFloat(val.toFixed(2)), 'h')
@@ -46,6 +51,8 @@ export default function TrackerModal({ type, todayData, onClose, onSaved }) {
   function handleOverlay(e) {
     if (e.target === overlayRef.current) onClose()
   }
+
+  const addLabel = type === 'water' || type === 'calories' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
@@ -69,9 +76,12 @@ export default function TrackerModal({ type, todayData, onClose, onSaved }) {
             onMinutes={setSleepMinutes}
           />
         )}
+        {type === 'calories' && (
+          <CaloriesInput amount={caloriesAmount} onChange={setCaloriesAmount} total={caloriesTotal} />
+        )}
 
         <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
-          {saving ? 'СОХРАНЯЕМ...' : type === 'water' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'}
+          {saving ? 'СОХРАНЯЕМ...' : addLabel}
         </button>
       </div>
     </div>
@@ -138,6 +148,43 @@ function WaterInput({ amount, onChange, total }) {
           onChange={(e) => onChange(parseInt(e.target.value) || 0)}
         />
         <span className="weight-unit">мл</span>
+      </div>
+    </div>
+  )
+}
+
+function CaloriesInput({ amount, onChange, total }) {
+  const GOAL_KCAL = 2500
+  const pct = Math.min((total / GOAL_KCAL) * 100, 100)
+  return (
+    <div className="tracker-input">
+      <p className="water-today">
+        Сегодня: <strong>{Math.round(total).toLocaleString('ru')} ккал</strong>
+      </p>
+      <div className="progress-bar">
+        <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="progress-label">{Math.round(total)} / {GOAL_KCAL} ккал</p>
+      <div className="water-quick">
+        {[100, 300, 500].map((kcal) => (
+          <button
+            key={kcal}
+            className={`water-btn ${amount === kcal ? 'water-btn--active' : ''}`}
+            onClick={() => onChange(kcal)}
+          >
+            +{kcal}
+          </button>
+        ))}
+      </div>
+      <div className="water-custom">
+        <input
+          type="number"
+          className="weight-num-input"
+          value={amount}
+          min="0"
+          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        />
+        <span className="weight-unit">ккал</span>
       </div>
     </div>
   )

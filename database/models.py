@@ -65,6 +65,7 @@ class TrackerType(str, enum.Enum):
     weight = "weight"
     water = "water"
     sleep = "sleep"
+    calories = "calories"
 
 
 class User(Base):
@@ -112,6 +113,10 @@ class Profile(Base):
     workout_hours_per_day: Mapped[int | None] = mapped_column(Integer)  # только для продвинутых
     health_restrictions: Mapped[str | None] = mapped_column(String(512))
     tone: Mapped[Tone] = mapped_column(Enum(Tone), default=Tone.soft)
+    # New fields
+    goals: Mapped[list | None] = mapped_column(JSONB, nullable=True)       # ["muscle_gain", "weight_loss"]
+    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)  # "Europe/Moscow"
+    push_time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # "08:00" (morning)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

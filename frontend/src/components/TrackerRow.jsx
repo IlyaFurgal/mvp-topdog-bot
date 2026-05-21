@@ -1,7 +1,8 @@
 const CONFIG = {
-  weight: { label: 'ВЕС' },
-  water: { label: 'ВОДА' },
-  sleep: { label: 'СОН' },
+  weight:   { label: 'ВЕС' },
+  water:    { label: 'ВОДА' },
+  sleep:    { label: 'СОН' },
+  calories: { label: 'КАЛОРИИ' },
 }
 
 function formatValue(type, data) {
@@ -15,6 +16,9 @@ function formatValue(type, data) {
     const h = Math.floor(value)
     const m = Math.round((value - h) * 60)
     return m > 0 ? `${h}ч ${m}м` : `${h}ч`
+  }
+  if (type === 'calories') {
+    return `${Math.round(value)} ккал`
   }
   return null
 }

@@ -41,6 +41,7 @@ async def create_profile(
     gender: Gender | None = None,
     birth_date: date | None = None,
     goal: Goal | None = None,
+    goals: list[str] | None = None,
     sport_type: str | None = None,
     fitness_level: FitnessLevel | None = None,
     activity_level: ActivityLevel | None = None,
@@ -48,6 +49,8 @@ async def create_profile(
     workout_hours_per_day: int | None = None,
     health_restrictions: str | None = None,
     tone: Tone = Tone.soft,
+    timezone: str | None = None,
+    push_time: str | None = None,
 ) -> Profile:
     profile = Profile(
         user_id=user_id,
@@ -55,6 +58,7 @@ async def create_profile(
         gender=gender,
         birth_date=birth_date,
         goal=goal,
+        goals=goals,
         sport_type=sport_type,
         fitness_level=fitness_level,
         activity_level=activity_level,
@@ -62,6 +66,8 @@ async def create_profile(
         workout_hours_per_day=workout_hours_per_day,
         health_restrictions=health_restrictions,
         tone=tone,
+        timezone=timezone,
+        push_time=push_time,
     )
     session.add(profile)
     await session.commit()

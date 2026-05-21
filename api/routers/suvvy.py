@@ -99,7 +99,9 @@ async def send_message(
     placeholders = {
         "name":                user.first_name or "",
         "username":            user.username or "",
-        "goal":                (profile.goal.value if profile and profile.goal else ""),
+        "goal":                ", ".join(profile.goals) if profile and profile.goals else (
+                               profile.goal.value if profile and profile.goal else ""
+                           ),
         "fitness_level":       (profile.fitness_level.value if profile and profile.fitness_level else ""),
         "sport_type":          (profile.sport_type or ""),
         "activity_level":      (profile.activity_level.value if profile and profile.activity_level else ""),

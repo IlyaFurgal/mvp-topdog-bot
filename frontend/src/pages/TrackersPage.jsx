@@ -7,7 +7,7 @@ import TrackerModal from '../components/TrackerModal'
 import TrackerRow from '../components/TrackerRow'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
-const TRACKER_TYPES = ['weight', 'water', 'sleep']
+const TRACKER_TYPES = ['weight', 'water', 'sleep', 'calories']
 
 function getOverallStatus(checkins) {
   const done = CHECKIN_TYPES.filter((t) => checkins[t]).length
@@ -22,7 +22,7 @@ function nextUndone(checkins) {
 
 export default function TrackersPage() {
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
-  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null })
+  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
   const [loading, setLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)

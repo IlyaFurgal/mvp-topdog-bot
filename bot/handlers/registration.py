@@ -10,9 +10,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.keyboards.inline import (
-    kb_fitness, kb_gender, kb_goal, kb_health,
-    kb_lifestyle, kb_sport, kb_start, kb_tone,
-    kb_workout_days, kb_workout_hours,
+    kb_fitness, kb_gender, kb_goals, kb_health,
+    kb_lifestyle, kb_push_time, kb_sport, kb_start,
+    kb_timezone, kb_tone, kb_workout_days, kb_workout_hours,
 )
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
@@ -29,15 +29,6 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 # ── Маппинги ──────────────────────────────────────────────────────────────────
-
-_GOAL_MAP: dict[str, Goal] = {
-    "muscle_gain": Goal.muscle_gain,
-    "weight_loss":  Goal.weight_loss,
-    "endurance":    Goal.endurance,
-    "health":       Goal.maintenance,
-    "stress":       Goal.maintenance,
-    "overall":      Goal.maintenance,
-}
 
 _SPORT_LABELS: dict[str, str] = {
     "boxing":  "Бокс / единоборства",
@@ -69,6 +60,14 @@ _HOURS_MAP: dict[str, int] = {
     "gt3": 4,
 }
 
+# Goals: new multi-select keys → legacy Goal enum (for backward compat)
+_GOAL_MAP: dict[str, Goal] = {
+    "muscle_gain": Goal.muscle_gain,
+    "weight_loss":  Goal.weight_loss,
+    "endurance":    Goal.endurance,
+    "maintenance":  Goal.maintenance,
+}
+
 
 # ── Хелпер: переход к вопросу о нагрузке ─────────────────────────────────────
 
@@ -96,13 +95,16 @@ async def _register_in_getcourse(user: User, profile: Profile) -> None:
     """Send user data to GetCourse after registration. Silently skips if GC_API_KEY is empty."""
     if not settings.GC_API_KEY:
         return
+    goals_str = ", ".join(profile.goals) if profile.goals else (
+        profile.goal.value if profile.goal else ""
+    )
     data = {
         "user": {
             "email": None,
             "first_name": user.first_name or "",
             "addfields": {
                 "telegram_id": str(user.telegram_id),
-                "goal": profile.goal.value if profile.goal else "",
+                "goal": goals_str,
                 "sport_type": profile.sport_type or "",
                 "fitness_level": profile.fitness_level.value if profile.fitness_level else "",
             },
@@ -234,21 +236,40 @@ async def step_fitness(message: Message, state: FSMContext) -> None:
     await message.answer("Какой у тебя уровень подготовки?", reply_markup=kb_fitness())
 
 
-# ── Уровень подготовки → цель ─────────────────────────────────────────────────
+# ── Уровень подготовки → цели (multi-select) ──────────────────────────────────
 
 @router.callback_query(RegistrationForm.fitness_level, F.data.startswith("reg_fitness_"))
-async def step_goal(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(fitness_level=callback.data.removeprefix("reg_fitness_"))
-    await state.set_state(RegistrationForm.goal)
-    await callback.message.edit_text("Твоя главная цель?", reply_markup=kb_goal())
+async def step_goals(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(fitness_level=callback.data.removeprefix("reg_fitness_"), goals_selected=[])
+    await state.set_state(RegistrationForm.goals)
+    await callback.message.edit_text(
+        "Выбери свои цели 🎯\n\n"
+        "Можно выбрать несколько — нажми на каждую нужную цель:",
+        reply_markup=kb_goals([]),
+    )
     await callback.answer()
 
 
-# ── Цель → вид спорта ────────────────────────────────────────────────────────
+# ── Цели: переключение вариантов ─────────────────────────────────────────────
 
-@router.callback_query(RegistrationForm.goal, F.data.startswith("reg_goal_"))
+@router.callback_query(RegistrationForm.goals, F.data.startswith("reg_goals_toggle_"))
+async def step_goals_toggle(callback: CallbackQuery, state: FSMContext) -> None:
+    key = callback.data.removeprefix("reg_goals_toggle_")
+    data = await state.get_data()
+    selected: list[str] = data.get("goals_selected", [])
+    if key in selected:
+        selected.remove(key)
+    else:
+        selected.append(key)
+    await state.update_data(goals_selected=selected)
+    await callback.message.edit_reply_markup(reply_markup=kb_goals(selected))
+    await callback.answer()
+
+
+# ── Цели: "Готово" → вид спорта ───────────────────────────────────────────────
+
+@router.callback_query(RegistrationForm.goals, F.data == "reg_goals_done")
 async def step_sport(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(goal=callback.data.removeprefix("reg_goal_"))
     await state.set_state(RegistrationForm.sport_type)
     await callback.message.edit_text("Чем занимаешься?", reply_markup=kb_sport())
     await callback.answer()
@@ -350,11 +371,77 @@ async def step_tone_after_health(message: Message, state: FSMContext) -> None:
     await message.answer("Как тебе комфортнее общаться?", reply_markup=kb_tone())
 
 
-# ── Тон → финал: сохранение в БД ─────────────────────────────────────────────
+# ── Тон → часовой пояс ───────────────────────────────────────────────────────
 
 @router.callback_query(RegistrationForm.tone, F.data.startswith("reg_tone_"))
-async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
+async def step_timezone(callback: CallbackQuery, state: FSMContext) -> None:
     tone_key = callback.data.removeprefix("reg_tone_")
+    await state.update_data(tone=tone_key)
+    await state.set_state(RegistrationForm.timezone)
+    await callback.message.edit_text(
+        "Выбери свой часовой пояс 🌍",
+        reply_markup=kb_timezone(),
+    )
+    await callback.answer()
+
+
+# ── Часовой пояс → время напоминаний ─────────────────────────────────────────
+
+@router.callback_query(RegistrationForm.timezone, F.data.startswith("reg_tz_"))
+async def step_push_time(callback: CallbackQuery, state: FSMContext) -> None:
+    tz = callback.data.removeprefix("reg_tz_")
+    await state.update_data(timezone=tz)
+    await state.set_state(RegistrationForm.push_time)
+    await callback.message.edit_text(
+        "В какое время тебе присылать утреннее напоминание? ⏰\n\n"
+        "Время — по твоему часовому поясу:",
+        reply_markup=kb_push_time(),
+    )
+    await callback.answer()
+
+
+# ── Время напоминаний: быстрый выбор → финал ─────────────────────────────────
+
+@router.callback_query(RegistrationForm.push_time, F.data.startswith("reg_pushtime_"))
+async def step_pushtime_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    val = callback.data.removeprefix("reg_pushtime_")
+    if val == "custom":
+        await state.set_state(RegistrationForm.push_time_custom)
+        await callback.message.edit_text(
+            "Напиши время в формате ЧЧ:ММ, например: 07:30"
+        )
+        await callback.answer()
+        return
+    await state.update_data(push_time=val)
+    await _finish_registration(callback, state)
+
+
+# ── Время напоминаний: ручной ввод → финал ───────────────────────────────────
+
+@router.message(RegistrationForm.push_time_custom)
+async def step_pushtime_custom(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip()
+    # validate HH:MM
+    try:
+        parts = raw.split(":")
+        if len(parts) != 2:
+            raise ValueError
+        hh, mm = int(parts[0]), int(parts[1])
+        if not (0 <= hh <= 23 and 0 <= mm <= 59):
+            raise ValueError
+        push_time = f"{hh:02d}:{mm:02d}"
+    except ValueError:
+        await message.answer(
+            "⚠️ Неверный формат. Напиши время как ЧЧ:ММ, например: 07:30"
+        )
+        return
+    await state.update_data(push_time=push_time)
+    await _finish_registration(message, state)
+
+
+# ── Финальный шаг: сохранение в БД и приветствие ─────────────────────────────
+
+async def _finish_registration(target: CallbackQuery | Message, state: FSMContext) -> None:
     data = await state.get_data()
     await state.clear()
 
@@ -380,11 +467,24 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
         except ValueError:
             pass
 
+    # Tone
+    tone_key = data.get("tone", "soft")
+    tone_val = Tone.aggressive if tone_key == "aggressive" else Tone.soft
+
+    # Goals — new array + legacy first goal for backward compat
+    goals_selected: list[str] = data.get("goals_selected", [])
+    legacy_goal: Goal | None = _GOAL_MAP.get(goals_selected[0]) if goals_selected else None
+
     preferred_name = data.get("preferred_name")
 
     saved_profile = None
     async with AsyncSessionLocal() as session:
-        user = await get_user_by_telegram_id(session, callback.from_user.id)
+        telegram_id = (
+            target.from_user.id
+            if isinstance(target, CallbackQuery)
+            else target.from_user.id
+        )
+        user = await get_user_by_telegram_id(session, telegram_id)
         if user:
             await update_user(session, user, is_active=True)
             saved_profile = await create_profile(
@@ -393,28 +493,38 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
                 preferred_name=preferred_name,
                 gender=gender_val,
                 birth_date=birth_date,
-                goal=_GOAL_MAP.get(data.get("goal", "")),
+                goal=legacy_goal,
+                goals=goals_selected if goals_selected else None,
                 sport_type=data.get("sport_type"),
                 fitness_level=_FITNESS_MAP.get(data.get("fitness_level", "")),
                 activity_level=activity_val,
                 workout_days_per_week=data.get("workout_days"),
                 workout_hours_per_day=data.get("workout_hours"),
                 health_restrictions=data.get("health_restrictions"),
-                tone=Tone.aggressive if tone_key == "aggressive" else Tone.soft,
+                tone=tone_val,
+                timezone=data.get("timezone"),
+                push_time=data.get("push_time"),
             )
-            # Отправляем данные в GetCourse (не блокирует, ошибки — только в лог)
             if saved_profile:
                 await _register_in_getcourse(user, saved_profile)
 
-    display_name = preferred_name or callback.from_user.first_name or "друг"
+    display_name = preferred_name or (
+        target.from_user.first_name if target.from_user else "друг"
+    ) or "друг"
 
-    # Re-fetch user to get current subscription state after possible updates
+    # Re-fetch user to get current subscription state
     async with AsyncSessionLocal() as session:
-        fresh_user = await get_user_by_telegram_id(session, callback.from_user.id)
+        fresh_user = await get_user_by_telegram_id(session, target.from_user.id)
         has_sub = _user_has_subscription(fresh_user) if fresh_user else False
 
     # Confirm profile saved
-    await callback.message.edit_text(f"Профиль создан, {display_name}! 💪")
+    confirm_text = f"Профиль создан, {display_name}! 💪"
+    if isinstance(target, CallbackQuery):
+        await target.message.edit_text(confirm_text)
+        send = target.message.answer
+    else:
+        await target.answer(confirm_text)
+        send = target.answer
 
     # Welcome message — always sent to ALL new users
     welcome_text = (
@@ -434,7 +544,7 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
             web_app=WebAppInfo(url=settings.MINI_APP_URL),
         )
     ]])
-    await callback.message.answer(welcome_text, reply_markup=welcome_kb)
+    await send(welcome_text, reply_markup=welcome_kb)
 
     # If no subscription — additionally show payment options
     if not has_sub:
@@ -448,16 +558,17 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
         if not buttons:
             buttons = [[InlineKeyboardButton(text="Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
         pay_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
-        await callback.message.answer(
+        await send(
             "Для доступа ко всем функциям оформи подписку:",
             reply_markup=pay_kb,
         )
-        await callback.message.answer(
+        await send(
             "После оплаты нажми /start — бот сразу покажет кнопку приложения.",
             reply_markup=freemium_menu_kb(),
         )
 
-    await callback.answer()
+    if isinstance(target, CallbackQuery):
+        await target.answer()
 
 
 # ── Защита от текста вместо кнопки ───────────────────────────────────────────
@@ -466,13 +577,15 @@ _BUTTON_STATES = (
     RegistrationForm.greeting,
     RegistrationForm.gender,
     RegistrationForm.fitness_level,
-    RegistrationForm.goal,
+    RegistrationForm.goals,
     RegistrationForm.sport_type,
     RegistrationForm.workout_hours,
     RegistrationForm.workout_days,
     RegistrationForm.lifestyle,
     RegistrationForm.health_restrictions,
     RegistrationForm.tone,
+    RegistrationForm.timezone,
+    RegistrationForm.push_time,
 )
 
 

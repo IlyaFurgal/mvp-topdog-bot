@@ -33,21 +33,31 @@ def kb_fitness() -> InlineKeyboardMarkup:
     ])
 
 
-def kb_goal() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Набор мышц", callback_data="reg_goal_muscle_gain"),
-            InlineKeyboardButton(text="Похудение", callback_data="reg_goal_weight_loss"),
-        ],
-        [
-            InlineKeyboardButton(text="Выносливость", callback_data="reg_goal_endurance"),
-            InlineKeyboardButton(text="Здоровье и ЗОЖ", callback_data="reg_goal_health"),
-        ],
-        [
-            InlineKeyboardButton(text="Снижение стресса", callback_data="reg_goal_stress"),
-            InlineKeyboardButton(text="Общая форма", callback_data="reg_goal_overall"),
-        ],
-    ])
+# ── Multi-select goals ────────────────────────────────────────────────────────
+
+GOAL_OPTIONS = [
+    ("muscle_gain", "Набор мышц"),
+    ("weight_loss",  "Похудение"),
+    ("endurance",    "Выносливость"),
+    ("maintenance",  "Поддержание / здоровье"),
+]
+
+
+def kb_goals(selected: list[str]) -> InlineKeyboardMarkup:
+    """Multi-select keyboard: tap to toggle, 'Done' when ≥1 selected."""
+    rows = []
+    for key, label in GOAL_OPTIONS:
+        check = "✅ " if key in selected else "◻️ "
+        rows.append([InlineKeyboardButton(
+            text=f"{check}{label}",
+            callback_data=f"reg_goals_toggle_{key}",
+        )])
+    if selected:
+        rows.append([InlineKeyboardButton(
+            text=f"Готово ({len(selected)}) →",
+            callback_data="reg_goals_done",
+        )])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def kb_sport() -> InlineKeyboardMarkup:
@@ -122,3 +132,47 @@ def kb_tone() -> InlineKeyboardMarkup:
             callback_data="reg_tone_soft",
         )],
     ])
+
+
+# ── Timezone ──────────────────────────────────────────────────────────────────
+
+TIMEZONE_OPTIONS = [
+    ("Europe/Kaliningrad", "UTC+2  Калининград"),
+    ("Europe/Moscow",      "UTC+3  Москва / Питер"),
+    ("Europe/Samara",      "UTC+4  Самара"),
+    ("Asia/Yekaterinburg", "UTC+5  Екатеринбург"),
+    ("Asia/Omsk",          "UTC+6  Омск"),
+    ("Asia/Krasnoyarsk",   "UTC+7  Новосибирск / Красноярск"),
+    ("Asia/Irkutsk",       "UTC+8  Иркутск"),
+    ("Asia/Yakutsk",       "UTC+9  Якутск"),
+    ("Asia/Vladivostok",   "UTC+10 Владивосток"),
+    ("Asia/Magadan",       "UTC+11 Магадан"),
+    ("Asia/Kamchatka",     "UTC+12 Камчатка"),
+]
+
+
+def kb_timezone() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data=f"reg_tz_{key}")]
+        for key, label in TIMEZONE_OPTIONS
+    ])
+
+
+# ── Push time ─────────────────────────────────────────────────────────────────
+
+PUSH_TIME_OPTIONS = [
+    ("06:00", "6:00"),
+    ("07:00", "7:00"),
+    ("08:00", "8:00"),
+    ("09:00", "9:00"),
+    ("10:00", "10:00"),
+]
+
+
+def kb_push_time() -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(text=label, callback_data=f"reg_pushtime_{t}")]
+        for t, label in PUSH_TIME_OPTIONS
+    ]
+    rows.append([InlineKeyboardButton(text="✏️ Другое время", callback_data="reg_pushtime_custom")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)

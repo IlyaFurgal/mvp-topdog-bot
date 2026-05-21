@@ -16,8 +16,8 @@ class RegistrationForm(StatesGroup):
     # 3. Уровень подготовки
     fitness_level = State()
 
-    # 4. Цель
-    goal = State()
+    # 4. Цели (multi-select)
+    goals = State()
 
     # 5. Вид спорта
     sport_type = State()
@@ -36,3 +36,10 @@ class RegistrationForm(StatesGroup):
 
     # 9. Тон общения
     tone = State()
+
+    # 10. Часовой пояс
+    timezone = State()
+
+    # 11. Время напоминаний
+    push_time = State()
+    push_time_custom = State()   # если пользователь вводит вручную

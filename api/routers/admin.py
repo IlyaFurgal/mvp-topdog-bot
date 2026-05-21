@@ -2,6 +2,7 @@
 import csv
 import io
 import secrets
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -186,6 +187,34 @@ async def admin_stats(
         .order_by(func.count().desc())
     )).all()
 
+    # Age distribution (from birth_date)
+    birth_dates = (await session.execute(
+        select(Profile.birth_date).where(Profile.birth_date.isnot(None))
+    )).scalars().all()
+
+    def _age_bucket(bd: date) -> str:
+        age = (date.today() - bd).days // 365
+        if age < 20: return "< 20"
+        if age < 30: return "20–29"
+        if age < 40: return "30–39"
+        if age < 50: return "40–49"
+        return "50+"
+
+    _bucket_order = ["< 20", "20–29", "30–39", "40–49", "50+"]
+    age_counter = Counter(_age_bucket(bd) for bd in birth_dates)
+    age_data_raw = [(b, age_counter.get(b, 0)) for b in _bucket_order if age_counter.get(b, 0) > 0]
+    age_max = max((c for _, c in age_data_raw), default=1)
+    ages = [(label, cnt, int(cnt / age_max * 100)) for label, cnt in age_data_raw]
+
+    # Timezone distribution
+    tz_rows = (await session.execute(
+        select(Profile.timezone, func.count().label("cnt"))
+        .where(Profile.timezone.isnot(None))
+        .group_by(Profile.timezone)
+        .order_by(func.count().desc())
+        .limit(12)
+    )).all()
+
     return templates.TemplateResponse(
         request=request,
         name="admin/stats.html",
@@ -197,6 +226,8 @@ async def admin_stats(
             "mvp_count":  mvp_count,
             "new7":       new7,
             "new30":      new30,
+            "ages":       ages,
+            "timezones":  _to_bars(tz_rows),
             "goals":      _to_bars(goal_rows, GOAL_DISPLAY),
             "sports":     _to_bars(sport_rows),
             "healths":    _to_bars(health_rows),
