@@ -1,6 +1,6 @@
 """add goals, timezone, push_time to profiles; add calories to trackertype
 
-Revision ID: 0006_goals_timezone_pushtime_calories
+Revision ID: 0006_profile_extras
 Revises: 0005_rename_subscription_types
 Create Date: 2026-05-21 14:00:00.000000
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0006_goals_timezone_pushtime_calories"
+revision: str = "0006_profile_extras"
 down_revision: Union[str, None] = "0005_rename_subscription_types"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
