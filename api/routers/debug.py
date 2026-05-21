@@ -108,7 +108,7 @@ async def get_placeholders(
         "fitness_level":     list(FITNESS_LEVEL_DISPLAY.keys()),
         "activity_level":    list(ACTIVITY_LEVEL_DISPLAY.keys()),
         "tone":              list(TONE_DISPLAY.keys()),
-        "subscription_type": ["ai", "mvp"],
+        "subscription_type": ["plus", "pro"],
         "gender":            list(GENDER_DISPLAY.keys()),
     }
 

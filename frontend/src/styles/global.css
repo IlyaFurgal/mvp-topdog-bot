@@ -1037,8 +1037,8 @@ html, body {
   text-transform: uppercase;
 }
 
-.badge--ai  { background: var(--accent); color: #000; }
-.badge--mvp { background: var(--accent); color: #000; }
+.badge--plus { background: var(--accent); color: #000; }
+.badge--pro  { background: var(--accent); color: #000; }
 
 /* ── Support button ───────────────────────────────────── */
 

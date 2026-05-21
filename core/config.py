@@ -23,24 +23,21 @@ class Settings(BaseSettings):
     # GetCourse integration
     GC_API_KEY: str = ""
     GC_ACCOUNT: str = "topdog-mvp"
-    GC_OFFER_CODE_AI: str = ""
-    GC_OFFER_CODE_MVP: str = ""
-    GC_PAYMENT_URL_AI: str = ""
-    GC_PAYMENT_URL_MVP: str = ""
-    GETCOURSE_AI_URL: str = ""
-    GETCOURSE_MVP_URL: str = ""
+    GC_OFFER_CODE_PLUS: str = ""
+    GC_OFFER_CODE_PRO: str = ""
+    GC_PAYMENT_URL_PLUS: str = ""
+    GC_PAYMENT_URL_PRO: str = ""
+    GETCOURSE_PLUS_URL: str = ""
+    GETCOURSE_PRO_URL: str = ""
 
     # Bot welcome video note (video_note file_id, optional)
     WELCOME_VIDEO_NOTE_FILE_ID: str = ""
 
     # Subscription prices (RUB)
-    SUBSCRIPTION_AI_1M_PRICE: int = 990
-    SUBSCRIPTION_AI_6M_PRICE: int = 4990
-    SUBSCRIPTION_MVP_1M_PRICE: int = 2990
-    SUBSCRIPTION_MVP_6M_PRICE: int = 14990
-
-    # GetCourse payment links
-    GETCOURSE_MVP_URL: str = ""
+    SUBSCRIPTION_PLUS_1M_PRICE: int = 990
+    SUBSCRIPTION_PLUS_6M_PRICE: int = 4990
+    SUBSCRIPTION_PRO_1M_PRICE: int = 2990
+    SUBSCRIPTION_PRO_6M_PRICE: int = 14990
 
     # Support
     SUPPORT_TG_URL: str = "https://t.me/topdog_support"

@@ -53,13 +53,13 @@ async def getcourse_webhook(
         return {"status": "ok", "message": "user not found"}
 
     if event == "payment":
-        if settings.GC_OFFER_CODE_MVP and offer_code == settings.GC_OFFER_CODE_MVP:
-            sub_type = "mvp"
-        elif settings.GC_OFFER_CODE_AI and offer_code == settings.GC_OFFER_CODE_AI:
-            sub_type = "ai"
+        if settings.GC_OFFER_CODE_PRO and offer_code == settings.GC_OFFER_CODE_PRO:
+            sub_type = "pro"
+        elif settings.GC_OFFER_CODE_PLUS and offer_code == settings.GC_OFFER_CODE_PLUS:
+            sub_type = "plus"
         else:
-            logger.warning("GC webhook: unknown offer_code=%s, defaulting to ai", offer_code)
-            sub_type = "ai"
+            logger.warning("GC webhook: unknown offer_code=%s, defaulting to plus", offer_code)
+            sub_type = "plus"
 
         expires: datetime | None = None
         if finish_at:

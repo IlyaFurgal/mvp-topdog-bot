@@ -16,13 +16,13 @@ const FITNESS_LABELS = {
 }
 
 const SUB_BADGE = {
-  ai:  { label: 'AI',  cls: 'badge--ai'  },
-  mvp: { label: 'MVP', cls: 'badge--mvp' },
+  plus: { label: 'Plus', cls: 'badge--plus' },
+  pro:  { label: 'Pro',  cls: 'badge--pro'  },
 }
 
 const PRICES = {
-  ai:  { monthly: 990,  biannual: 4990  },
-  mvp: { monthly: 2990, biannual: 14990 },
+  plus: { monthly: 990,  biannual: 4990  },
+  pro:  { monthly: 2990, biannual: 14990 },
 }
 
 function fmtPrice(n) {
@@ -32,7 +32,7 @@ function fmtPrice(n) {
 function SubInfo({ type, period }) {
   if (!type) return <span>Нет подписки</span>
 
-  const typeLabel = type === 'mvp' ? 'MVP' : 'AI'
+  const typeLabel = type === 'pro' ? 'Pro' : 'Plus'
   const periodLabel = period === 'biannual' ? '6 месяцев' : '1 месяц'
   const price = PRICES[type]?.[period ?? 'monthly']
   const isDiscount = period === 'biannual'
@@ -52,7 +52,7 @@ function SubInfo({ type, period }) {
 }
 
 const SUPPORT_URL = import.meta.env.VITE_SUPPORT_TG_URL || 'https://t.me/topdog_support'
-const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || import.meta.env.VITE_GETCOURSE_MVP_URL || '#'
+const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
 export default function ProfilePage() {
   const { user } = useTelegram()
@@ -112,16 +112,16 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {subscriptionType === 'ai' && (
+      {subscriptionType === 'plus' && (
         <a
-          href={MVP_URL}
+          href={PRO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-accent"
           style={{ textDecoration: 'none', textAlign: 'center' }}
           onClick={() => trackUpgradeIntent()}
         >
-          УЛУЧШИТЬ ДО MVP
+          УЛУЧШИТЬ ДО PRO
         </a>
       )}
 

@@ -439,12 +439,12 @@ async def step_finish(callback: CallbackQuery, state: FSMContext) -> None:
     # If no subscription — additionally show payment options
     if not has_sub:
         buttons = []
-        if settings.GETCOURSE_MVP_URL or settings.GC_PAYMENT_URL_MVP:
-            url = settings.GETCOURSE_MVP_URL or settings.GC_PAYMENT_URL_MVP
-            buttons.append([InlineKeyboardButton(text="MVP — от 2 990 ₽/мес", url=url)])
-        if settings.GETCOURSE_AI_URL or settings.GC_PAYMENT_URL_AI:
-            url = settings.GETCOURSE_AI_URL or settings.GC_PAYMENT_URL_AI
-            buttons.append([InlineKeyboardButton(text="AI — от 990 ₽/мес", url=url)])
+        if settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO:
+            url = settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO
+            buttons.append([InlineKeyboardButton(text="Pro — от 2 990 ₽/мес", url=url)])
+        if settings.GETCOURSE_PLUS_URL or settings.GC_PAYMENT_URL_PLUS:
+            url = settings.GETCOURSE_PLUS_URL or settings.GC_PAYMENT_URL_PLUS
+            buttons.append([InlineKeyboardButton(text="Plus — от 990 ₽/мес", url=url)])
         if not buttons:
             buttons = [[InlineKeyboardButton(text="Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
         pay_kb = InlineKeyboardMarkup(inline_keyboard=buttons)

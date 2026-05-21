@@ -1,7 +1,7 @@
 import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
 
-const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || import.meta.env.VITE_GETCOURSE_MVP_URL || '#'
+const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/topdog_residents'
 
 function LockedScreen() {
@@ -9,7 +9,7 @@ function LockedScreen() {
     <div className="locked-page">
       <h2 className="locked-title">ЧАТ РЕЗИДЕНТОВ</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
-        Доступен на тарифе MVP
+        Доступен на тарифе Pro
       </p>
 
       <div className="card" style={{ width: '100%', marginTop: 8 }}>
@@ -27,7 +27,7 @@ function LockedScreen() {
       </div>
 
       <a
-        href={MVP_URL}
+        href={PRO_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn-accent"
@@ -43,7 +43,7 @@ function LockedScreen() {
 export default function ResidentsChatPage() {
   const { subscriptionType } = useProfile()
 
-  if (subscriptionType !== 'mvp') {
+  if (subscriptionType !== 'pro') {
     return (
       <div className="page">
         <LockedScreen />
@@ -54,7 +54,7 @@ export default function ResidentsChatPage() {
   return (
     <div className="page">
       <h1 className="page-title">ЧАТ</h1>
-      <p className="page-subtitle">РЕЗИДЕНТЫ MVP</p>
+      <p className="page-subtitle">РЕЗИДЕНТЫ PRO</p>
 
       <div className="card" style={{ textAlign: 'center', padding: '32px 16px' }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8, letterSpacing: '0.04em' }}>

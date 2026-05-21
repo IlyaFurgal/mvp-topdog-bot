@@ -7,10 +7,10 @@
 <div class="user-header">
   <h1>{{ user.first_name or '—' }}</h1>
   <span class="user-tg">@{{ user.username or '—' }}</span>
-  {% if user.subscription_type == 'ai' %}
-    <span class="badge badge--ai">AI</span>
-  {% elif user.subscription_type == 'mvp' %}
-    <span class="badge badge--mvp">MVP</span>
+  {% if user.subscription_type == 'plus' %}
+    <span class="badge badge--plus">Plus</span>
+  {% elif user.subscription_type == 'pro' %}
+    <span class="badge badge--pro">Pro</span>
   {% endif %}
   {% if user.subscription_active == 'active' %}
     <span class="badge badge--active">Активна</span>

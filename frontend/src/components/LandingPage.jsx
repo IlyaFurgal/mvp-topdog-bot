@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 
 const DEFAULT_CONFIG = {
-  getcourse_ai_url: '#',
-  getcourse_mvp_url: '#',
-  subscription_ai_1m_price: 990,
-  subscription_ai_6m_price: 4990,
-  subscription_mvp_1m_price: 2990,
-  subscription_mvp_6m_price: 14990,
+  getcourse_plus_url: '#',
+  getcourse_pro_url: '#',
+  subscription_plus_1m_price: 990,
+  subscription_plus_6m_price: 4990,
+  subscription_pro_1m_price: 2990,
+  subscription_pro_6m_price: 14990,
 }
 
 function fmt(n) {
@@ -23,8 +23,8 @@ export default function LandingPage() {
       .catch(() => {})
   }, [])
 
-  const aiUrl = cfg.getcourse_ai_url || '#'
-  const mvpUrl = cfg.getcourse_mvp_url || '#'
+  const plusUrl = cfg.getcourse_plus_url || '#'
+  const proUrl  = cfg.getcourse_pro_url  || '#'
 
   return (
     <div className="landing">
@@ -39,33 +39,33 @@ export default function LandingPage() {
 
       <div className="landing-divider" />
 
-      {/* AI plan */}
+      {/* Plus plan */}
       <div className="landing-plan">
         <div className="landing-plan__header">
-          <span className="landing-plan__badge badge--ai">AI</span>
-          <span className="landing-plan__price">от {fmt(cfg.subscription_ai_1m_price)} ₽/мес</span>
+          <span className="landing-plan__badge badge--plus">Plus</span>
+          <span className="landing-plan__price">от {fmt(cfg.subscription_plus_1m_price)} ₽/мес</span>
         </div>
         <ul className="landing-plan__features">
           <li>🤖 Персональный ИИ-ассистент 24/7</li>
           <li>📊 Трекеры состояния и прогресса</li>
         </ul>
         <a
-          href={aiUrl}
+          href={plusUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-accent landing-plan__btn"
         >
-          ВЫБРАТЬ AI →
+          ВЫБРАТЬ PLUS →
         </a>
       </div>
 
       <div className="landing-divider" />
 
-      {/* MVP plan */}
+      {/* Pro plan */}
       <div className="landing-plan landing-plan--featured">
         <div className="landing-plan__header">
-          <span className="landing-plan__badge badge--mvp">MVP</span>
-          <span className="landing-plan__price">от {fmt(cfg.subscription_mvp_1m_price)} ₽/мес</span>
+          <span className="landing-plan__badge badge--pro">Pro</span>
+          <span className="landing-plan__price">от {fmt(cfg.subscription_pro_1m_price)} ₽/мес</span>
         </div>
         <ul className="landing-plan__features">
           <li>🤖 Персональный ИИ-ассистент 24/7</li>
@@ -74,12 +74,12 @@ export default function LandingPage() {
           <li>📚 База знаний (программы, нутрициология, эфиры)</li>
         </ul>
         <a
-          href={mvpUrl}
+          href={proUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-accent landing-plan__btn"
         >
-          ВЫБРАТЬ MVP →
+          ВЫБРАТЬ PRO →
         </a>
       </div>
 

@@ -9,8 +9,8 @@
 <form method="get" class="filter-bar">
   <select name="subscription_type">
     <option value="">Все тарифы</option>
-    <option value="ai"  {% if filter_sub_type == 'ai' %}selected{% endif %}>AI</option>
-    <option value="mvp" {% if filter_sub_type == 'mvp' %}selected{% endif %}>MVP</option>
+    <option value="plus" {% if filter_sub_type == 'plus' %}selected{% endif %}>Plus</option>
+    <option value="pro"  {% if filter_sub_type == 'pro' %}selected{% endif %}>Pro</option>
   </select>
   <select name="subscription_active">
     <option value="">Любой статус</option>
@@ -53,10 +53,10 @@
       <td style="color:#888">{{ u.username }}</td>
       <td style="color:#666;font-size:12px">{{ u.telegram_id }}</td>
       <td>
-        {% if u.subscription_type == 'ai' %}
-          <span class="badge badge--ai">AI</span>
-        {% elif u.subscription_type == 'mvp' %}
-          <span class="badge badge--mvp">MVP</span>
+        {% if u.subscription_type == 'plus' %}
+          <span class="badge badge--plus">Plus</span>
+        {% elif u.subscription_type == 'pro' %}
+          <span class="badge badge--pro">Pro</span>
         {% else %}
           <span style="color:#555">—</span>
         {% endif %}

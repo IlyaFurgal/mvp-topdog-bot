@@ -25,10 +25,10 @@ def _webapp_kb() -> InlineKeyboardMarkup:
 def _plans_kb() -> InlineKeyboardMarkup:
     """Inline keyboard with payment links for the two plans."""
     buttons = []
-    if settings.GC_PAYMENT_URL_AI:
-        buttons.append([InlineKeyboardButton(text="💡 Тариф AI — до 1 000 ₽/мес", url=settings.GC_PAYMENT_URL_AI)])
-    if settings.GC_PAYMENT_URL_MVP:
-        buttons.append([InlineKeyboardButton(text="🏆 Тариф MVP — 2 990 ₽/мес", url=settings.GC_PAYMENT_URL_MVP)])
+    if settings.GC_PAYMENT_URL_PLUS:
+        buttons.append([InlineKeyboardButton(text="💡 Тариф Plus — до 1 000 ₽/мес", url=settings.GC_PAYMENT_URL_PLUS)])
+    if settings.GC_PAYMENT_URL_PRO:
+        buttons.append([InlineKeyboardButton(text="🏆 Тариф Pro — 2 990 ₽/мес", url=settings.GC_PAYMENT_URL_PRO)])
     if not buttons:
         buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -90,11 +90,11 @@ async def menu_about(message: Message) -> None:
 async def menu_plans(message: Message) -> None:
     text = (
         "📦 *Наши тарифы:*\n\n"
-        "💡 *AI* — до 1 000 ₽/мес\n"
+        "💡 *Plus* — до 1 000 ₽/мес\n"
         "  • ИИ-ассистент (тренер, нутрициолог, здоровье, фокус)\n"
         "  • Чекины и трекеры\n\n"
-        "🏆 *MVP* — 2 990 ₽/мес\n"
-        "  • Всё из AI\n"
+        "🏆 *Pro* — 2 990 ₽/мес\n"
+        "  • Всё из Plus\n"
         "  • Доступ в Telegram-группу резидентов\n"
         "  • База знаний и эфиры на GetCourse\n"
         "  • Офлайн-активности и мероприятия\n"

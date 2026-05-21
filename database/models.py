@@ -84,7 +84,7 @@ class User(Base):
     )
 
     # Billing fields
-    subscription_type: Mapped[str | None] = mapped_column(String(16), nullable=True)    # null / "ai" / "mvp"
+    subscription_type: Mapped[str | None] = mapped_column(String(16), nullable=True)    # null / "plus" / "pro"
     subscription_active: Mapped[str | None] = mapped_column(String(16), nullable=True)  # null / "active" / "inactive"
     subscription_period: Mapped[str | None] = mapped_column(String(16), nullable=True)  # null / "monthly" / "biannual"
     subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
