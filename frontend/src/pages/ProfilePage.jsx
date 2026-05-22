@@ -4,19 +4,19 @@ import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
 import { useTelegram } from '../hooks/useTelegram'
 
-const GOAL_LABELS = {
-  weight_loss: 'Похудение',
-  muscle_gain: 'Набор мышц',
-  maintenance: 'Поддержание',
-  endurance:   'Выносливость',
-}
-
 const GOAL_OPTIONS = [
-  ['muscle_gain', 'Набор мышц'],
-  ['weight_loss',  'Похудение'],
-  ['endurance',    'Выносливость'],
-  ['maintenance',  'Поддержание / здоровье'],
+  ['muscle_gain',    'Набор мышц'],
+  ['weight_loss',    'Похудение'],
+  ['endurance',      'Выносливость'],
+  ['maintenance',    'Поддержание / здоровье'],
+  ['stress',         'Снижение стресса'],
+  ['sleep_quality',  'Улучшение сна'],
+  ['rehabilitation', 'Реабилитация'],
+  ['competition',    'Соревнования'],
+  ['flexibility',    'Гибкость / растяжка'],
 ]
+
+const GOAL_LABELS = Object.fromEntries(GOAL_OPTIONS)
 
 const FITNESS_LABELS = {
   beginner:     'Начинающий',
@@ -445,9 +445,13 @@ export default function ProfilePage() {
       </div>
 
       <div className="card">
-        <div className="profile-row">
-          <span className="profile-label">ЦЕЛЬ</span>
-          <span className="profile-value">{goalsDisplay}</span>
+        <div className="profile-row" style={{ alignItems: 'flex-start' }}>
+          <span className="profile-label" style={{ paddingTop: 2 }}>ЦЕЛЬ</span>
+          <span className="profile-value" style={{ textAlign: 'right' }}>
+            {goalsDisplay === '—' ? '—' : goalsDisplay.split(', ').map((g) => (
+              <span key={g} style={{ display: 'block' }}>{g}</span>
+            ))}
+          </span>
         </div>
         <div className="profile-row">
           <span className="profile-label">УРОВЕНЬ</span>

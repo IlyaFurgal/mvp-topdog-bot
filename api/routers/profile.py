@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import FitnessLevel, Profile, UpgradeIntent, User
+from database.models import FitnessLevel, Profile, Tone, UpgradeIntent, User
 from database.session import get_session
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -53,6 +53,8 @@ async def get_my_profile(
 
 
 class ProfileUpdate(BaseModel):
+    preferred_name:         Optional[str]       = None
+    tone:                   Optional[str]       = None   # "soft" | "aggressive"
     goals:                  Optional[list[str]] = None
     fitness_level:          Optional[str]       = None
     sport_type:             Optional[str]       = None
@@ -74,6 +76,15 @@ async def update_my_profile(
 
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
+
+    if body.preferred_name is not None:
+        profile.preferred_name = body.preferred_name
+
+    if body.tone is not None:
+        try:
+            profile.tone = Tone(body.tone)
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid tone: {body.tone}")
 
     if body.goals is not None:
         profile.goals = body.goals
