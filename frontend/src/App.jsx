@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
 import LandingPage from './components/LandingPage'
@@ -15,47 +15,11 @@ import TrackersPage from './pages/TrackersPage'
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
-// Read once at module load — no re-renders needed
-const TZ_ACTION = new URLSearchParams(window.location.search).get('action')
+// Check pathname at module level — before any routing or auth.
+// /tz  → manual timezone picker (React, no auth required)
+const IS_TZ_SELECT = window.location.pathname === '/tz'
 
-// ── Timezone: detect mode ─────────────────────────────────────────────────────
-
-function DetectTimezone({ tg }) {
-  const offset    = -new Date().getTimezoneOffset() / 60
-  const utcString = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`
-
-  useEffect(() => {
-    tg?.ready()
-    tg?.expand()
-    const t = setTimeout(() => {
-      tg?.sendData(utcString)
-      tg?.close()
-    }, 500)
-    return () => clearTimeout(t)
-  }, [])
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#111',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    }}>
-      <div style={{ fontSize: 44 }}>🌍</div>
-      <div style={{ fontSize: 13, color: '#888', letterSpacing: '0.04em' }}>
-        Определяем часовой пояс…
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: '#C8FF00', letterSpacing: '0.02em' }}>
-        {utcString}
-      </div>
-    </div>
-  )
-}
-
-// ── Timezone: select mode ─────────────────────────────────────────────────────
+// ── Manual timezone picker ────────────────────────────────────────────────────
 
 const UTC_OFFSETS = Array.from({ length: 25 }, (_, i) => {
   const n = i - 12
@@ -93,7 +57,6 @@ function SelectTimezone({ tg }) {
       flexDirection: 'column',
       boxSizing: 'border-box',
     }}>
-      {/* Header */}
       <div style={{ padding: '22px 16px 12px' }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
           🌍 Часовой пояс
@@ -101,7 +64,6 @@ function SelectTimezone({ tg }) {
         <div style={{ fontSize: 12, color: '#666' }}>Выбери свой UTC-offset</div>
       </div>
 
-      {/* Scroll list */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
@@ -135,7 +97,6 @@ function SelectTimezone({ tg }) {
         <div style={{ height: 90 }} />
       </div>
 
-      {/* Sticky button */}
       <div style={{
         position: 'sticky',
         bottom: 0,
@@ -169,7 +130,6 @@ function SelectTimezone({ tg }) {
 
 function AppContent() {
   const { subscriptionType, profileLoading } = useProfile()
-  const location = useLocation()
 
   if (!SKIP_AUTH && !profileLoading && subscriptionType === null) {
     return <LandingPage />
@@ -200,8 +160,12 @@ export default function App() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // For timezone actions — skip auth entirely
-    if (TZ_ACTION === 'detect_timezone' || TZ_ACTION === 'select_timezone') return
+    // Manual timezone picker — skip auth entirely
+    if (IS_TZ_SELECT) {
+      tg?.ready()
+      tg?.expand()
+      return
+    }
 
     tg?.expand()
 
@@ -224,9 +188,8 @@ export default function App() {
       .catch(() => setError('auth-failed'))
   }, [])
 
-  // ── Timezone shortcuts — rendered before auth, no ProfileProvider needed ──
-  if (TZ_ACTION === 'detect_timezone') return <DetectTimezone tg={tg} />
-  if (TZ_ACTION === 'select_timezone') return <SelectTimezone tg={tg} />
+  // ── /tz — manual picker, no auth ──────────────────────────────────────────
+  if (IS_TZ_SELECT) return <SelectTimezone tg={tg} />
 
   // No Telegram context — show marketing landing
   if (error === 'no-telegram' || error === 'auth-failed') {

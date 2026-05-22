@@ -149,17 +149,17 @@ def kb_tone() -> InlineKeyboardMarkup:
 # ── Timezone — WebApp reply keyboard ─────────────────────────────────────────
 
 def kb_timezone_choice(mini_app_url: str) -> ReplyKeyboardMarkup:
-    """Two WebApp buttons: auto-detect or manual scroll picker."""
+    """Two WebApp buttons: auto-detect (static HTML) or manual scroll picker (React /tz)."""
     base = mini_app_url.rstrip("/")
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(
                 text="🔍 ОПРЕДЕЛИТЬ АВТОМАТИЧЕСКИ",
-                web_app=WebAppInfo(url=f"{base}?action=detect_timezone"),
+                web_app=WebAppInfo(url=f"{base}/tz.html"),
             )],
             [KeyboardButton(
                 text="🕐 ВЫБРАТЬ ВРУЧНУЮ",
-                web_app=WebAppInfo(url=f"{base}?action=select_timezone"),
+                web_app=WebAppInfo(url=f"{base}/tz"),
             )],
         ],
         resize_keyboard=True,
