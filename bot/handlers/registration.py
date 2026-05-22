@@ -9,7 +9,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
-    Message, WebAppInfo,
+    Message, ReplyKeyboardRemove, WebAppInfo,
 )
 
 from bot.keyboards.inline import (
@@ -166,6 +166,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         )
 
     await state.set_state(RegistrationForm.greeting)
+    # Убираем любую ReplyKeyboard, оставшуюся от предыдущей сессии
+    await message.answer("👋", reply_markup=ReplyKeyboardRemove())
     await message.answer(
         "Привет! 👊\n\n"
         "Я твой персональный ассистент MVP by TopDog.\n"
