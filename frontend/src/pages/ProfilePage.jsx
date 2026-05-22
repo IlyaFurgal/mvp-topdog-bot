@@ -31,20 +31,46 @@ const FITNESS_OPTIONS = [
 ]
 
 const TIMEZONE_OPTIONS = [
-  ['Europe/Kaliningrad', 'UTC+2  Калининград'],
-  ['Europe/Moscow',      'UTC+3  Москва / Питер'],
-  ['Europe/Samara',      'UTC+4  Самара'],
-  ['Asia/Yekaterinburg', 'UTC+5  Екатеринбург'],
-  ['Asia/Omsk',          'UTC+6  Омск'],
-  ['Asia/Krasnoyarsk',   'UTC+7  Новосибирск / Красноярск'],
-  ['Asia/Irkutsk',       'UTC+8  Иркутск'],
-  ['Asia/Yakutsk',       'UTC+9  Якутск'],
-  ['Asia/Vladivostok',   'UTC+10 Владивосток'],
-  ['Asia/Magadan',       'UTC+11 Магадан'],
-  ['Asia/Kamchatka',     'UTC+12 Камчатка'],
+  ['UTC-12', 'UTC-12 — Baker Island'],
+  ['UTC-11', 'UTC-11 — Samoa'],
+  ['UTC-10', 'UTC-10 — Hawaii'],
+  ['UTC-9',  'UTC-9  — Alaska'],
+  ['UTC-8',  'UTC-8  — Los Angeles, Vancouver'],
+  ['UTC-7',  'UTC-7  — Denver, Phoenix'],
+  ['UTC-6',  'UTC-6  — Chicago, Mexico City'],
+  ['UTC-5',  'UTC-5  — New York, Toronto'],
+  ['UTC-4',  'UTC-4  — Caracas, Halifax'],
+  ['UTC-3',  'UTC-3  — Buenos Aires, São Paulo'],
+  ['UTC-2',  'UTC-2  — Mid-Atlantic'],
+  ['UTC-1',  'UTC-1  — Azores'],
+  ['UTC+0',  'UTC+0  — London, Lisbon'],
+  ['UTC+1',  'UTC+1  — Berlin, Paris, Warsaw'],
+  ['UTC+2',  'UTC+2  — Cairo, Kyiv, Helsinki'],
+  ['UTC+3',  'UTC+3  — Москва, Стамбул, Эр-Рияд'],
+  ['UTC+4',  'UTC+4  — Дубай, Баку'],
+  ['UTC+5',  'UTC+5  — Карачи, Ташкент'],
+  ['UTC+6',  'UTC+6  — Алматы, Дакка'],
+  ['UTC+7',  'UTC+7  — Бангкок, Новосибирск'],
+  ['UTC+8',  'UTC+8  — Пекин, Сингапур, Иркутск'],
+  ['UTC+9',  'UTC+9  — Токио, Сеул, Якутск'],
+  ['UTC+10', 'UTC+10 — Сидней, Владивосток'],
+  ['UTC+11', 'UTC+11 — Магадан, Соломоновы острова'],
+  ['UTC+12', 'UTC+12 — Окленд, Камчатка'],
 ]
 
-const PUSH_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00']
+// Morning: 05:00–12:00 step 30min
+const MORNING_TIMES = []
+for (let h = 5; h <= 12; h++) {
+  MORNING_TIMES.push(`${String(h).padStart(2,'0')}:00`)
+  if (h < 12) MORNING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
+}
+
+// Evening: 18:00–23:30 step 30min
+const EVENING_TIMES = []
+for (let h = 18; h <= 23; h++) {
+  EVENING_TIMES.push(`${String(h).padStart(2,'0')}:00`)
+  EVENING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
+}
 
 const SUB_BADGE = {
   plus: { label: 'Plus', cls: 'badge--plus' },
@@ -102,13 +128,12 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   // Sport type (free text)
   const [sportType, setSportType] = useState(profile?.sport_type ?? '')
 
-  // Push time
-  const [pushTime, setPushTime] = useState(profile?.push_time ?? '')
-  const [customTime, setCustomTime] = useState('')
-  const [showCustomTime, setShowCustomTime] = useState(false)
-
   // Timezone
-  const [tz, setTz] = useState(profile?.timezone ?? 'Europe/Moscow')
+  const [tz, setTz] = useState(profile?.timezone ?? 'UTC+3')
+
+  // Reminder times
+  const [morningTime, setMorningTime] = useState(profile?.morning_reminder_time ?? '08:00')
+  const [eveningTime, setEveningTime] = useState(profile?.evening_reminder_time ?? '21:00')
 
   function toggleGoal(key) {
     setSelectedGoals((prev) =>
@@ -118,31 +143,15 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 
   async function handleSave() {
     setError(null)
-    // Validate custom time
-    let finalPushTime = pushTime
-    if (showCustomTime) {
-      const parts = customTime.split(':')
-      if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
-        setError('Неверный формат времени. Используй ЧЧ:ММ, например 07:30')
-        return
-      }
-      const hh = parseInt(parts[0], 10)
-      const mm = parseInt(parts[1], 10)
-      if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
-        setError('Время вне допустимого диапазона')
-        return
-      }
-      finalPushTime = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-    }
-
     setSaving(true)
     try {
       await client.patch('/profile/me', {
-        goals:         selectedGoals.length > 0 ? selectedGoals : undefined,
-        fitness_level: fitnessLevel || undefined,
-        sport_type:    sportType || undefined,
-        push_time:     finalPushTime || undefined,
-        timezone:      tz || undefined,
+        goals:                 selectedGoals.length > 0 ? selectedGoals : undefined,
+        fitness_level:         fitnessLevel || undefined,
+        sport_type:            sportType || undefined,
+        timezone:              tz || undefined,
+        morning_reminder_time: morningTime || undefined,
+        evening_reminder_time: eveningTime || undefined,
       })
       onSaved()
     } catch (e) {
@@ -251,63 +260,47 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           ))}
         </select>
 
-        {/* Push time */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ВРЕМЯ НАПОМИНАНИЯ</p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-          {PUSH_TIMES.map((t) => (
-            <button
-              key={t}
-              onClick={() => { setPushTime(t); setShowCustomTime(false) }}
-              style={{
-                padding: '7px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: pushTime === t && !showCustomTime ? 'var(--accent)' : 'var(--card-bg)',
-                color: pushTime === t && !showCustomTime ? '#000' : 'var(--text)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
-            >
-              {t}
-            </button>
+        {/* Morning reminder */}
+        <p className="section-label" style={{ marginBottom: 8 }}>УТРЕННЕЕ НАПОМИНАНИЕ</p>
+        <select
+          value={morningTime}
+          onChange={(e) => setMorningTime(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            marginBottom: 16,
+          }}
+        >
+          {MORNING_TIMES.map((t) => (
+            <option key={t} value={t}>{t}</option>
           ))}
-          <button
-            onClick={() => { setShowCustomTime(true); setPushTime('') }}
-            style={{
-              padding: '7px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: showCustomTime ? 'var(--accent)' : 'var(--card-bg)',
-              color: showCustomTime ? '#000' : 'var(--text)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-            }}
-          >
-            ✏️ Другое
-          </button>
-        </div>
-        {showCustomTime && (
-          <input
-            type="text"
-            value={customTime}
-            onChange={(e) => setCustomTime(e.target.value)}
-            placeholder="07:30"
-            maxLength={5}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'var(--card-bg)',
-              color: 'var(--text)',
-              fontSize: '0.9rem',
-              boxSizing: 'border-box',
-              marginBottom: 8,
-            }}
-          />
-        )}
+        </select>
+
+        {/* Evening reminder */}
+        <p className="section-label" style={{ marginBottom: 8 }}>ВЕЧЕРНЕЕ НАПОМИНАНИЕ</p>
+        <select
+          value={eveningTime}
+          onChange={(e) => setEveningTime(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            marginBottom: 16,
+          }}
+        >
+          {EVENING_TIMES.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
 
         {error && (
           <p style={{ color: '#ff4444', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>
@@ -355,8 +348,28 @@ export default function ProfilePage() {
     : '—'
 
   return (
-    <div className="page">
+    <div className="page" style={{ position: 'relative' }}>
       <h1 className="page-title">ПРОФИЛЬ</h1>
+      <button
+        onClick={() => setEditOpen(true)}
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          background: 'transparent',
+          border: '1px solid #2a2a2a',
+          color: '#888888',
+          fontSize: 12,
+          padding: '6px 12px',
+          borderRadius: 4,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          fontWeight: 600,
+          letterSpacing: '0.04em',
+        }}
+      >
+        Изменить
+      </button>
 
       <div className="profile-header">
         <div className="avatar">{initials}</div>
@@ -394,25 +407,21 @@ export default function ProfilePage() {
         </div>
         <div className="profile-row">
           <span className="profile-label">ЧАСОВОЙ ПОЯС</span>
-          <span className="profile-value" style={{ fontSize: '0.8rem' }}>{tzLabel}</span>
+          <span className="profile-value" style={{ fontSize: '0.85rem' }}>{profile?.timezone ?? '—'}</span>
         </div>
         <div className="profile-row">
-          <span className="profile-label">НАПОМИНАНИЕ</span>
-          <span className="profile-value">{profile?.push_time ?? '—'}</span>
+          <span className="profile-label">УТРО</span>
+          <span className="profile-value">{profile?.morning_reminder_time ?? '08:00'}</span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">ВЕЧЕР</span>
+          <span className="profile-value">{profile?.evening_reminder_time ?? '21:00'}</span>
         </div>
         <div className="profile-row">
           <span className="profile-label">ТАРИФ</span>
           <SubInfo type={subscriptionType} period={subscriptionPeriod} />
         </div>
       </div>
-
-      <button
-        className="btn btn-outline"
-        onClick={() => setEditOpen(true)}
-        style={{ marginBottom: 8 }}
-      >
-        ✏️ РЕДАКТИРОВАТЬ
-      </button>
 
       {subscriptionType === 'plus' && (
         <a

@@ -106,13 +106,14 @@ async def get_tracker_history(
     )
     trackers = result.scalars().all()
 
-    # Water: group by date and sum
-    if tracker_type == TrackerType.water:
+    # Water / calories: group by date and sum
+    if tracker_type in (TrackerType.water, TrackerType.calories):
+        unit = "ml" if tracker_type == TrackerType.water else "kcal"
         by_date: dict = {}
         for t in trackers:
             d = t.created_at.date().isoformat()
             by_date[d] = by_date.get(d, 0) + t.value
-        return [{"value": round(v), "unit": "ml", "created_at": d} for d, v in sorted(by_date.items())]
+        return [{"value": round(v), "unit": unit, "created_at": d} for d, v in sorted(by_date.items())]
 
     # Weight / sleep: latest per day
     by_date_single: dict = {}

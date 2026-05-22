@@ -40,6 +40,8 @@ async def get_my_profile(
         "sport_type":           profile.sport_type if profile else None,
         "timezone":             profile.timezone if profile else None,
         "push_time":            profile.push_time if profile else None,
+        "morning_reminder_time": profile.morning_reminder_time if profile else "08:00",
+        "evening_reminder_time": profile.evening_reminder_time if profile else "21:00",
         # Subscription
         "subscription_type":    user.subscription_type,
         "subscription_active":  user.subscription_active,
@@ -51,11 +53,13 @@ async def get_my_profile(
 
 
 class ProfileUpdate(BaseModel):
-    goals:         Optional[list[str]] = None
-    fitness_level: Optional[str]       = None
-    sport_type:    Optional[str]       = None
-    push_time:     Optional[str]       = None   # "HH:MM"
-    timezone:      Optional[str]       = None
+    goals:                  Optional[list[str]] = None
+    fitness_level:          Optional[str]       = None
+    sport_type:             Optional[str]       = None
+    push_time:              Optional[str]       = None   # "HH:MM"
+    timezone:               Optional[str]       = None
+    morning_reminder_time:  Optional[str]       = None   # "HH:MM"
+    evening_reminder_time:  Optional[str]       = None   # "HH:MM"
 
 
 @router.patch("/me")
@@ -92,6 +96,19 @@ async def update_my_profile(
 
     if body.timezone is not None:
         profile.timezone = body.timezone
+
+    def _validate_time(val: str, field: str) -> str:
+        parts = val.split(":")
+        if len(parts) != 2 or not (parts[0].isdigit() and parts[1].isdigit()):
+            raise HTTPException(status_code=422, detail=f"{field} must be HH:MM")
+        return val
+
+    if body.morning_reminder_time is not None:
+        profile.morning_reminder_time = _validate_time(body.morning_reminder_time, "morning_reminder_time")
+        profile.push_time = profile.morning_reminder_time  # keep alias in sync
+
+    if body.evening_reminder_time is not None:
+        profile.evening_reminder_time = _validate_time(body.evening_reminder_time, "evening_reminder_time")
 
     await session.commit()
     return {"status": "ok"}

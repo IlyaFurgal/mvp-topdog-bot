@@ -61,6 +61,7 @@ export default function ProgressPage() {
   const [weightData, setWeightData] = useState([])
   const [waterData, setWaterData] = useState([])
   const [sleepData, setSleepData] = useState([])
+  const [caloriesData, setCaloriesData] = useState([])
   const [stats, setStats] = useState(null)
   const [checkins, setCheckins] = useState([])
   const [insight, setInsight] = useState(null)
@@ -74,14 +75,16 @@ export default function ProgressPage() {
       getTrackerHistory('weight', days),
       getTrackerHistory('water', days),
       getTrackerHistory('sleep', days),
+      getTrackerHistory('calories', days),
       getTrackerStats(days),
       getCheckinHistory(500),
       getWeeklyInsight(),
     ])
-      .then(([wt, wa, sl, st, ch, ins]) => {
+      .then(([wt, wa, sl, cal, st, ch, ins]) => {
         setWeightData(wt)
         setWaterData(wa)
         setSleepData(sl)
+        setCaloriesData(cal)
         setStats(st)
         setCheckins(ch)
         setInsight(ins)
@@ -122,7 +125,7 @@ export default function ProgressPage() {
 
   return (
     <div className="page">
-      <h1 className="page-title">PROGRESS</h1>
+      <h1 className="page-title">ПРОГРЕСС</h1>
 
       <div className="period-tabs">
         {PERIODS.map((p, i) => (
@@ -236,6 +239,60 @@ export default function ProgressPage() {
                   { label: 'СРЕДНЕЕ 7 ДНЕЙ', value: `${Math.round(stats.water.avg_7days)} мл` },
                   { label: 'СЕГОДНЯ', value: `${Math.round(stats.water.today)} мл` },
                   { label: 'ЦЕЛЬ', value: `${stats.water.goal} мл` },
+                ]}
+              />
+            )}
+          </div>
+
+          {/* ── Calories ────────────────────────────────── */}
+          <div className="card chart-card">
+            <div className="chart-header">
+              <span className="chart-title">КАЛОРИИ</span>
+              {stats?.calories && (
+                <span className="chart-current">{Math.round(stats.calories.avg_7days)} ккал/день</span>
+              )}
+            </div>
+            {caloriesData.length === 0 ? (
+              <EmptyChart />
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={caloriesData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <XAxis
+                    dataKey="created_at"
+                    tickFormatter={fmtDate}
+                    tick={{ fill: '#666', fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={['auto', 'auto']}
+                    tick={{ fill: '#666', fontSize: 10 }}
+                    width={44}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(v) => [`${Math.round(v)} ккал`, 'Калории']}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={fmtDate}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#C8FF00"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#C8FF00', strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: '#C8FF00' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+            {stats?.calories && (
+              <StatRow
+                items={[
+                  { label: 'МИН', value: caloriesData.length ? `${Math.round(Math.min(...caloriesData.map(d => d.value)))} ккал` : null },
+                  { label: 'МАКС', value: caloriesData.length ? `${Math.round(Math.max(...caloriesData.map(d => d.value)))} ккал` : null },
+                  { label: 'СРЕДНЕЕ', value: `${Math.round(stats.calories.avg_7days)} ккал` },
                 ]}
               />
             )}

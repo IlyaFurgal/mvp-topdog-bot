@@ -4,27 +4,31 @@ import { useProfile } from '../context/ProfileContext'
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/topdog_residents'
 
-function LockedScreen() {
+function LockedScreen({ isPlusUser }) {
   return (
     <div className="locked-page">
-      <h2 className="locked-title">ЧАТ РЕЗИДЕНТОВ</h2>
+      <h2 className="locked-title">
+        {isPlusUser ? 'ЧАТ ДОСТУПЕН НА ТАРИФЕ PRO' : 'ЧАТ РЕЗИДЕНТОВ'}
+      </h2>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
-        Доступен на тарифе Pro
+        {isPlusUser ? 'Закрытое сообщество резидентов клуба.' : 'Доступен на тарифе Pro'}
       </p>
 
-      <div className="card" style={{ width: '100%', marginTop: 8 }}>
-        <div className="profile-row">
-          <span className="profile-label">1 месяц</span>
-          <span className="profile-value">2 990 ₽</span>
+      {!isPlusUser && (
+        <div className="card" style={{ width: '100%', marginTop: 8 }}>
+          <div className="profile-row">
+            <span className="profile-label">1 месяц</span>
+            <span className="profile-value">2 990 ₽</span>
+          </div>
+          <div className="profile-row">
+            <span className="profile-label">6 месяцев</span>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <span className="profile-value">14 990 ₽</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>–16%</span>
+            </span>
+          </div>
         </div>
-        <div className="profile-row">
-          <span className="profile-label">6 месяцев</span>
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span className="profile-value">14 990 ₽</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>–16%</span>
-          </span>
-        </div>
-      </div>
+      )}
 
       <a
         href={PRO_URL}
@@ -34,7 +38,7 @@ function LockedScreen() {
         style={{ textDecoration: 'none', textAlign: 'center', width: '100%' }}
         onClick={() => trackUpgradeIntent()}
       >
-        UPGRADE →
+        УЛУЧШИТЬ ДО PRO →
       </a>
     </div>
   )
@@ -46,7 +50,7 @@ export default function ResidentsChatPage() {
   if (subscriptionType !== 'pro') {
     return (
       <div className="page">
-        <LockedScreen />
+        <LockedScreen isPlusUser={subscriptionType === 'plus'} />
       </div>
     )
   }

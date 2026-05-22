@@ -57,7 +57,9 @@ export default function TrackersPage() {
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">ТРЕКЕРЫ</h1>
-        <span className={`checkin-status ${status.cls}`}>{status.label}</span>
+        {status.cls !== 'status--open' && (
+          <span className={`checkin-status ${status.cls}`}>{status.label}</span>
+        )}
       </div>
       <p className="page-subtitle">СЕГОДНЯ</p>
 

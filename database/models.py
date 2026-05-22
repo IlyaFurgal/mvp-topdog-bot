@@ -115,8 +115,10 @@ class Profile(Base):
     tone: Mapped[Tone] = mapped_column(Enum(Tone), default=Tone.soft)
     # New fields
     goals: Mapped[list | None] = mapped_column(JSONB, nullable=True)       # ["muscle_gain", "weight_loss"]
-    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)  # "Europe/Moscow"
-    push_time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # "08:00" (morning)
+    timezone: Mapped[str | None] = mapped_column(String(16), nullable=True)  # "UTC+3"
+    push_time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # "08:00" (morning, alias)
+    morning_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="08:00")
+    evening_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="21:00")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

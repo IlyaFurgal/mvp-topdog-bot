@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, or_
 
 from api.services.getcourse import sync_progress_to_gc
 from core.config import settings
@@ -19,9 +19,8 @@ from database.session import AsyncSessionLocal
 logger = logging.getLogger(__name__)
 MOSCOW = pytz.timezone("Europe/Moscow")
 
-# ── In-memory dedup: user_id → date of last morning push sent ────────────────
-# Prevents duplicate sends if the per-minute job overlaps midnight or restarts.
-_morning_sent: dict[int, date] = {}
+# ── In-memory dedup: (user_id, checkin_type) → date last sent ────────────────
+_reminder_sent: dict[tuple[int, str], date] = {}
 
 
 def _webapp_kb() -> InlineKeyboardMarkup:
@@ -55,153 +54,86 @@ async def _has_morning_checkin_today(session, user_id: int) -> bool:
     return result.scalar_one_or_none() is not None
 
 
-async def _get_active_users_without_checkin(checkin_type: CheckinType) -> list[User]:
-    today_start = datetime.combine(date.today(), datetime.min.time()).replace(
-        tzinfo=timezone.utc
-    )
-    async with AsyncSessionLocal() as session:
-        users_result = await session.execute(
-            select(User).where(User.is_active == True)
-        )
-        users = users_result.scalars().all()
 
-        result = []
-        for user in users:
-            done = await session.execute(
-                select(Checkin).where(
-                    and_(
-                        Checkin.user_id == user.id,
-                        Checkin.type == checkin_type,
-                        Checkin.created_at >= today_start,
-                    )
-                )
-            )
-            if not done.scalar_one_or_none():
-                result.append(user)
-        return result
+def _user_local_time(tz_str: str | None) -> datetime:
+    """Return current datetime in user's UTC-offset timezone (e.g. 'UTC+3')."""
+    tz_str = (tz_str or "UTC+3").strip()
+    try:
+        if tz_str.startswith("UTC"):
+            rest = tz_str[3:]  # "+3", "-5", "+10", "" (UTC)
+            if not rest:
+                offset_hours = 0.0
+            else:
+                offset_hours = float(rest)
+        else:
+            # Fallback: try pytz name
+            user_tz = pytz.timezone(tz_str)
+            return datetime.now(timezone.utc).astimezone(user_tz)
+        user_tz = timezone(timedelta(hours=offset_hours))
+    except Exception:
+        user_tz = timezone(timedelta(hours=3))  # МСК fallback
+    return datetime.now(user_tz)
 
 
-# ── Personal push-time morning reminders (runs every minute) ─────────────────
-
-async def send_personal_morning_reminders(bot: Bot) -> None:
+async def check_reminders(bot: Bot) -> None:
     """
-    For each active user who has a push_time set, check if their local time
-    matches push_time right now (within this minute). Send morning reminder
-    if not already sent today and no morning checkin exists yet.
+    Runs every minute.
+    For each active user, compare their local HH:MM against
+    morning_reminder_time and evening_reminder_time.
+    Sends the appropriate reminder if not already sent today.
     """
     now_utc = datetime.now(timezone.utc)
     today = now_utc.date()
 
     async with AsyncSessionLocal() as session:
-        # Join User ↔ Profile to get users with push_time set
         rows = (await session.execute(
             select(User, Profile)
-            .join(Profile, Profile.user_id == User.id)
-            .where(
-                User.is_active == True,
-                Profile.push_time.isnot(None),
-                Profile.push_time != "",
-            )
+            .outerjoin(Profile, Profile.user_id == User.id)
+            .where(User.is_active == True)
         )).all()
 
     for user, profile in rows:
         try:
-            # Determine user's local time
-            tz_name = profile.timezone or "Europe/Moscow"
-            try:
-                user_tz = pytz.timezone(tz_name)
-            except pytz.exceptions.UnknownTimeZoneError:
-                user_tz = MOSCOW
+            now_local = _user_local_time(profile.timezone if profile else None)
+            hhmm = now_local.strftime("%H:%M")
 
-            now_local = now_utc.astimezone(user_tz)
-            local_hhmm = now_local.strftime("%H:%M")
+            morning_time = (profile.morning_reminder_time if profile and profile.morning_reminder_time
+                            else (profile.push_time if profile and profile.push_time else "08:00"))
+            evening_time = (profile.evening_reminder_time if profile and profile.evening_reminder_time
+                            else "21:00")
 
-            if local_hhmm != profile.push_time:
-                continue
+            # ── Morning ──────────────────────────────────────────────
+            if hhmm == morning_time:
+                key = (user.id, "morning")
+                if _reminder_sent.get(key) != today:
+                    async with AsyncSessionLocal() as s:
+                        already = await _has_morning_checkin_today(s, user.id)
+                    if not already:
+                        await bot.send_message(
+                            chat_id=user.telegram_id,
+                            text="Доброе утро! 🌅 Время утреннего чекина — как ты сегодня?",
+                            reply_markup=_webapp_kb(),
+                        )
+                    _reminder_sent[key] = today
 
-            # Dedup: already sent today?
-            if _morning_sent.get(user.id) == today:
-                continue
-
-            # Also check if user already has a morning checkin
-            async with AsyncSessionLocal() as session:
-                if await _has_morning_checkin_today(session, user.id):
-                    _morning_sent[user.id] = today
-                    continue
-
-            await bot.send_message(
-                chat_id=user.telegram_id,
-                text="Доброе утро! 🌅 Время утреннего чекина — как ты сегодня?",
-                reply_markup=_webapp_kb(),
-            )
-            _morning_sent[user.id] = today
-            logger.info("Personal morning push sent to user %s at %s", user.telegram_id, local_hhmm)
+            # ── Evening ──────────────────────────────────────────────
+            if hhmm == evening_time:
+                key = (user.id, "evening")
+                if _reminder_sent.get(key) != today:
+                    await bot.send_message(
+                        chat_id=user.telegram_id,
+                        text="Время вечернего чекина. Как прошёл день? 🌙",
+                        reply_markup=_webapp_kb(),
+                    )
+                    _reminder_sent[key] = today
 
         except Exception as exc:
-            logger.warning("Personal morning push failed for user %s: %s", user.telegram_id, exc)
+            logger.warning("check_reminders failed for user %s: %s", user.telegram_id, exc)
 
-    # Clean up old entries from _morning_sent (keep only today's)
-    stale = [uid for uid, d in _morning_sent.items() if d < today]
-    for uid in stale:
-        del _morning_sent[uid]
-
-
-# ── Fallback broadcast reminders (for users without personal push_time) ───────
-
-async def send_morning_reminders(bot: Bot) -> None:
-    """Broadcast morning reminder at 08:00 Moscow for users without push_time."""
-    async with AsyncSessionLocal() as session:
-        rows = (await session.execute(
-            select(User)
-            .outerjoin(Profile, Profile.user_id == User.id)
-            .where(
-                User.is_active == True,
-                (Profile.push_time == None) | (Profile.push_time == ""),
-            )
-        )).scalars().all()
-
-    today_start = datetime.combine(date.today(), datetime.min.time()).replace(
-        tzinfo=timezone.utc
-    )
-    to_notify = []
-    async with AsyncSessionLocal() as session:
-        for user in rows:
-            done = await session.execute(
-                select(Checkin).where(
-                    and_(
-                        Checkin.user_id == user.id,
-                        Checkin.type == CheckinType.morning,
-                        Checkin.created_at >= today_start,
-                    )
-                )
-            )
-            if not done.scalar_one_or_none():
-                to_notify.append(user)
-
-    logger.info("Broadcast morning reminders: %d users to notify", len(to_notify))
-    for user in to_notify:
-        try:
-            await bot.send_message(
-                chat_id=user.telegram_id,
-                text="Доброе утро! Время утреннего чекина.",
-                reply_markup=_webapp_kb(),
-            )
-        except Exception as e:
-            logger.warning("Failed to notify user %s: %s", user.telegram_id, e)
-
-
-async def send_evening_reminders(bot: Bot) -> None:
-    users = await _get_active_users_without_checkin(CheckinType.evening)
-    logger.info("Evening reminders: %d users to notify", len(users))
-    for user in users:
-        try:
-            await bot.send_message(
-                chat_id=user.telegram_id,
-                text="Время вечернего чекина. Как прошёл день?",
-                reply_markup=_webapp_kb(),
-            )
-        except Exception as e:
-            logger.warning("Failed to notify user %s: %s", user.telegram_id, e)
+    # Clean up stale entries (older than today)
+    stale = [k for k, d in _reminder_sent.items() if d < today]
+    for k in stale:
+        del _reminder_sent[k]
 
 
 async def check_upgrade_reminders(bot: Bot) -> None:
@@ -378,27 +310,12 @@ async def sync_progress_to_getcourse() -> None:
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=MOSCOW)
 
-    # Personal push: every minute — checks each user's local HH:MM vs their push_time
+    # Per-minute check: sends morning/evening reminders based on each user's local time
     scheduler.add_job(
-        send_personal_morning_reminders,
+        check_reminders,
         IntervalTrigger(minutes=1),
         args=[bot],
-        id="personal_morning_reminders",
-    )
-
-    # Fallback broadcast: 08:00 Moscow for users without a personal push_time
-    scheduler.add_job(
-        send_morning_reminders,
-        CronTrigger(hour=8, minute=0, timezone=MOSCOW),
-        args=[bot],
-        id="morning_reminders",
-    )
-
-    scheduler.add_job(
-        send_evening_reminders,
-        CronTrigger(hour=21, minute=0, timezone=MOSCOW),
-        args=[bot],
-        id="evening_reminders",
+        id="check_reminders",
     )
     scheduler.add_job(
         check_upgrade_reminders,
