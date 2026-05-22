@@ -118,6 +118,12 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
+  // Preferred name
+  const [preferredName, setPreferredName] = useState(profile?.preferred_name ?? '')
+
+  // Tone
+  const [tone, setTone] = useState(profile?.tone ?? 'soft')
+
   // Goals: multi-select
   const initialGoals = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
   const [selectedGoals, setSelectedGoals] = useState(initialGoals)
@@ -146,6 +152,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     setSaving(true)
     try {
       await client.patch('/profile/me', {
+        preferred_name:        preferredName || undefined,
+        tone:                  tone || undefined,
         goals:                 selectedGoals.length > 0 ? selectedGoals : undefined,
         fitness_level:         fitnessLevel || undefined,
         sport_type:            sportType || undefined,
@@ -170,6 +178,53 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         <div className="modal-header">
           <span className="modal-title">РЕДАКТИРОВАТЬ ПРОФИЛЬ</span>
           <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Preferred name */}
+        <p className="section-label" style={{ marginBottom: 8 }}>ИМЯ</p>
+        <input
+          type="text"
+          value={preferredName}
+          onChange={(e) => setPreferredName(e.target.value)}
+          placeholder="Как к тебе обращаться?"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            boxSizing: 'border-box',
+            marginBottom: 16,
+          }}
+        />
+
+        {/* Tone */}
+        <p className="section-label" style={{ marginBottom: 8 }}>СТИЛЬ ОБЩЕНИЯ</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {[
+            ['aggressive', '💪 Жёсткий'],
+            ['soft',       '🤝 Мягкий'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTone(key)}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: tone === key ? 'var(--accent)' : 'var(--card-bg)',
+                color: tone === key ? '#000' : 'var(--text)',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Goals */}
@@ -326,13 +381,16 @@ export default function ProfilePage() {
   const { profile, subscriptionType, subscriptionPeriod, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
 
-  const initials = user
-    ? `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase() || 'TG'
-    : 'TG'
+  // Prefer the name the user set during registration
+  const displayName = profile?.preferred_name
+    || (user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'Пользователь')
 
-  const fullName = user
-    ? [user.first_name, user.last_name].filter(Boolean).join(' ')
-    : (profile?.preferred_name ?? 'Пользователь')
+  const initials = (() => {
+    const words = displayName.trim().split(/\s+/)
+    return words.length >= 2
+      ? (words[0][0] + words[1][0]).toUpperCase()
+      : displayName.slice(0, 2).toUpperCase()
+  })()
 
   const badge = subscriptionType ? SUB_BADGE[subscriptionType] : null
 
@@ -375,7 +433,7 @@ export default function ProfilePage() {
         <div className="avatar">{initials}</div>
         <div className="profile-name">
           <div className="profile-name-row">
-            <span className="profile-name-text">{fullName}</span>
+            <span className="profile-name-text">{displayName}</span>
             {badge && (
               <span className={`sub-badge ${badge.cls}`}>{badge.label}</span>
             )}
