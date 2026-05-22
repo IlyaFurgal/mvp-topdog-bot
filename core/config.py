@@ -24,11 +24,39 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     MINI_APP_URL: str = "https://topdogmvp.ru"
 
-    # GetCourse integration
+    # GetCourse integration — base
     GC_API_KEY: str = ""
     GC_ACCOUNT: str = "topdog-mvp"
-    GC_OFFER_CODE_PLUS: str = ""
-    GC_OFFER_CODE_PRO: str = ""
+
+    # GetCourse offer codes (per-period)
+    GC_OFFER_CODE_PRO: str = ""          # legacy single-code fallback
+    GC_OFFER_CODE_PLUS: str = ""         # legacy single-code fallback
+    GC_OFFER_CODE_PRO_1M: str = ""
+    GC_OFFER_CODE_PRO_1M_RENEW: str = ""
+    GC_OFFER_CODE_PRO_6M: str = ""
+    GC_OFFER_CODE_PRO_6M_RENEW: str = ""
+    GC_OFFER_CODE_PLUS_1M: str = ""
+    GC_OFFER_CODE_PLUS_1M_RENEW: str = ""
+    GC_OFFER_CODE_PLUS_6M: str = ""
+    GC_OFFER_CODE_PLUS_6M_RENEW: str = ""
+
+    # GetCourse groups
+    GC_GROUP_PLUS: str = ""
+    GC_GROUP_PRO: str = ""
+
+    # GetCourse extra-field names (configured in GC account)
+    GC_FIELD_DISCIPLINE: str = ""
+    GC_FIELD_CHECKINS: str = ""
+    GC_FIELD_WEIGHT: str = ""
+    GC_FIELD_SLEEP: str = ""
+    GC_FIELD_WATER: str = ""
+    GC_FIELD_LAST_CHECKIN: str = ""
+    GC_FIELD_GOAL: str = ""
+    GC_FIELD_SUBSCRIPTION: str = ""
+    GC_FIELD_REGISTERED_AT: str = ""
+    GC_FIELD_USERNAME: str = ""
+
+    # Payment / landing URLs
     GC_PAYMENT_URL_PLUS: str = ""
     GC_PAYMENT_URL_PRO: str = ""
     GETCOURSE_PLUS_URL: str = ""
