@@ -51,6 +51,8 @@ async def create_profile(
     tone: Tone = Tone.soft,
     timezone: str | None = None,
     push_time: str | None = None,
+    morning_reminder_time: str | None = None,
+    evening_reminder_time: str | None = None,
 ) -> Profile:
     profile = Profile(
         user_id=user_id,
@@ -68,6 +70,8 @@ async def create_profile(
         tone=tone,
         timezone=timezone,
         push_time=push_time,
+        morning_reminder_time=morning_reminder_time,
+        evening_reminder_time=evening_reminder_time,
     )
     session.add(profile)
     await session.commit()

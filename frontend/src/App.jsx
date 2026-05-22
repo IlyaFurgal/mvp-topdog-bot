@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
 import LandingPage from './components/LandingPage'
@@ -11,12 +11,20 @@ import KnowledgePage from './pages/KnowledgePage'
 import ProfilePage from './pages/ProfilePage'
 import ProgressPage from './pages/ProgressPage'
 import ResidentsChatPage from './pages/ResidentsChatPage'
+import TimezonePage from './pages/TimezonePage'
 import TrackersPage from './pages/TrackersPage'
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
 function AppContent() {
   const { subscriptionType, profileLoading } = useProfile()
+  const location = useLocation()
+
+  // Timezone picker is opened from the bot during registration —
+  // bypass subscription check so it always renders.
+  if (location.pathname === '/timezone') {
+    return <TimezonePage />
+  }
 
   if (!SKIP_AUTH && !profileLoading && subscriptionType === null) {
     return <LandingPage />
@@ -34,6 +42,7 @@ function AppContent() {
           <Route path="/knowledge" element={<KnowledgePage />} />
           <Route path="/residents" element={<ResidentsChatPage />} />
           <Route path="/profile"   element={<ProfilePage />} />
+          <Route path="/timezone"  element={<TimezonePage />} />
         </Routes>
       </main>
       <BottomNav />

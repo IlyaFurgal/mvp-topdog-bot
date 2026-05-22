@@ -40,6 +40,9 @@ class RegistrationForm(StatesGroup):
     # 10. Часовой пояс
     timezone = State()
 
-    # 11. Время напоминаний
+    # 11. Время утреннего чекина
     push_time = State()
     push_time_custom = State()   # если пользователь вводит вручную
+
+    # 12. Время вечернего чекина
+    evening_reminder_time = State()

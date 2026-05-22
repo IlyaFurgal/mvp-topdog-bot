@@ -1,4 +1,7 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    InlineKeyboardButton, InlineKeyboardMarkup,
+    KeyboardButton, ReplyKeyboardMarkup, WebAppInfo,
+)
 
 
 def kb_start() -> InlineKeyboardMarkup:
@@ -36,22 +39,31 @@ def kb_fitness() -> InlineKeyboardMarkup:
 # ── Multi-select goals ────────────────────────────────────────────────────────
 
 GOAL_OPTIONS = [
-    ("muscle_gain", "Набор мышц"),
-    ("weight_loss",  "Похудение"),
-    ("endurance",    "Выносливость"),
-    ("maintenance",  "Поддержание / здоровье"),
+    ("muscle_gain",    "Набор мышц"),
+    ("weight_loss",    "Похудение"),
+    ("endurance",      "Выносливость"),
+    ("maintenance",    "Поддержание / здоровье"),
+    ("stress",         "Снижение стресса"),
+    ("sleep_quality",  "Улучшение сна"),
+    ("rehabilitation", "Реабилитация"),
+    ("competition",    "Соревнования"),
+    ("flexibility",    "Гибкость / растяжка"),
 ]
 
 
 def kb_goals(selected: list[str]) -> InlineKeyboardMarkup:
-    """Multi-select keyboard: tap to toggle, 'Done' when ≥1 selected."""
+    """Multi-select keyboard: 2 per row, 'Done' when ≥1 selected."""
     rows = []
-    for key, label in GOAL_OPTIONS:
-        check = "✅ " if key in selected else "◻️ "
-        rows.append([InlineKeyboardButton(
-            text=f"{check}{label}",
-            callback_data=f"reg_goals_toggle_{key}",
-        )])
+    items = list(GOAL_OPTIONS)
+    for i in range(0, len(items), 2):
+        row = []
+        for key, label in items[i:i + 2]:
+            check = "✅ " if key in selected else "◻️ "
+            row.append(InlineKeyboardButton(
+                text=f"{check}{label}",
+                callback_data=f"reg_goals_toggle_{key}",
+            ))
+        rows.append(row)
     if selected:
         rows.append([InlineKeyboardButton(
             text=f"Готово ({len(selected)}) →",
@@ -134,45 +146,63 @@ def kb_tone() -> InlineKeyboardMarkup:
     ])
 
 
-# ── Timezone ──────────────────────────────────────────────────────────────────
+# ── Timezone — WebApp reply keyboard ─────────────────────────────────────────
 
-TIMEZONE_OPTIONS = [
-    ("Europe/Kaliningrad", "UTC+2  Калининград"),
-    ("Europe/Moscow",      "UTC+3  Москва / Питер"),
-    ("Europe/Samara",      "UTC+4  Самара"),
-    ("Asia/Yekaterinburg", "UTC+5  Екатеринбург"),
-    ("Asia/Omsk",          "UTC+6  Омск"),
-    ("Asia/Krasnoyarsk",   "UTC+7  Новосибирск / Красноярск"),
-    ("Asia/Irkutsk",       "UTC+8  Иркутск"),
-    ("Asia/Yakutsk",       "UTC+9  Якутск"),
-    ("Asia/Vladivostok",   "UTC+10 Владивосток"),
-    ("Asia/Magadan",       "UTC+11 Магадан"),
-    ("Asia/Kamchatka",     "UTC+12 Камчатка"),
-]
-
-
-def kb_timezone() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=label, callback_data=f"reg_tz_{key}")]
-        for key, label in TIMEZONE_OPTIONS
-    ])
+def kb_timezone_choice(mini_app_url: str) -> ReplyKeyboardMarkup:
+    """Two WebApp buttons: auto-detect or manual scroll picker."""
+    base = mini_app_url.rstrip("/")
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(
+                text="🔍 ОПРЕДЕЛИТЬ АВТОМАТИЧЕСКИ",
+                web_app=WebAppInfo(url=f"{base}/timezone?action=detect"),
+            )],
+            [KeyboardButton(
+                text="🕐 ВЫБРАТЬ ВРУЧНУЮ",
+                web_app=WebAppInfo(url=f"{base}/timezone?action=select"),
+            )],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
 
 
-# ── Push time ─────────────────────────────────────────────────────────────────
+# ── Morning time: 05:00–12:00 step 30 min, 3 per row ─────────────────────────
 
-PUSH_TIME_OPTIONS = [
-    ("06:00", "6:00"),
-    ("07:00", "7:00"),
-    ("08:00", "8:00"),
-    ("09:00", "9:00"),
-    ("10:00", "10:00"),
-]
+def _build_time_range(start_h: int, start_m: int,
+                      end_h: int, end_m: int) -> list[str]:
+    times: list[str] = []
+    h, m = start_h, start_m
+    while (h, m) <= (end_h, end_m):
+        times.append(f"{h:02d}:{m:02d}")
+        m += 30
+        if m >= 60:
+            m = 0
+            h += 1
+    return times
 
 
 def kb_push_time() -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text=label, callback_data=f"reg_pushtime_{t}")]
-        for t, label in PUSH_TIME_OPTIONS
-    ]
-    rows.append([InlineKeyboardButton(text="✏️ Другое время", callback_data="reg_pushtime_custom")])
+    """05:00–12:00 step 30 min, 3 per row."""
+    times = _build_time_range(5, 0, 12, 0)
+    rows = []
+    for i in range(0, len(times), 3):
+        rows.append([
+            InlineKeyboardButton(text=t, callback_data=f"reg_pushtime_{t}")
+            for t in times[i:i + 3]
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+# ── Evening time: 18:00–23:30 step 30 min, 3 per row ─────────────────────────
+
+def kb_evening_time() -> InlineKeyboardMarkup:
+    """18:00–23:30 step 30 min, 3 per row."""
+    times = _build_time_range(18, 0, 23, 30)
+    rows = []
+    for i in range(0, len(times), 3):
+        rows.append([
+            InlineKeyboardButton(text=t, callback_data=f"reg_eveningtime_{t}")
+            for t in times[i:i + 3]
+        ])
     return InlineKeyboardMarkup(inline_keyboard=rows)

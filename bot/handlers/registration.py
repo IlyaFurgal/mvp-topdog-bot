@@ -7,15 +7,16 @@ import httpx
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import (
+    CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
+    Message, ReplyKeyboardRemove, WebAppInfo,
+)
 
 from bot.keyboards.inline import (
-    kb_fitness, kb_gender, kb_goals, kb_health,
+    kb_evening_time, kb_fitness, kb_gender, kb_goals, kb_health,
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
-    kb_timezone, kb_tone, kb_workout_days, kb_workout_hours,
+    kb_timezone_choice, kb_tone, kb_workout_days, kb_workout_hours,
 )
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from bot.states import RegistrationForm
@@ -371,36 +372,42 @@ async def step_tone_after_health(message: Message, state: FSMContext) -> None:
     await message.answer("Как тебе комфортнее общаться?", reply_markup=kb_tone())
 
 
-# ── Тон → часовой пояс ───────────────────────────────────────────────────────
+# ── Тон → часовой пояс (WebApp) ──────────────────────────────────────────────
 
 @router.callback_query(RegistrationForm.tone, F.data.startswith("reg_tone_"))
 async def step_timezone(callback: CallbackQuery, state: FSMContext) -> None:
     tone_key = callback.data.removeprefix("reg_tone_")
     await state.update_data(tone=tone_key)
     await state.set_state(RegistrationForm.timezone)
-    await callback.message.edit_text(
-        "Выбери свой часовой пояс 🌍",
-        reply_markup=kb_timezone(),
+    await callback.message.edit_text("Тон общения сохранён ✅")
+    await callback.message.answer(
+        "Укажи свой часовой пояс 🌍\n\n"
+        "Нажми кнопку ниже 👇",
+        reply_markup=kb_timezone_choice(settings.MINI_APP_URL),
     )
     await callback.answer()
 
 
-# ── Часовой пояс → время напоминаний ─────────────────────────────────────────
+# ── Часовой пояс: получаем данные из WebApp ──────────────────────────────────
 
-@router.callback_query(RegistrationForm.timezone, F.data.startswith("reg_tz_"))
-async def step_push_time(callback: CallbackQuery, state: FSMContext) -> None:
-    tz = callback.data.removeprefix("reg_tz_")
-    await state.update_data(timezone=tz)
+@router.message(RegistrationForm.timezone, F.web_app_data)
+async def step_timezone_from_webapp(message: Message, state: FSMContext) -> None:
+    tz_str = (message.web_app_data.data or "").strip() or "UTC+3"
+    await state.update_data(timezone=tz_str)
     await state.set_state(RegistrationForm.push_time)
-    await callback.message.edit_text(
-        "В какое время тебе присылать утреннее напоминание? ⏰\n\n"
-        "Время — по твоему часовому поясу:",
+    # Remove the reply keyboard and ask morning time
+    await message.answer(
+        f"Часовой пояс: {tz_str} ✅",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await message.answer(
+        "Выбери время утреннего чекина ☀️\n\n"
+        "Когда тебе удобно начинать день и отмечать своё состояние?",
         reply_markup=kb_push_time(),
     )
-    await callback.answer()
 
 
-# ── Время напоминаний: быстрый выбор → финал ─────────────────────────────────
+# ── Утреннее время: быстрый выбор → вечернее время ───────────────────────────
 
 @router.callback_query(RegistrationForm.push_time, F.data.startswith("reg_pushtime_"))
 async def step_pushtime_selected(callback: CallbackQuery, state: FSMContext) -> None:
@@ -413,15 +420,14 @@ async def step_pushtime_selected(callback: CallbackQuery, state: FSMContext) -> 
         await callback.answer()
         return
     await state.update_data(push_time=val)
-    await _finish_registration(callback, state)
+    await _ask_evening_time(callback, state)
 
 
-# ── Время напоминаний: ручной ввод → финал ───────────────────────────────────
+# ── Утреннее время: ручной ввод → вечернее время ─────────────────────────────
 
 @router.message(RegistrationForm.push_time_custom)
 async def step_pushtime_custom(message: Message, state: FSMContext) -> None:
     raw = (message.text or "").strip()
-    # validate HH:MM
     try:
         parts = raw.split(":")
         if len(parts) != 2:
@@ -436,7 +442,33 @@ async def step_pushtime_custom(message: Message, state: FSMContext) -> None:
         )
         return
     await state.update_data(push_time=push_time)
-    await _finish_registration(message, state)
+    await _ask_evening_time(message, state)
+
+
+async def _ask_evening_time(target: CallbackQuery | Message, state: FSMContext) -> None:
+    await state.set_state(RegistrationForm.evening_reminder_time)
+    text = (
+        "Выбери время вечернего чекина 🌙\n\n"
+        "Когда тебе удобно подводить итог дня?"
+    )
+    kb = kb_evening_time()
+    if isinstance(target, CallbackQuery):
+        await target.message.edit_text(text, reply_markup=kb)
+        await target.answer()
+    else:
+        await target.answer(text, reply_markup=kb)
+
+
+# ── Вечернее время → финал ───────────────────────────────────────────────────
+
+@router.callback_query(
+    RegistrationForm.evening_reminder_time,
+    F.data.startswith("reg_eveningtime_"),
+)
+async def step_eveningtime_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    val = callback.data.removeprefix("reg_eveningtime_")
+    await state.update_data(evening_reminder_time=val)
+    await _finish_registration(callback, state)
 
 
 # ── Финальный шаг: сохранение в БД и приветствие ─────────────────────────────
@@ -477,13 +509,13 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
 
     preferred_name = data.get("preferred_name")
 
+    # Morning / evening reminder times
+    morning_time = data.get("push_time") or "08:00"
+    evening_time = data.get("evening_reminder_time") or "21:00"
+
     saved_profile = None
     async with AsyncSessionLocal() as session:
-        telegram_id = (
-            target.from_user.id
-            if isinstance(target, CallbackQuery)
-            else target.from_user.id
-        )
+        telegram_id = target.from_user.id
         user = await get_user_by_telegram_id(session, telegram_id)
         if user:
             await update_user(session, user, is_active=True)
@@ -503,7 +535,9 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
                 health_restrictions=data.get("health_restrictions"),
                 tone=tone_val,
                 timezone=data.get("timezone"),
-                push_time=data.get("push_time"),
+                push_time=morning_time,
+                morning_reminder_time=morning_time,
+                evening_reminder_time=evening_time,
             )
             if saved_profile:
                 await _register_in_getcourse(user, saved_profile)
@@ -586,6 +620,7 @@ _BUTTON_STATES = (
     RegistrationForm.tone,
     RegistrationForm.timezone,
     RegistrationForm.push_time,
+    RegistrationForm.evening_reminder_time,
 )
 
 
