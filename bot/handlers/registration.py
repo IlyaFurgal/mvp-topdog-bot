@@ -166,8 +166,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         )
 
     await state.set_state(RegistrationForm.greeting)
-    # Убираем любую ReplyKeyboard, оставшуюся от предыдущей сессии
-    await message.answer("...", reply_markup=ReplyKeyboardRemove())
+    # ReplyKeyboardRemove убирает старую клавиатуру (без лишнего сообщения)
+    await message.answer("​", reply_markup=ReplyKeyboardRemove())
     await message.answer(
         "Привет! 👊\n\n"
         "Я твой персональный ассистент MVP by TopDog.\n"
