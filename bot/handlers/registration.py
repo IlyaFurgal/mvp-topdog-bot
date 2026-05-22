@@ -9,13 +9,13 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
-    Message, ReplyKeyboardRemove, WebAppInfo,
+    Message, WebAppInfo,
 )
 
 from bot.keyboards.inline import (
     kb_evening_time, kb_fitness, kb_gender, kb_goals, kb_health,
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
-    kb_timezone_choice, kb_tone, kb_workout_days, kb_workout_hours,
+    kb_timezone, kb_tone, kb_workout_days, kb_workout_hours,
 )
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
@@ -372,39 +372,33 @@ async def step_tone_after_health(message: Message, state: FSMContext) -> None:
     await message.answer("Как тебе комфортнее общаться?", reply_markup=kb_tone())
 
 
-# ── Тон → часовой пояс (WebApp) ──────────────────────────────────────────────
+# ── Тон → часовой пояс ───────────────────────────────────────────────────────
 
 @router.callback_query(RegistrationForm.tone, F.data.startswith("reg_tone_"))
 async def step_timezone(callback: CallbackQuery, state: FSMContext) -> None:
     tone_key = callback.data.removeprefix("reg_tone_")
     await state.update_data(tone=tone_key)
     await state.set_state(RegistrationForm.timezone)
-    await callback.message.edit_text("Тон общения сохранён ✅")
-    await callback.message.answer(
-        "Укажи свой часовой пояс 🌍\n\n"
-        "Нажми кнопку ниже 👇",
-        reply_markup=kb_timezone_choice(settings.MINI_APP_URL),
+    await callback.message.edit_text(
+        "Выбери свой часовой пояс 🌍",
+        reply_markup=kb_timezone(),
     )
     await callback.answer()
 
 
-# ── Часовой пояс: получаем данные из WebApp ──────────────────────────────────
+# ── Часовой пояс → утреннее время ────────────────────────────────────────────
 
-@router.message(RegistrationForm.timezone, F.web_app_data)
-async def step_timezone_from_webapp(message: Message, state: FSMContext) -> None:
-    tz_str = (message.web_app_data.data or "").strip() or "UTC+3"
-    await state.update_data(timezone=tz_str)
+@router.callback_query(RegistrationForm.timezone, F.data.startswith("reg_tz_"))
+async def step_timezone_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    tz = callback.data.removeprefix("reg_tz_")
+    await state.update_data(timezone=tz)
     await state.set_state(RegistrationForm.push_time)
-    # Remove the reply keyboard and ask morning time
-    await message.answer(
-        f"Часовой пояс: {tz_str} ✅",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    await message.answer(
+    await callback.message.edit_text(
         "Выбери время утреннего чекина ☀️\n\n"
         "Когда тебе удобно начинать день и отмечать своё состояние?",
         reply_markup=kb_push_time(),
     )
+    await callback.answer()
 
 
 # ── Утреннее время: быстрый выбор → вечернее время ───────────────────────────
