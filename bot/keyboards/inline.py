@@ -143,42 +143,35 @@ def kb_tone() -> InlineKeyboardMarkup:
     ])
 
 
-# ── Timezone — inline UTC list ────────────────────────────────────────────────
+# ── Timezone — 3 per row ──────────────────────────────────────────────────────
 
-_TIMEZONE_OPTIONS = [
-    ("UTC-12", "UTC-12"),
-    ("UTC-11", "UTC-11"),
-    ("UTC-10", "UTC-10"),
-    ("UTC-9",  "UTC-9"),
-    ("UTC-8",  "UTC-8"),
-    ("UTC-7",  "UTC-7"),
-    ("UTC-6",  "UTC-6"),
-    ("UTC-5",  "UTC-5"),
-    ("UTC-4",  "UTC-4"),
-    ("UTC-3",  "UTC-3"),
-    ("UTC-2",  "UTC-2"),
-    ("UTC-1",  "UTC-1"),
-    ("UTC+0",  "UTC+0"),
-    ("UTC+1",  "UTC+1"),
-    ("UTC+2",  "UTC+2  Калининград"),
-    ("UTC+3",  "UTC+3  Москва / Питер"),
-    ("UTC+4",  "UTC+4  Самара"),
-    ("UTC+5",  "UTC+5  Екатеринбург"),
-    ("UTC+6",  "UTC+6  Омск"),
-    ("UTC+7",  "UTC+7  Новосибирск"),
-    ("UTC+8",  "UTC+8  Иркутск"),
-    ("UTC+9",  "UTC+9  Якутск"),
-    ("UTC+10", "UTC+10 Владивосток"),
-    ("UTC+11", "UTC+11 Магадан"),
-    ("UTC+12", "UTC+12 Камчатка"),
+_TIMEZONE_KEYS = [
+    "UTC-12", "UTC-11", "UTC-10",
+    "UTC-9",  "UTC-8",  "UTC-7",
+    "UTC-6",  "UTC-5",  "UTC-4",
+    "UTC-3",  "UTC-2",  "UTC-1",
+    "UTC+0",  "UTC+1",  "UTC+2",
+    "UTC+3",  "UTC+4",  "UTC+5",
+    "UTC+6",  "UTC+7",  "UTC+8",
+    "UTC+9",  "UTC+10", "UTC+11",
+    "UTC+12",
 ]
+
+_TZ_LABELS = {"UTC+3": "UTC+3 🇷🇺"}
 
 
 def kb_timezone() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=label, callback_data=f"reg_tz_{key}")]
-        for key, label in _TIMEZONE_OPTIONS
-    ])
+    rows = []
+    for i in range(0, len(_TIMEZONE_KEYS), 3):
+        row = [
+            InlineKeyboardButton(
+                text=_TZ_LABELS.get(k, k),
+                callback_data=f"reg_tz_{k}",
+            )
+            for k in _TIMEZONE_KEYS[i:i + 3]
+        ]
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 # ── Morning time: 05:00–12:00 step 30 min, 3 per row ─────────────────────────

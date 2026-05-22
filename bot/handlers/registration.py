@@ -15,7 +15,7 @@ from aiogram.types import (
 from bot.keyboards.inline import (
     kb_evening_time, kb_fitness, kb_gender, kb_goals, kb_health,
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
-    kb_tone, kb_workout_days, kb_workout_hours,
+    kb_timezone, kb_tone, kb_workout_days, kb_workout_hours,
 )
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
@@ -167,7 +167,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
     await state.set_state(RegistrationForm.greeting)
     # Убираем любую ReplyKeyboard, оставшуюся от предыдущей сессии
-    await message.answer("👋", reply_markup=ReplyKeyboardRemove())
+    await message.answer("...", reply_markup=ReplyKeyboardRemove())
     await message.answer(
         "Привет! 👊\n\n"
         "Я твой персональный ассистент MVP by TopDog.\n"
@@ -374,12 +374,26 @@ async def step_tone_after_health(message: Message, state: FSMContext) -> None:
     await message.answer("Как тебе комфортнее общаться?", reply_markup=kb_tone())
 
 
-# ── Тон → утреннее время (часовой пояс пропущен, дефолт UTC+3) ───────────────
+# ── Тон → часовой пояс ───────────────────────────────────────────────────────
 
 @router.callback_query(RegistrationForm.tone, F.data.startswith("reg_tone_"))
-async def step_morning_time(callback: CallbackQuery, state: FSMContext) -> None:
+async def step_timezone(callback: CallbackQuery, state: FSMContext) -> None:
     tone_key = callback.data.removeprefix("reg_tone_")
-    await state.update_data(tone=tone_key, timezone="UTC+3")
+    await state.update_data(tone=tone_key)
+    await state.set_state(RegistrationForm.timezone)
+    await callback.message.edit_text(
+        "Выбери свой часовой пояс 🌍",
+        reply_markup=kb_timezone(),
+    )
+    await callback.answer()
+
+
+# ── Часовой пояс → утреннее время ────────────────────────────────────────────
+
+@router.callback_query(RegistrationForm.timezone, F.data.startswith("reg_tz_"))
+async def step_timezone_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    tz = callback.data.removeprefix("reg_tz_")
+    await state.update_data(timezone=tz)
     await state.set_state(RegistrationForm.push_time)
     await callback.message.edit_text(
         "Выбери время утреннего чекина ☀️\n\n"
@@ -600,6 +614,7 @@ _BUTTON_STATES = (
     RegistrationForm.lifestyle,
     RegistrationForm.health_restrictions,
     RegistrationForm.tone,
+    RegistrationForm.timezone,
     RegistrationForm.push_time,
     RegistrationForm.evening_reminder_time,
 )
