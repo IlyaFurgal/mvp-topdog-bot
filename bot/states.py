@@ -37,10 +37,7 @@ class RegistrationForm(StatesGroup):
     # 9. Тон общения
     tone = State()
 
-    # 10. Часовой пояс
-    timezone = State()
-
-    # 11. Время утреннего чекина
+    # 10. Время утреннего чекина
     push_time = State()
     push_time_custom = State()   # если пользователь вводит вручную
 
