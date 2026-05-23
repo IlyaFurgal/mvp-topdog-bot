@@ -1,7 +1,9 @@
+import base64
 import json
 import logging
 import uuid
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -21,6 +23,10 @@ router = APIRouter(prefix="/suvvy", tags=["suvvy"])
 
 SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
 MAX_HISTORY = 20
+UPLOADS_DIR = Path("/app/uploads")
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+PDF_MAX_PAGES = 5
 
 
 async def _trim_history(session: AsyncSession, user_id: int) -> None:
@@ -50,10 +56,66 @@ def _calc_age(birth_date: date | None) -> str:
     return str(age)
 
 
+def _save_image_from_dataurl(data_url: str, name: str | None) -> tuple[str, str, str]:
+    """
+    Сохраняет изображение из data-URL на диск.
+    Возвращает (image_path_relative, mime, pure_b64).
+    """
+    try:
+        header, pure_b64 = data_url.split(",", 1)
+        mime = header.split(";")[0].split(":")[1]   # e.g. image/png
+        ext = mime.split("/")[1]                    # e.g. png
+    except (IndexError, ValueError):
+        raise HTTPException(status_code=422, detail="Invalid image_base64 format")
+
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = UPLOADS_DIR / filename
+    filepath.write_bytes(base64.b64decode(pure_b64))
+    return f"/uploads/{filename}", mime, pure_b64
+
+
+def _save_pdf_pages(pdf_b64: str) -> list[str]:
+    """
+    Конвертирует PDF из base64 в PNG-изображения (макс PDF_MAX_PAGES страниц).
+    Сохраняет их и возвращает список относительных путей /uploads/…
+    """
+    try:
+        from pdf2image import convert_from_bytes
+    except ImportError:
+        raise HTTPException(status_code=503, detail="pdf2image not available")
+
+    try:
+        pdf_bytes = base64.b64decode(pdf_b64)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid pdf_base64")
+
+    try:
+        images = convert_from_bytes(
+            pdf_bytes,
+            dpi=150,
+            first_page=1,
+            last_page=PDF_MAX_PAGES,
+            fmt="png",
+        )
+    except Exception as e:
+        logger.error("PDF conversion error: %s", e)
+        raise HTTPException(status_code=422, detail="Cannot convert PDF")
+
+    paths = []
+    for img in images:
+        filename = f"{uuid.uuid4()}.png"
+        filepath = UPLOADS_DIR / filename
+        img.save(str(filepath), "PNG")
+        paths.append(f"/uploads/{filename}")
+    return paths
+
+
 class MessageIn(BaseModel):
     text: str = ""
     image_base64: Optional[str] = None
     image_name: Optional[str] = None
+    pdf_base64: Optional[str] = None
+    pdf_name: Optional[str] = None
 
 
 @router.get("/history")
@@ -71,7 +133,7 @@ async def get_history(
     rows = result.scalars().all()
     return {
         "messages": [
-            {"role": m.role, "text": m.text, "id": m.id}
+            {"role": m.role, "text": m.text, "id": m.id, "image_path": m.image_path}
             for m in rows
         ]
     }
@@ -86,8 +148,8 @@ async def send_message(
     if not settings.SUVVY_API_KEY:
         raise HTTPException(status_code=503, detail="Suvvy not configured")
 
-    if not body.text and not body.image_base64:
-        raise HTTPException(status_code=422, detail="text or image_base64 required")
+    if not body.text and not body.image_base64 and not body.pdf_base64:
+        raise HTTPException(status_code=422, detail="text, image_base64 or pdf_base64 required")
 
     # Загружаем профиль для placeholders
     profile_result = await session.execute(
@@ -112,21 +174,43 @@ async def send_message(
         "gender":              (profile.gender.value if profile and profile.gender else ""),
     }
 
-    # Attachments
+    # Attachments + saved image path
     attachments = []
-    if body.image_base64:
-        try:
-            mime = body.image_base64.split(";")[0].split(":")[1]   # image/png
-            ext = mime.split("/")[1]                                 # png
-            pure_b64 = body.image_base64.split(",")[1]
-        except (IndexError, ValueError):
-            raise HTTPException(status_code=422, detail="Invalid image_base64 format")
+    saved_image_path: str | None = None
+    display_text = body.text if body.text else ""
 
+    if body.pdf_base64:
+        # Конвертируем PDF → PNG страницы
+        page_paths = _save_pdf_pages(body.pdf_base64)
+        saved_image_path = page_paths[0] if page_paths else None
+
+        # Отправляем все страницы в Suvvy
+        for i, path in enumerate(page_paths):
+            page_filename = Path(path).name
+            img_bytes = (UPLOADS_DIR / page_filename).read_bytes()
+            page_b64 = base64.b64encode(img_bytes).decode()
+            attachments.append({
+                "file_name": f"page_{i+1}.png",
+                "file_type": "image",
+                "data": page_b64,
+            })
+
+        if not display_text:
+            pdf_label = body.pdf_name or "document.pdf"
+            display_text = f"📄 {pdf_label}"
+
+    elif body.image_base64:
+        image_path_rel, mime, pure_b64 = _save_image_from_dataurl(
+            body.image_base64, body.image_name
+        )
+        saved_image_path = image_path_rel
         attachments.append({
-            "file_name": body.image_name or f"photo.{ext}",
+            "file_name": body.image_name or f"photo.{mime.split('/')[1]}",
             "file_type": "image",
             "data": pure_b64,
         })
+        if not display_text:
+            display_text = "📷 Фото"
 
     payload: dict = {
         "api_version":    1,
@@ -144,10 +228,10 @@ async def send_message(
     logger.info(
         "Suvvy payload for user %s: %s",
         user.telegram_id,
-        json.dumps(payload, ensure_ascii=False, default=str),
+        json.dumps({k: v for k, v in payload.items() if k != "attachments"}, ensure_ascii=False, default=str),
     )
 
-    async with httpx.AsyncClient(timeout=10) as http:
+    async with httpx.AsyncClient(timeout=30) as http:
         try:
             resp = await http.post(
                 SUVVY_URL,
@@ -160,8 +244,12 @@ async def send_message(
             raise HTTPException(status_code=502, detail="Failed to reach Suvvy")
 
     # Сохраняем сообщение пользователя в БД
-    saved_text = body.text if body.text else "📷 Фото"
-    session.add(AiMessage(user_id=user.id, role="user", text=saved_text))
+    session.add(AiMessage(
+        user_id=user.id,
+        role="user",
+        text=display_text or "📎 Файл",
+        image_path=saved_image_path,
+    ))
     await session.flush()
     await _trim_history(session, user.id)
     await session.commit()

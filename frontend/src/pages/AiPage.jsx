@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { useProfile } from '../context/ProfileContext'
 
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024  // 15 МБ
+const MAX_FILE_BYTES = 15 * 1024 * 1024  // 15 МБ
 
 const GREETING = {
   aggressive:
@@ -33,6 +33,17 @@ function buildGreeting(tone, name) {
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_ATTEMPTS = 40  // ~60 секунд
 
+// Берём базовый URL (origin) для построения абсолютных путей к /uploads/
+const API_BASE = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
+  : ''
+
+function resolveImagePath(imagePath) {
+  if (!imagePath) return null
+  if (imagePath.startsWith('http')) return imagePath
+  return `${API_BASE}${imagePath}`
+}
+
 export default function AiPage() {
   const { tone, profile } = useProfile()
   const name = profile?.preferred_name || ''
@@ -41,8 +52,9 @@ export default function AiPage() {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const [imagePreview, setImagePreview] = useState(null)   // { dataUrl, name }
-  const [imageError, setImageError] = useState('')
+  // filePreview: { dataUrl, name, isPdf }
+  const [filePreview, setFilePreview] = useState(null)
+  const [fileError, setFileError] = useState('')
   const bottomRef = useRef(null)
   const pollRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -59,6 +71,7 @@ export default function AiPage() {
               id: m.id,
               from: m.role,
               text: m.text,
+              imagePath: resolveImagePath(m.image_path),
             }))
           )
         } else {
@@ -83,8 +96,8 @@ export default function AiPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
-  function addMessage(from, text, imageUrl) {
-    setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text, imageUrl }])
+  function addMessage(from, text, imagePath) {
+    setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text, imagePath }])
     scrollToBottom()
   }
 
@@ -119,41 +132,58 @@ export default function AiPage() {
   function handleFileChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setImageError('')
+    setFileError('')
 
-    if (file.size > MAX_IMAGE_BYTES) {
-      setImageError('Файл слишком большой. Максимум 15 МБ.')
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError('Файл слишком большой. Максимум 15 МБ.')
       e.target.value = ''
       return
     }
 
+    const isPdf = file.type === 'application/pdf'
     const reader = new FileReader()
-    reader.onload = (ev) => setImagePreview({ dataUrl: ev.target.result, name: file.name })
+    reader.onload = (ev) =>
+      setFilePreview({ dataUrl: ev.target.result, name: file.name, isPdf })
     reader.readAsDataURL(file)
     e.target.value = ''
   }
 
-  function removeImage() {
-    setImagePreview(null)
-    setImageError('')
+  function removeFile() {
+    setFilePreview(null)
+    setFileError('')
   }
 
   async function handleSend() {
     const text = input.trim()
-    if (!text && !imagePreview) return
+    if (!text && !filePreview) return
     if (typing) return
 
     setInput('')
-    addMessage('user', text, imagePreview?.dataUrl)
-    setImagePreview(null)
-    setImageError('')
+
+    // Показываем превью в чате сразу
+    const previewImageUrl = filePreview && !filePreview.isPdf ? filePreview.dataUrl : null
+    const previewText = filePreview?.isPdf
+      ? (text ? `${text}\n📄 ${filePreview.name}` : `📄 ${filePreview.name}`)
+      : text
+
+    addMessage('user', previewText, previewImageUrl)
+    const capturedFile = filePreview
+    setFilePreview(null)
+    setFileError('')
 
     setTyping(true)
     try {
       const body = { text }
-      if (imagePreview) {
-        body.image_base64 = imagePreview.dataUrl
-        body.image_name = imagePreview.name
+      if (capturedFile) {
+        if (capturedFile.isPdf) {
+          // Убираем data:application/pdf;base64, prefix
+          const pure = capturedFile.dataUrl.split(',')[1]
+          body.pdf_base64 = pure
+          body.pdf_name = capturedFile.name
+        } else {
+          body.image_base64 = capturedFile.dataUrl
+          body.image_name = capturedFile.name
+        }
       }
       await client.post('/suvvy/message', body)
       startPolling()
@@ -173,7 +203,7 @@ export default function AiPage() {
     }
   }
 
-  const canSend = (input.trim() || imagePreview) && !typing
+  const canSend = (input.trim() || filePreview) && !typing
 
   return (
     <div className="ai-page">
@@ -185,8 +215,8 @@ export default function AiPage() {
         {messages.map((msg) => (
           <div key={msg.id} className={`ai-msg ai-msg--${msg.from}`}>
             <div className="ai-msg__bubble">
-              {msg.imageUrl && (
-                <img src={msg.imageUrl} alt="attachment" className="ai-msg__image" />
+              {msg.imagePath && (
+                <img src={msg.imagePath} alt="attachment" className="ai-msg__image" />
               )}
               {msg.text && (
                 msg.from === 'ai'
@@ -206,23 +236,30 @@ export default function AiPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Image preview strip */}
-      {imagePreview && (
+      {/* File preview strip */}
+      {filePreview && (
         <div className="ai-image-preview">
-          <img src={imagePreview.dataUrl} alt="preview" />
-          <button className="ai-image-remove" onClick={removeImage}>✕</button>
+          {filePreview.isPdf ? (
+            <div className="ai-pdf-preview">
+              <span className="ai-pdf-icon">📄</span>
+              <span className="ai-pdf-name">{filePreview.name}</span>
+            </div>
+          ) : (
+            <img src={filePreview.dataUrl} alt="preview" />
+          )}
+          <button className="ai-image-remove" onClick={removeFile}>✕</button>
         </div>
       )}
-      {imageError && (
-        <div className="ai-image-error">{imageError}</div>
+      {fileError && (
+        <div className="ai-image-error">{fileError}</div>
       )}
 
       <div className="ai-input-bar">
-        {/* Hidden file input */}
+        {/* Hidden file input — accepts images + PDF */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
+          accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
@@ -230,7 +267,7 @@ export default function AiPage() {
           className="ai-attach"
           onClick={() => fileInputRef.current?.click()}
           disabled={typing}
-          title="Прикрепить изображение"
+          title="Прикрепить файл"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />

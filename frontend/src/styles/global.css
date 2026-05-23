@@ -1352,6 +1352,33 @@ html, body {
   flex-shrink: 0;
 }
 
+/* PDF preview in strip */
+.ai-pdf-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 72px;
+  padding: 0 12px;
+  background: var(--surface, #1a1a1a);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 220px;
+}
+
+.ai-pdf-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.ai-pdf-name {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #aaa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
 .ai-input-bar {
   display: flex;
   gap: 8px;
