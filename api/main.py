@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +29,10 @@ app.include_router(suvvy.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router)  # без prefix — пути /admin, /admin/users, ...
+
+# Static uploads (images saved from AI chat)
+os.makedirs("/app/uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 
 @app.get("/health")
