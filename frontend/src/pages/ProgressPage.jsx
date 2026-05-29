@@ -49,11 +49,63 @@ function disciplineColor(pct) {
   return 'var(--danger)'
 }
 
-function recoveryInfo(avgScore) {
-  if (avgScore == null) return { label: '—', color: '#888', sub: '' }
-  if (avgScore >= 2.5) return { label: 'ХОРОШЕЕ', color: 'var(--accent)', sub: 'ритм держишь' }
-  if (avgScore >= 1.5) return { label: 'СРЕДНЕЕ', color: '#fff', sub: 'нестабильно' }
-  return { label: 'СКАЧКИ', color: 'var(--danger)', sub: 'нужен режим' }
+const RPE_LABELS = {
+  1: 'почти нет нагрузки',
+  2: 'очень легко',
+  3: 'легко',
+  4: 'умеренно',
+  5: 'средне',
+  6: 'тяжело, но контролируемо',
+  7: 'очень тяжело',
+  8: 'почти максимум',
+  9: 'предельная нагрузка',
+  10: 'максимум',
+}
+
+function rpeColor(rpe) {
+  if (!rpe) return '#888'
+  const n = parseFloat(rpe)
+  if (n <= 3) return 'var(--accent)'
+  if (n <= 6) return '#f59e0b'
+  return 'var(--danger)'
+}
+
+function rpeLabel(rpe) {
+  if (!rpe) return ''
+  return RPE_LABELS[Math.round(parseFloat(rpe))] ?? ''
+}
+
+const SCORE_MAP = {
+  great: 100, good: 100, high: 100, fresh: 100,
+  normal: 67, okay: 67, medium: 67, slightly_tired: 67,
+  bad: 33, poor: 33, hard: 33, heavy: 33, low: 33,
+}
+
+function calcRecoveryPct(checkins) {
+  const scores = []
+  for (const c of checkins) {
+    if (c.type === 'morning') {
+      if (c.data?.sleep_quality != null) scores.push(SCORE_MAP[c.data.sleep_quality] ?? 67)
+      if (c.data?.body_feeling != null) scores.push(SCORE_MAP[c.data.body_feeling] ?? 67)
+      if (c.data?.motivation != null) scores.push(SCORE_MAP[c.data.motivation] ?? 67)
+    }
+    if (c.type === 'evening') {
+      if (c.data?.energy != null) scores.push(SCORE_MAP[c.data.energy] ?? 67)
+      if (c.data?.recovery != null) scores.push(SCORE_MAP[c.data.recovery] ?? 67)
+    }
+  }
+  if (scores.length === 0) return null
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+}
+
+function recoveryGrade(pct) {
+  if (pct === null) return { label: 'Нет данных', color: '#888', sub: '' }
+  if (pct >= 85) return { label: 'Отличное', color: '#22c55e', sub: 'Организм восстановлен. Можно работать.' }
+  if (pct >= 70) return { label: 'Хорошее', color: '#86efac', sub: 'Режим стабильный. Нагрузка допустима.' }
+  if (pct >= 55) return { label: 'Среднее', color: '#f59e0b', sub: 'Есть признаки усталости. Не перегружайся.' }
+  if (pct >= 40) return { label: 'Нестабильное', color: '#f97316', sub: 'Нужен режим. Выровняй сон и нагрузку.' }
+  if (pct >= 25) return { label: 'Слабое', color: '#ef4444', sub: 'Организм не успевает восстановиться.' }
+  return { label: 'Критическое', color: '#7f1d1d', sub: 'Снизь нагрузку и восстановись.' }
 }
 
 export default function ProgressPage() {
@@ -93,7 +145,6 @@ export default function ProgressPage() {
       .finally(() => setLoading(false))
   }, [periodIdx])
 
-  // Metrics computed from checkin history
   const postWorkouts = checkins.filter((c) => c.type === 'post_workout')
   const discipline =
     postWorkouts.length > 0
@@ -110,18 +161,10 @@ export default function ProgressPage() {
       ? (rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length).toFixed(1)
       : null
 
-  const sleepMap = { great: 3, normal: 2, bad: 1 }
-  const sleepScores = checkins
-    .filter((c) => c.type === 'morning')
-    .map((c) => sleepMap[c.data?.sleep_quality])
-    .filter(Boolean)
-  const avgSleepScore =
-    sleepScores.length > 0
-      ? sleepScores.reduce((a, b) => a + b, 0) / sleepScores.length
-      : null
+  const recoveryPct = calcRecoveryPct(checkins)
+  const rec = recoveryGrade(recoveryPct)
 
-  const rec = recoveryInfo(avgSleepScore)
-  const hasMetrics = discipline !== null || avgRpe !== null || avgSleepScore !== null
+  const hasMetrics = discipline !== null || avgRpe !== null || recoveryPct !== null
 
   return (
     <div className="page">
@@ -143,6 +186,50 @@ export default function ProgressPage() {
         <div className="card"><p className="card-muted">Загрузка...</p></div>
       ) : (
         <>
+          {/* ── Insight ─────────────────────────────────── */}
+          {insight && (
+            <div className="insight-block">
+              <span className="insight-label">ИНСАЙТ НЕДЕЛИ</span>
+              <p className="insight-text">"{insight.text}"</p>
+            </div>
+          )}
+
+          {/* ── Metrics ─────────────────────────────────── */}
+          {hasMetrics && (
+            <div className="metrics-cards">
+              <div className="metric-card">
+                <span className="metric-label">DISCIPLINE</span>
+                <span className="metric-value" style={{ color: disciplineColor(discipline) }}>
+                  {discipline !== null ? `${discipline}%` : '—'}
+                </span>
+                <span className="metric-sub">
+                  {discipline !== null
+                    ? (discipline >= 80 ? 'отлично' : discipline >= 50 ? 'стабильно' : 'нужно больше')
+                    : ''}
+                </span>
+              </div>
+              <div className="metric-card">
+                <span className="metric-label">ТРЕНИРОВОЧНАЯ НАГРУЗКА (RPE)</span>
+                <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
+                  {avgRpe ?? 'Нет данных'}
+                </span>
+                <span className="metric-sub">{rpeLabel(avgRpe)}</span>
+              </div>
+              <div className="metric-card">
+                <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
+                <span className="metric-value" style={{ color: rec.color }}>
+                  {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
+                </span>
+                <span className="metric-sub">{rec.label !== 'Нет данных' ? rec.label : ''}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Recovery details */}
+          {rec.sub && (
+            <p className="recovery-detail" style={{ color: rec.color }}>{rec.sub}</p>
+          )}
+
           {/* ── Weight ──────────────────────────────────── */}
           <div className="card chart-card">
             <div className="chart-header">
@@ -352,43 +439,6 @@ export default function ProgressPage() {
               />
             )}
           </div>
-
-          {/* ── Metrics ─────────────────────────────────── */}
-          {hasMetrics && (
-            <div className="metrics-cards">
-              <div className="metric-card">
-                <span className="metric-label">DISCIPLINE</span>
-                <span className="metric-value" style={{ color: disciplineColor(discipline) }}>
-                  {discipline !== null ? `${discipline}%` : '—'}
-                </span>
-                <span className="metric-sub">
-                  {discipline >= 80 ? 'отлично' : discipline >= 50 ? 'стабильно' : 'нужно больше'}
-                </span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-label">НАГРУЗКА</span>
-                <span className="metric-value" style={{ color: '#fff' }}>
-                  {avgRpe ? `RPE ${avgRpe}` : '—'}
-                </span>
-                <span className="metric-sub">среднее</span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-label">ВОССТАНОВ.</span>
-                <span className="metric-value" style={{ color: rec.color }}>
-                  {rec.label}
-                </span>
-                <span className="metric-sub">{rec.sub}</span>
-              </div>
-            </div>
-          )}
-
-          {/* ── Insight ─────────────────────────────────── */}
-          {insight && (
-            <div className="insight-block">
-              <span className="insight-label">ИНСАЙТ НЕДЕЛИ</span>
-              <p className="insight-text">"{insight.text}"</p>
-            </div>
-          )}
         </>
       )}
     </div>
