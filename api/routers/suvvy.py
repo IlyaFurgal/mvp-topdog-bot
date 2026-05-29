@@ -2,20 +2,20 @@ import base64
 import json
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
 from api.suvvy_queue import pop
 from core.config import settings
-from database.models import AiMessage, Profile, User
+from database.models import AiMessage, Checkin, Profile, Tracker, TrackerType, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -158,21 +158,94 @@ async def send_message(
     profile = profile_result.scalar_one_or_none()
 
     # Placeholders для системной инструкции Suvvy
-    placeholders = {
-        "name":                user.first_name or "",
-        "username":            user.username or "",
-        "goal":                ", ".join(profile.goals) if profile and profile.goals else (
-                               profile.goal.value if profile and profile.goal else ""
-                           ),
-        "fitness_level":       (profile.fitness_level.value if profile and profile.fitness_level else ""),
-        "sport_type":          (profile.sport_type or ""),
-        "activity_level":      (profile.activity_level.value if profile and profile.activity_level else ""),
-        "health_restrictions": (profile.health_restrictions or ""),
-        "tone":                (profile.tone.value if profile and profile.tone else "soft"),
-        "subscription_type":   (user.subscription_type or ""),
-        "age":                 _calc_age(profile.birth_date if profile else None),
-        "gender":              (profile.gender.value if profile and profile.gender else ""),
-    }
+    if profile is None:
+        placeholders = {
+            "name":                      user.first_name or "",
+            "username":                  user.username or "",
+            "goal":                      "",
+            "fitness_level":             "",
+            "sport_type":                "",
+            "activity_level":            "",
+            "health_restrictions":       "",
+            "tone":                      "soft",
+            "subscription_type":         user.subscription_type or "",
+            "age":                       "",
+            "gender":                    "",
+        }
+    else:
+        placeholders = {
+            "name":                      user.first_name or "",
+            "username":                  user.username or "",
+            "goal":                      ", ".join(profile.goals) if profile.goals else (
+                                             profile.goal.value if profile.goal else ""
+                                         ),
+            "fitness_level":             profile.fitness_level.value if profile.fitness_level else "",
+            "sport_type":                profile.sport_type or "",
+            "activity_level":            profile.activity_level.value if profile.activity_level else "",
+            "health_restrictions":       profile.health_restrictions or "",
+            "tone":                      profile.tone.value if profile.tone else "soft",
+            "subscription_type":         user.subscription_type or "",
+            "age":                       _calc_age(profile.birth_date),
+            "gender":                    profile.gender.value if profile.gender else "",
+        }
+
+    # Load recent trackers and checkins for AI context
+    since_7 = datetime.combine(
+        date.today() - timedelta(days=7), datetime.min.time()
+    ).replace(tzinfo=timezone.utc)
+
+    tr_result = await session.execute(
+        select(Tracker)
+        .where(and_(Tracker.user_id == user.id, Tracker.created_at >= since_7))
+        .order_by(Tracker.created_at.desc())
+    )
+    recent_trackers_rows = tr_result.scalars().all()
+
+    ch_result = await session.execute(
+        select(Checkin)
+        .where(and_(Checkin.user_id == user.id, Checkin.created_at >= since_7))
+        .order_by(Checkin.created_at.desc())
+    )
+    recent_checkins_rows = ch_result.scalars().all()
+
+    def _days_ago(dt: datetime) -> str:
+        delta = (date.today() - dt.date()).days
+        if delta == 0:
+            return "сегодня"
+        if delta == 1:
+            return "вчера"
+        if delta < 5:
+            return f"{delta} дня назад"
+        return f"{delta} дней назад"
+
+    tracker_parts = []
+    seen_types: set = set()
+    for t in recent_trackers_rows:
+        key = t.type.value
+        if key not in seen_types:
+            seen_types.add(key)
+            day = _days_ago(t.created_at)
+            if t.type == TrackerType.weight:
+                tracker_parts.append(f"Вес: {t.value} кг ({day})")
+            elif t.type == TrackerType.water:
+                tracker_parts.append(f"Вода: {round(t.value)} мл ({day})")
+            elif t.type == TrackerType.sleep:
+                tracker_parts.append(f"Сон: {t.value} ч ({day})")
+            elif t.type == TrackerType.calories:
+                tracker_parts.append(f"Калории: {round(t.value)} ккал ({day})")
+    recent_trackers_str = ", ".join(tracker_parts) if tracker_parts else "Нет данных"
+
+    CHECKIN_TYPE_LABELS = {"morning": "Утро", "evening": "Вечер", "post_workout": "После тренировки"}
+    checkin_parts = []
+    for c in recent_checkins_rows[:7]:
+        day = _days_ago(c.created_at)
+        label = CHECKIN_TYPE_LABELS.get(c.type.value, c.type.value)
+        data_str = ", ".join(f"{k}: {v}" for k, v in (c.data or {}).items())
+        checkin_parts.append(f"{label} ({day}): {data_str}")
+    recent_checkins_str = "; ".join(checkin_parts) if checkin_parts else "Нет данных"
+
+    placeholders["recent_trackers"] = recent_trackers_str
+    placeholders["recent_checkins"] = recent_checkins_str
 
     # Attachments + saved image path
     attachments = []
