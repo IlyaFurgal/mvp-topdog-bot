@@ -53,6 +53,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   }
 
   function handleOverlay(e) {
+    if (saving) return
     if (e.target === overlayRef.current) onClose()
   }
 
@@ -63,7 +64,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
       <div className="modal-sheet">
         <div className="modal-header">
           <span className="modal-title">{TITLES[type]}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} disabled={saving}>✕</button>
         </div>
 
         {type === 'weight' && (
