@@ -229,7 +229,12 @@ export default function CheckinFlow({ type, onClose }) {
         )}
       </div>
 
-      {saving && <div className="checkin-flow__saving">Сохраняем...</div>}
+      {saving && (
+        <div className="checkin-flow__saving-overlay">
+          <div className="checkin-flow__spinner" />
+          <p className="checkin-flow__saving-text">Сохраняем...</p>
+        </div>
+      )}
     </div>
   )
 }
