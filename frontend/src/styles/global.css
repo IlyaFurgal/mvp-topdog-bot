@@ -990,6 +990,17 @@ html, body {
   letter-spacing: 0.06em;
 }
 
+/* ── Calorie overrun warning ──────────────────────────── */
+
+.calorie-overrun {
+  font-size: 0.8rem;
+  color: var(--danger);
+  text-align: center;
+  margin: -8px 0 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
 /* ── Recovery detail ─────────────────────────────────── */
 
 .recovery-detail {

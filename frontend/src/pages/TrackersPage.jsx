@@ -23,6 +23,7 @@ function nextUndone(checkins) {
 export default function TrackersPage() {
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
+  const [calorieLimit, setCalorieLimit] = useState(2000)
   const [loading, setLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
@@ -34,7 +35,9 @@ export default function TrackersPage() {
         getTodayTrackers(),
       ])
       setCheckins(checkData)
-      setTrackers(trackData)
+      const { calorie_limit, ...rest } = trackData
+      setTrackers(rest)
+      if (calorie_limit) setCalorieLimit(calorie_limit)
     } catch (_) {}
     setLoading(false)
   }
@@ -96,10 +99,16 @@ export default function TrackersPage() {
                 key={type}
                 type={type}
                 data={trackers[type]}
+                calorieLimit={type === 'calories' ? calorieLimit : undefined}
                 onAdd={() => setActiveTracker(type)}
               />
             ))}
           </div>
+          {trackers.calories && trackers.calories.value > calorieLimit && (
+            <p className="calorie-overrun">
+              Вы превысили норму калорий на {Math.round(trackers.calories.value - calorieLimit)} ккал
+            </p>
+          )}
         </>
       )}
 
@@ -107,8 +116,16 @@ export default function TrackersPage() {
         <TrackerModal
           type={activeTracker}
           todayData={trackers[activeTracker]}
+          calorieLimit={activeTracker === 'calories' ? calorieLimit : undefined}
           onClose={() => setActiveTracker(null)}
-          onSaved={() => { setActiveTracker(null); load() }}
+          onSaved={(type, newValue) => {
+            setActiveTracker(null)
+            if (type && newValue !== undefined) {
+              setTrackers(prev => ({ ...prev, [type]: { ...prev[type], value: newValue } }))
+            } else {
+              load()
+            }
+          }}
         />
       )}
     </div>

@@ -6,7 +6,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import Tracker, TrackerType, User
+from database.models import Profile, Tracker, TrackerType, User
 from database.session import get_session
 
 router = APIRouter(prefix="/trackers", tags=["trackers"])
@@ -16,6 +16,52 @@ class TrackerCreate(BaseModel):
     type: str
     value: float
     unit: str
+
+
+class TrackerUpdate(BaseModel):
+    value: float
+
+
+def calculate_calorie_limit(profile) -> int:
+    if not profile:
+        return 2000
+    weight = profile.weight
+    height = profile.height
+    birth_date = profile.birth_date
+    if not weight or not height or not birth_date:
+        return 2000
+
+    today = date.today()
+    age = today.year - birth_date.year - (
+        (today.month, today.day) < (birth_date.month, birth_date.day)
+    )
+
+    gender = profile.gender.value if profile.gender else None
+    if gender == "male":
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5
+    elif gender == "female":
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+    else:
+        bmr = 10 * weight + 6.25 * height - 5 * age - 78
+
+    activity_coefs = {
+        "sedentary": 1.2,
+        "light": 1.375,
+        "moderate": 1.55,
+        "active": 1.725,
+        "very_active": 1.9,
+    }
+    activity = profile.activity_level.value if profile.activity_level else "moderate"
+    tdee = bmr * activity_coefs.get(activity, 1.55)
+
+    goal = profile.goal.value if profile.goal else None
+    goals = profile.goals or []
+    if goal == "weight_loss" or "weight_loss" in goals:
+        tdee *= 0.85
+    elif goal == "muscle_gain" or "muscle_gain" in goals:
+        tdee *= 1.12
+
+    return round(tdee)
 
 
 def _today_start() -> datetime:
@@ -52,6 +98,12 @@ async def get_today_trackers(
     session: AsyncSession = Depends(get_session),
 ):
     today = _today_start()
+
+    profile_result = await session.execute(
+        select(Profile).where(Profile.user_id == user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+
     result = await session.execute(
         select(Tracker)
         .where(and_(Tracker.user_id == user.id, Tracker.created_at >= today))
@@ -62,26 +114,31 @@ async def get_today_trackers(
     out: dict = {"weight": None, "water": None, "sleep": None, "calories": None}
     water_total = 0.0
     has_water = False
+    last_water_id: int | None = None
     cal_total = 0.0
     has_calories = False
+    last_cal_id: int | None = None
 
     for t in trackers:
         if t.type == TrackerType.weight:
-            out["weight"] = {"value": t.value, "unit": t.unit}
+            out["weight"] = {"value": t.value, "unit": t.unit, "id": t.id}
         elif t.type == TrackerType.water:
             water_total += t.value
             has_water = True
+            last_water_id = t.id
         elif t.type == TrackerType.sleep:
-            out["sleep"] = {"value": t.value, "unit": t.unit}
+            out["sleep"] = {"value": t.value, "unit": t.unit, "id": t.id}
         elif t.type == TrackerType.calories:
             cal_total += t.value
             has_calories = True
+            last_cal_id = t.id
 
     if has_water:
-        out["water"] = {"value": water_total, "unit": "ml"}
+        out["water"] = {"value": water_total, "unit": "ml", "id": last_water_id}
     if has_calories:
-        out["calories"] = {"value": cal_total, "unit": "kcal"}
+        out["calories"] = {"value": cal_total, "unit": "kcal", "id": last_cal_id}
 
+    out["calorie_limit"] = calculate_calorie_limit(profile)
     return out
 
 
