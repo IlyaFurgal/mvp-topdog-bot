@@ -656,6 +656,58 @@ html, body {
   border-color: var(--accent);
 }
 
+.tracker-row__edit {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.tracker-row__edit:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.tracker-row__edit-input {
+  width: 72px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.tracker-row__edit-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #2e2e2e;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tracker-row__edit-btn--confirm {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tracker-row__edit-btn--cancel {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* ── TrackerModal ─────────────────────────────────────── */
 
 .modal-overlay {

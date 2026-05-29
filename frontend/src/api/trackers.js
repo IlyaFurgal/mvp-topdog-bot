@@ -20,6 +20,11 @@ export async function getTrackerStats(days = 30) {
   return data
 }
 
+export async function updateTracker(trackerId, value) {
+  const { data } = await client.patch(`/trackers/${trackerId}`, { value })
+  return data
+}
+
 export async function getWeeklyInsight() {
   const { data } = await client.get('/insights/weekly')
   return data

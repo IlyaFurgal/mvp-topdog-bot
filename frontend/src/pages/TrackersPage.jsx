@@ -101,6 +101,10 @@ export default function TrackersPage() {
                 data={trackers[type]}
                 calorieLimit={type === 'calories' ? calorieLimit : undefined}
                 onAdd={() => setActiveTracker(type)}
+                onEdited={(t, newVal) => setTrackers(prev => ({
+                  ...prev,
+                  [t]: { ...prev[t], value: newVal },
+                }))}
               />
             ))}
           </div>

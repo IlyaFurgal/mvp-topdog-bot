@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,6 +90,26 @@ async def create_tracker(
     await session.commit()
     await session.refresh(tracker)
     return {"id": tracker.id, "created_at": tracker.created_at}
+
+
+@router.patch("/{tracker_id}")
+async def update_tracker(
+    tracker_id: int,
+    body: TrackerUpdate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Tracker).where(Tracker.id == tracker_id)
+    )
+    tracker = result.scalar_one_or_none()
+    if not tracker:
+        raise HTTPException(status_code=404, detail="Tracker not found")
+    if tracker.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    tracker.value = body.value
+    await session.commit()
+    return {"id": tracker.id, "value": tracker.value, "unit": tracker.unit}
 
 
 @router.get("/today")
