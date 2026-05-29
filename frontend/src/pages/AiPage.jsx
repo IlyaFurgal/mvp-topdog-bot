@@ -58,6 +58,7 @@ export default function AiPage() {
   const bottomRef = useRef(null)
   const pollRef = useRef(null)
   const fileInputRef = useRef(null)
+  const textareaRef = useRef(null)
 
   // Загружаем историю при монтировании
   useEffect(() => {
@@ -153,12 +154,22 @@ export default function AiPage() {
     setFileError('')
   }
 
+  function handleTextareaChange(e) {
+    setInput(e.target.value)
+    const ta = textareaRef.current
+    if (ta) {
+      ta.style.height = 'auto'
+      ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'
+    }
+  }
+
   async function handleSend() {
     const text = input.trim()
     if (!text && !filePreview) return
     if (typing) return
 
     setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = ''
 
     // Показываем превью в чате сразу
     const previewImageUrl = filePreview && !filePreview.isPdf ? filePreview.dataUrl : null
@@ -274,12 +285,12 @@ export default function AiPage() {
           </svg>
         </button>
         <textarea
+          ref={textareaRef}
           className="ai-input"
           placeholder="Напиши вопрос..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleTextareaChange}
           onKeyDown={handleKey}
-          rows={1}
         />
         <button className="ai-send" onClick={handleSend} disabled={!canSend}>
           →

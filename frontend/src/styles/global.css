@@ -1422,15 +1422,19 @@ html, body {
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1rem;
+  line-height: 1.5;
   padding: 12px 14px;
   resize: none;
+  min-height: 96px;
   max-height: 120px;
   overflow-y: auto;
+  transition: min-height 0.15s ease;
 }
 
 .ai-input:focus {
   outline: none;
   border-color: var(--accent);
+  min-height: 120px;
 }
 
 .ai-send {
