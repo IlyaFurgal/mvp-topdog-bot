@@ -5,7 +5,7 @@ const tabs = [
   { path: '/trackers',  label: 'ТРЕКЕР'  },
   { path: '/progress',  label: 'ПРОГРЕСС' },
   { path: '/knowledge', label: 'БАЗА'     },
-  { path: '/residents', label: 'ЧАТ'      },
+  { path: '/residents', label: 'КОМЬЮНИТИ' },
   { path: '/profile',   label: 'ПРОФИЛЬ'  },
 ]
 
