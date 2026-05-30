@@ -82,6 +82,7 @@ const SCORE_MAP = {
 }
 
 function calcRecoveryPct(checkins) {
+  if (!Array.isArray(checkins)) return null
   const scores = []
   for (const c of checkins) {
     if (c.type === 'morning') {
@@ -123,7 +124,7 @@ export default function ProgressPage() {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([
+    Promise.allSettled([
       getTrackerHistory('weight', days),
       getTrackerHistory('water', days),
       getTrackerHistory('sleep', days),
@@ -133,15 +134,14 @@ export default function ProgressPage() {
       getWeeklyInsight(),
     ])
       .then(([wt, wa, sl, cal, st, ch, ins]) => {
-        setWeightData(wt)
-        setWaterData(wa)
-        setSleepData(sl)
-        setCaloriesData(cal)
-        setStats(st)
-        setCheckins(ch)
-        setInsight(ins)
+        if (wt.status === 'fulfilled') setWeightData(wt.value)
+        if (wa.status === 'fulfilled') setWaterData(wa.value)
+        if (sl.status === 'fulfilled') setSleepData(sl.value)
+        if (cal.status === 'fulfilled') setCaloriesData(cal.value)
+        if (st.status === 'fulfilled') setStats(st.value)
+        if (ch.status === 'fulfilled' && Array.isArray(ch.value)) setCheckins(ch.value)
+        if (ins.status === 'fulfilled') setInsight(ins.value)
       })
-      .catch(() => {})
       .finally(() => setLoading(false))
   }, [periodIdx])
 
@@ -155,7 +155,7 @@ export default function ProgressPage() {
         )
       : null
 
-  const rpeVals = postWorkouts.map((c) => c.data?.rpe).filter(Boolean)
+  const rpeVals = postWorkouts.map((c) => c.data?.rpe).filter((v) => v != null)
   const avgRpe =
     rpeVals.length > 0
       ? (rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length).toFixed(1)
