@@ -76,27 +76,56 @@ function rpeLabel(rpe) {
 }
 
 const SCORE_MAP = {
-  great: 100, good: 100, high: 100, fresh: 100,
-  normal: 67, okay: 67, medium: 67, slightly_tired: 67,
-  bad: 33, poor: 33, hard: 33, heavy: 33, low: 33,
+  // body_feeling
+  fresh: 100, slightly_tired: 67, heavy: 33, sick: 10,
+  // sleep_quality / general quality
+  great: 100, good: 100, normal: 67, bad: 33, poor: 33,
+  // energy / mood level
+  high: 100, medium: 67, low: 33,
+  // mood (explicit)
+  neutral: 67,
+  // training_desire
+  want: 100, okay: 67, no_desire: 33, no_chance: 33,
+  // day ratings
+  hard: 33,
 }
 
 function calcRecoveryPct(checkins) {
   if (!Array.isArray(checkins)) return null
   const scores = []
+
   for (const c of checkins) {
     if (c.type === 'morning') {
-      if (c.data?.sleep_quality != null) scores.push(SCORE_MAP[c.data.sleep_quality] ?? 67)
-      if (c.data?.body_feeling != null) scores.push(SCORE_MAP[c.data.body_feeling] ?? 67)
-      if (c.data?.motivation != null) scores.push(SCORE_MAP[c.data.motivation] ?? 67)
+      if (c.data?.sleep_quality != null)    scores.push(SCORE_MAP[c.data.sleep_quality]    ?? 67)
+      if (c.data?.body_feeling != null)     scores.push(SCORE_MAP[c.data.body_feeling]     ?? 67)
+      if (c.data?.motivation != null)       scores.push(SCORE_MAP[c.data.motivation]       ?? 67)
+      if (c.data?.mood != null)             scores.push(SCORE_MAP[c.data.mood]             ?? 67)
+      if (c.data?.training_desire != null)  scores.push(SCORE_MAP[c.data.training_desire]  ?? 67)
     }
     if (c.type === 'evening') {
-      if (c.data?.energy != null) scores.push(SCORE_MAP[c.data.energy] ?? 67)
-      if (c.data?.recovery != null) scores.push(SCORE_MAP[c.data.recovery] ?? 67)
+      if (c.data?.energy != null)    scores.push(SCORE_MAP[c.data.energy]    ?? 67)
+      if (c.data?.recovery != null)  scores.push(SCORE_MAP[c.data.recovery]  ?? 67)
     }
   }
+
   if (scores.length === 0) return null
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+
+  const base = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+
+  // Resting pulse penalty: if latest pulse is 10+ bpm above personal min → -20
+  const pulseVals = checkins
+    .filter((c) => c.type === 'morning' && c.data?.resting_pulse != null)
+    .map((c) => Number(c.data.resting_pulse))
+    .filter((n) => !isNaN(n) && n > 0)
+  // checkins are returned newest-first from API
+  let pulsePenalty = 0
+  if (pulseVals.length >= 2) {
+    const minPulse = Math.min(...pulseVals)
+    const latestPulse = pulseVals[0]
+    if (latestPulse - minPulse >= 10) pulsePenalty = 20
+  }
+
+  return Math.max(0, base - pulsePenalty)
 }
 
 function recoveryGrade(pct) {
