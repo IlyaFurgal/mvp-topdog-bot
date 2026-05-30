@@ -204,6 +204,15 @@ async def send_message(
             body.image_base64, body.image_name
         )
         saved_image_path = image_path_rel
+        # Логируем размер полученного изображения
+        try:
+            img_bytes_len = len(base64.b64decode(pure_b64 + "=="))
+            logger.info(
+                "Image upload: user=%s name=%r size_kb=%d mime=%s",
+                user.telegram_id, body.image_name, img_bytes_len // 1024, mime,
+            )
+        except Exception as _log_err:
+            logger.warning("Could not calculate image size: %s", _log_err)
         attachments.append({
             "file_name": body.image_name or f"photo.{mime.split('/')[1]}",
             "file_type": "image",
@@ -238,9 +247,13 @@ async def send_message(
                 json=payload,
                 headers={"Authorization": f"Bearer {settings.SUVVY_API_KEY}"},
             )
+            logger.info(
+                "Suvvy response: user=%s status=%s body=%.200s",
+                user.telegram_id, resp.status_code, resp.text,
+            )
             resp.raise_for_status()
         except httpx.HTTPError as e:
-            logger.error("Suvvy send error: %s", e)
+            logger.error("Suvvy send error: user=%s error=%s", user.telegram_id, e)
             raise HTTPException(status_code=502, detail="Failed to reach Suvvy")
 
     # Сохраняем сообщение пользователя в БД

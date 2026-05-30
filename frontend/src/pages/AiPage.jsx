@@ -3,7 +3,41 @@ import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { useProfile } from '../context/ProfileContext'
 
-const MAX_FILE_BYTES = 15 * 1024 * 1024  // 15 МБ
+const MAX_FILE_BYTES = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
+const RESIZE_THRESHOLD = 5 * 1024 * 1024  // 5 МБ — порог ресайза изображений
+const MAX_DIMENSION = 1920                 // px — максимальная сторона после ресайза
+
+async function resizeImageIfNeeded(file) {
+  if (file.size <= RESIZE_THRESHOLD) {
+    // Небольшой файл — читаем как есть
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (ev) =>
+        resolve({ dataUrl: ev.target.result, name: file.name, isPdf: false })
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+  // Сжимаем через Canvas
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const { width, height } = img
+      const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height, 1)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(width * ratio)
+      canvas.height = Math.round(height * ratio)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      const newName = file.name.replace(/\.[^.]+$/, '') + '.jpg'
+      resolve({ dataUrl, name: newName, isPdf: false })
+    }
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('load')) }
+    img.src = objectUrl
+  })
+}
 
 const GREETING = {
   aggressive:
@@ -131,23 +165,35 @@ export default function AiPage() {
     }, POLL_INTERVAL_MS)
   }
 
-  function handleFileChange(e) {
+  async function handleFileChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setFileError('')
+    e.target.value = ''
 
     if (file.size > MAX_FILE_BYTES) {
       setFileError('Файл слишком большой. Максимум 15 МБ.')
-      e.target.value = ''
       return
     }
 
     const isPdf = file.type === 'application/pdf'
-    const reader = new FileReader()
-    reader.onload = (ev) =>
-      setFilePreview({ dataUrl: ev.target.result, name: file.name, isPdf })
-    reader.readAsDataURL(file)
-    e.target.value = ''
+
+    if (isPdf) {
+      const reader = new FileReader()
+      reader.onload = (ev) =>
+        setFilePreview({ dataUrl: ev.target.result, name: file.name, isPdf: true })
+      reader.onerror = () => setFileError('Не удалось прочитать PDF.')
+      reader.readAsDataURL(file)
+      return
+    }
+
+    // Изображение: сжимаем если > 5 МБ
+    try {
+      const result = await resizeImageIfNeeded(file)
+      setFilePreview(result)
+    } catch (_) {
+      setFileError('Не удалось обработать изображение. Попробуй ещё раз.')
+    }
   }
 
   function removeFile() {
