@@ -1492,6 +1492,40 @@ html, body {
   40%           { opacity: 1;   transform: scale(1.2); }
 }
 
+/* Failed / retry state */
+.ai-msg__failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+.ai-msg__failed-label {
+  font-size: 0.75rem;
+  color: var(--danger);
+  letter-spacing: 0.04em;
+}
+
+.ai-msg__retry {
+  font-size: 0.75rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.ai-msg__retry:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* Image in chat bubble */
 .ai-msg__image {
   display: block;

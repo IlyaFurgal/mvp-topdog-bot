@@ -33,7 +33,6 @@ function buildGreeting(tone, name) {
 const POLL_INTERVAL_MS = 1500
 const POLL_MAX_ATTEMPTS = 40  // ~60 секунд
 
-// Берём базовый URL (origin) для построения абсолютных путей к /uploads/
 const API_BASE = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
   : ''
@@ -52,7 +51,6 @@ export default function AiPage() {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  // filePreview: { dataUrl, name, isPdf }
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
   const bottomRef = useRef(null)
@@ -60,12 +58,12 @@ export default function AiPage() {
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
 
-  // Загружаем историю при монтировании
+  // Всегда загружаем историю при монтировании
   useEffect(() => {
     async function fetchHistory() {
       try {
         const { data } = await client.get('/suvvy/history')
-        const history = data.messages ?? []
+        const history = (data.messages ?? []).filter((m) => m.text?.trim())
         if (history.length > 0) {
           setMessages(
             history.map((m) => ({
@@ -98,6 +96,7 @@ export default function AiPage() {
   }
 
   function addMessage(from, text, imagePath) {
+    if (!text?.trim()) return  // не добавляем пустые сообщения
     setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text, imagePath }])
     scrollToBottom()
   }
@@ -118,7 +117,9 @@ export default function AiPage() {
         if (data.messages && data.messages.length > 0) {
           stopPolling()
           setTyping(false)
-          data.messages.forEach((text) => addMessage('ai', text))
+          data.messages.forEach((text) => {
+            if (text?.trim()) addMessage('ai', text)
+          })
           return
         }
       } catch (_) {}
@@ -171,13 +172,20 @@ export default function AiPage() {
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = ''
 
-    // Показываем превью в чате сразу
     const previewImageUrl = filePreview && !filePreview.isPdf ? filePreview.dataUrl : null
     const previewText = filePreview?.isPdf
       ? (text ? `${text}\n📄 ${filePreview.name}` : `📄 ${filePreview.name}`)
       : text
 
-    addMessage('user', previewText, previewImageUrl)
+    // Добавляем сообщение с уникальным id для обновления статуса
+    const msgId = Date.now() + Math.random()
+    const isPhotoMsg = !!(filePreview && !filePreview.isPdf)
+    setMessages((prev) => [
+      ...prev,
+      { id: msgId, from: 'user', text: previewText, imagePath: previewImageUrl, retryText: text },
+    ])
+    scrollToBottom()
+
     const capturedFile = filePreview
     setFilePreview(null)
     setFileError('')
@@ -187,7 +195,6 @@ export default function AiPage() {
       const body = { text }
       if (capturedFile) {
         if (capturedFile.isPdf) {
-          // Убираем data:application/pdf;base64, prefix
           const pure = capturedFile.dataUrl.split(',')[1]
           body.pdf_base64 = pure
           body.pdf_name = capturedFile.name
@@ -200,10 +207,39 @@ export default function AiPage() {
       startPolling()
     } catch (e) {
       setTyping(false)
+      // Помечаем сообщение как неотправленное вместо добавления ошибки ИИ
+      setMessages((prev) =>
+        prev.map((m) => m.id === msgId ? { ...m, status: 'failed' } : m)
+      )
+      // Для фото — дополнительная подсказка
+      if (isPhotoMsg) {
+        setFileError('Не удалось загрузить фото. Попробуй ещё раз.')
+      }
       const detail = e?.response?.data?.detail
-      addMessage('ai', detail === 'Suvvy not configured'
-        ? 'ИИ-ассистент ещё не подключён.'
-        : 'Не удалось отправить сообщение. Попробуй позже.')
+      if (detail === 'Suvvy not configured') {
+        addMessage('ai', 'ИИ-ассистент ещё не подключён.')
+      }
+    }
+  }
+
+  async function handleRetry(msg) {
+    if (typing) return
+    // Снимаем статус failed, пробуем отправить текст заново
+    setMessages((prev) =>
+      prev.map((m) => m.id === msg.id ? { ...m, status: 'retrying' } : m)
+    )
+    setTyping(true)
+    try {
+      await client.post('/suvvy/message', { text: msg.retryText || msg.text || '' })
+      setMessages((prev) =>
+        prev.map((m) => m.id === msg.id ? { ...m, status: undefined, retryText: undefined } : m)
+      )
+      startPolling()
+    } catch (_) {
+      setTyping(false)
+      setMessages((prev) =>
+        prev.map((m) => m.id === msg.id ? { ...m, status: 'failed' } : m)
+      )
     }
   }
 
@@ -235,6 +271,23 @@ export default function AiPage() {
                   : <span>{msg.text}</span>
               )}
             </div>
+            {msg.status === 'failed' && (
+              <div className="ai-msg__failed">
+                <span className="ai-msg__failed-label">Не отправлено</span>
+                <button
+                  className="ai-msg__retry"
+                  onClick={() => handleRetry(msg)}
+                  disabled={typing}
+                >
+                  Повторить
+                </button>
+              </div>
+            )}
+            {msg.status === 'retrying' && (
+              <div className="ai-msg__failed">
+                <span className="ai-msg__failed-label">Отправляем...</span>
+              </div>
+            )}
           </div>
         ))}
         {typing && (
@@ -266,7 +319,6 @@ export default function AiPage() {
       )}
 
       <div className="ai-input-bar">
-        {/* Hidden file input — accepts images + PDF */}
         <input
           ref={fileInputRef}
           type="file"
