@@ -528,6 +528,96 @@ html, body {
   opacity: 0.75;
 }
 
+/* ── CheckinFlow: number input step ──────────────────── */
+
+.checkin-flow__number-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkin-flow__hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.checkin-flow__numfield {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 16px;
+}
+
+.checkin-flow__numfield:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.checkin-flow__number-submit {
+  width: 100%;
+}
+
+/* ── CheckinFlow: optional text step ─────────────────── */
+
+.checkin-flow__text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkin-flow__textfield {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem;
+  padding: 12px 14px;
+  resize: none;
+  line-height: 1.5;
+}
+
+.checkin-flow__textfield:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.checkin-flow__text-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.checkin-flow__text-skip {
+  flex: 1;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.checkin-flow__text-submit {
+  flex: 2;
+}
+
 .checkin-flow__saving-overlay {
   position: absolute;
   inset: 0;
