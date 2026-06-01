@@ -26,7 +26,8 @@ MAX_HISTORY = 20
 UPLOADS_DIR = Path("/app/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-PDF_MAX_PAGES = 5
+PDF_MAX_PAGES    = 5
+AUDIO_MAX_BYTES  = 15 * 1024 * 1024  # 15 МБ
 
 
 async def _trim_history(session: AsyncSession, user_id: int) -> None:
@@ -74,6 +75,36 @@ def _save_image_from_dataurl(data_url: str, name: str | None) -> tuple[str, str,
     return f"/uploads/{filename}", mime, pure_b64
 
 
+def _save_audio_from_dataurl(data_url: str, name: str | None) -> tuple[str, str, str]:
+    """
+    Сохраняет аудио из data-URL на диск.
+    Проверяет лимит AUDIO_MAX_BYTES.
+    Возвращает (audio_path_relative, mime, pure_b64).
+    """
+    try:
+        header, pure_b64 = data_url.split(",", 1)
+        mime = header.split(";")[0].split(":")[1]          # e.g. audio/webm
+        ext  = mime.split("/")[1].split(";")[0]            # e.g. webm
+    except (IndexError, ValueError):
+        raise HTTPException(status_code=422, detail="Invalid audio_base64 format")
+
+    try:
+        audio_bytes = base64.b64decode(pure_b64)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Cannot decode audio_base64")
+
+    if len(audio_bytes) > AUDIO_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio too large. Max 15 MB.",
+        )
+
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = UPLOADS_DIR / filename
+    filepath.write_bytes(audio_bytes)
+    return f"/uploads/{filename}", mime, pure_b64
+
+
 def _save_pdf_pages(pdf_b64: str) -> list[str]:
     """
     Конвертирует PDF из base64 в PNG-изображения (макс PDF_MAX_PAGES страниц).
@@ -116,6 +147,8 @@ class MessageIn(BaseModel):
     image_name: Optional[str] = None
     pdf_base64: Optional[str] = None
     pdf_name: Optional[str] = None
+    audio_base64: Optional[str] = None
+    audio_name: Optional[str] = None
 
 
 @router.get("/history")
@@ -148,8 +181,11 @@ async def send_message(
     if not settings.SUVVY_API_KEY:
         raise HTTPException(status_code=503, detail="Suvvy not configured")
 
-    if not body.text and not body.image_base64 and not body.pdf_base64:
-        raise HTTPException(status_code=422, detail="text, image_base64 or pdf_base64 required")
+    if not body.text and not body.image_base64 and not body.pdf_base64 and not body.audio_base64:
+        raise HTTPException(
+            status_code=422,
+            detail="text, image_base64, pdf_base64 or audio_base64 required",
+        )
 
     # Загружаем профиль для placeholders
     profile_result = await session.execute(
@@ -220,6 +256,31 @@ async def send_message(
         })
         if not display_text:
             display_text = "📷 Фото"
+
+    elif body.audio_base64:
+        audio_path_rel, mime, pure_b64 = _save_audio_from_dataurl(
+            body.audio_base64, body.audio_name
+        )
+        # _save_audio_from_dataurl уже проверил лимит 15 МБ и кинет 413 если превышено
+        saved_image_path = audio_path_rel
+
+        try:
+            audio_size_bytes = len(base64.b64decode(pure_b64))
+            logger.info(
+                "Audio upload: user=%s name=%r size_kb=%d mime=%s",
+                user.telegram_id, body.audio_name, audio_size_bytes // 1024, mime,
+            )
+        except Exception as _log_err:
+            logger.warning("Could not calculate audio size: %s", _log_err)
+
+        ext = mime.split("/")[1].split(";")[0]
+        attachments.append({
+            "file_name": body.audio_name or f"voice.{ext}",
+            "file_type": "audio",
+            "data":      pure_b64,
+        })
+        if not display_text:
+            display_text = "🎤 Голосовое сообщение"
 
     payload: dict = {
         "api_version":    1,

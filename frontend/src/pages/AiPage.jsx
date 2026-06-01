@@ -3,13 +3,13 @@ import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { useProfile } from '../context/ProfileContext'
 
-const MAX_FILE_BYTES = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
-const RESIZE_THRESHOLD = 5 * 1024 * 1024  // 5 МБ — порог ресайза изображений
-const MAX_DIMENSION = 1920                 // px — максимальная сторона после ресайза
+const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
+const RESIZE_THRESHOLD  =  5 * 1024 * 1024   // 5 МБ  — порог ресайза изображений
+const MAX_DIMENSION     = 1920                // px    — максимальная сторона после ресайза
+const MAX_REC_SECONDS   = 120                 // 2 минуты — лимит записи голоса
 
 async function resizeImageIfNeeded(file) {
   if (file.size <= RESIZE_THRESHOLD) {
-    // Небольшой файл — читаем как есть
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (ev) =>
@@ -18,7 +18,6 @@ async function resizeImageIfNeeded(file) {
       reader.readAsDataURL(file)
     })
   }
-  // Сжимаем через Canvas
   return new Promise((resolve, reject) => {
     const img = new Image()
     const objectUrl = URL.createObjectURL(file)
@@ -37,6 +36,19 @@ async function resizeImageIfNeeded(file) {
     img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('load')) }
     img.src = objectUrl
   })
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+function formatRecTime(secs) {
+  return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`
 }
 
 const GREETING = {
@@ -58,14 +70,12 @@ const GREETING = {
 
 function buildGreeting(tone, name) {
   const base = GREETING[tone] ?? GREETING.soft
-  if (tone === 'soft' && name) {
-    return base.replace('Привет!', `Привет, ${name}!`)
-  }
+  if (tone === 'soft' && name) return base.replace('Привет!', `Привет, ${name}!`)
   return base
 }
 
 const POLL_INTERVAL_MS = 1500
-const POLL_MAX_ATTEMPTS = 40  // ~60 секунд
+const POLL_MAX_ATTEMPTS = 40
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
@@ -81,32 +91,43 @@ export default function AiPage() {
   const { tone, profile } = useProfile()
   const name = profile?.preferred_name || ''
 
+  // ── Chat state ───────────────────────────────────────
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
-  const bottomRef = useRef(null)
-  const pollRef = useRef(null)
-  const fileInputRef = useRef(null)
-  const textareaRef = useRef(null)
 
-  // Всегда загружаем историю при монтировании
+  // ── Voice recording state ────────────────────────────
+  const [recording, setRecording] = useState(false)
+  const [recSeconds, setRecSeconds] = useState(0)
+  const [voiceError, setVoiceError] = useState('')
+
+  // ── Refs ─────────────────────────────────────────────
+  const bottomRef         = useRef(null)
+  const pollRef           = useRef(null)
+  const fileInputRef      = useRef(null)
+  const textareaRef       = useRef(null)
+  const mediaRecorderRef  = useRef(null)
+  const audioChunksRef    = useRef([])
+  const recTimerRef       = useRef(null)
+  const streamRef         = useRef(null)
+  const stoppingRef       = useRef(false)   // guard against double stop
+
+  // ── Load history on mount ────────────────────────────
   useEffect(() => {
     async function fetchHistory() {
       try {
         const { data } = await client.get('/suvvy/history')
         const history = (data.messages ?? []).filter((m) => m.text?.trim())
         if (history.length > 0) {
-          setMessages(
-            history.map((m) => ({
-              id: m.id,
-              from: m.role,
-              text: m.text,
-              imagePath: resolveImagePath(m.image_path),
-            }))
-          )
+          setMessages(history.map((m) => ({
+            id: m.id,
+            from: m.role,
+            text: m.text,
+            imagePath: resolveImagePath(m.image_path),
+          })))
         } else {
           setMessages([{ id: 1, from: 'ai', text: buildGreeting(tone, name) }])
         }
@@ -120,26 +141,31 @@ export default function AiPage() {
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (historyLoaded) {
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    }
+    if (historyLoaded) scrollToBottom()
   }, [historyLoaded])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling()
+      if (recTimerRef.current) clearInterval(recTimerRef.current)
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+    }
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Helpers ──────────────────────────────────────────
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
   function addMessage(from, text, imagePath) {
-    if (!text?.trim()) return  // не добавляем пустые сообщения
+    if (!text?.trim()) return
     setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text, imagePath }])
     scrollToBottom()
   }
 
   function stopPolling() {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }
 
   async function startPolling() {
@@ -151,9 +177,7 @@ export default function AiPage() {
         if (data.messages && data.messages.length > 0) {
           stopPolling()
           setTyping(false)
-          data.messages.forEach((text) => {
-            if (text?.trim()) addMessage('ai', text)
-          })
+          data.messages.forEach((text) => { if (text?.trim()) addMessage('ai', text) })
           return
         }
       } catch (_) {}
@@ -165,6 +189,7 @@ export default function AiPage() {
     }, POLL_INTERVAL_MS)
   }
 
+  // ── File/photo handling ───────────────────────────────
   async function handleFileChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -176,9 +201,7 @@ export default function AiPage() {
       return
     }
 
-    const isPdf = file.type === 'application/pdf'
-
-    if (isPdf) {
+    if (file.type === 'application/pdf') {
       const reader = new FileReader()
       reader.onload = (ev) =>
         setFilePreview({ dataUrl: ev.target.result, name: file.name, isPdf: true })
@@ -187,7 +210,6 @@ export default function AiPage() {
       return
     }
 
-    // Изображение: сжимаем если > 5 МБ
     try {
       const result = await resizeImageIfNeeded(file)
       setFilePreview(result)
@@ -210,6 +232,7 @@ export default function AiPage() {
     }
   }
 
+  // ── Send text / file ──────────────────────────────────
   async function handleSend() {
     const text = input.trim()
     if (!text && !filePreview) return
@@ -223,7 +246,6 @@ export default function AiPage() {
       ? (text ? `${text}\n📄 ${filePreview.name}` : `📄 ${filePreview.name}`)
       : text
 
-    // Добавляем сообщение с уникальным id для обновления статуса
     const msgId = Date.now() + Math.random()
     const isPhotoMsg = !!(filePreview && !filePreview.isPdf)
     setMessages((prev) => [
@@ -241,8 +263,7 @@ export default function AiPage() {
       const body = { text }
       if (capturedFile) {
         if (capturedFile.isPdf) {
-          const pure = capturedFile.dataUrl.split(',')[1]
-          body.pdf_base64 = pure
+          body.pdf_base64 = capturedFile.dataUrl.split(',')[1]
           body.pdf_name = capturedFile.name
         } else {
           body.image_base64 = capturedFile.dataUrl
@@ -253,27 +274,18 @@ export default function AiPage() {
       startPolling()
     } catch (e) {
       setTyping(false)
-      // Помечаем сообщение как неотправленное вместо добавления ошибки ИИ
       setMessages((prev) =>
         prev.map((m) => m.id === msgId ? { ...m, status: 'failed' } : m)
       )
-      // Для фото — дополнительная подсказка
-      if (isPhotoMsg) {
-        setFileError('Не удалось загрузить фото. Попробуй ещё раз.')
-      }
+      if (isPhotoMsg) setFileError('Не удалось загрузить фото. Попробуй ещё раз.')
       const detail = e?.response?.data?.detail
-      if (detail === 'Suvvy not configured') {
-        addMessage('ai', 'ИИ-ассистент ещё не подключён.')
-      }
+      if (detail === 'Suvvy not configured') addMessage('ai', 'ИИ-ассистент ещё не подключён.')
     }
   }
 
   async function handleRetry(msg) {
     if (typing) return
-    // Снимаем статус failed, пробуем отправить текст заново
-    setMessages((prev) =>
-      prev.map((m) => m.id === msg.id ? { ...m, status: 'retrying' } : m)
-    )
+    setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, status: 'retrying' } : m))
     setTyping(true)
     try {
       await client.post('/suvvy/message', { text: msg.retryText || msg.text || '' })
@@ -283,21 +295,170 @@ export default function AiPage() {
       startPolling()
     } catch (_) {
       setTyping(false)
-      setMessages((prev) =>
-        prev.map((m) => m.id === msg.id ? { ...m, status: 'failed' } : m)
-      )
+      setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, status: 'failed' } : m))
     }
   }
 
   function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+
+  // ── Voice recording ───────────────────────────────────
+  async function startRecording() {
+    if (typing || recording) return
+    setVoiceError('')
+
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err) {
+      setVoiceError(
+        err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
+          ? 'Разреши доступ к микрофону в настройках'
+          : 'Не удалось записать голосовое, попробуй ещё раз'
+      )
+      return
+    }
+
+    streamRef.current = stream
+    audioChunksRef.current = []
+    stoppingRef.current = false
+
+    // Выбираем наилучший поддерживаемый формат
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', '']
+      .find((m) => !m || MediaRecorder.isTypeSupported(m)) ?? ''
+
+    let recorder
+    try {
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+    } catch {
+      stream.getTracks().forEach((t) => t.stop())
+      setVoiceError('Не удалось запустить запись.')
+      return
+    }
+
+    mediaRecorderRef.current = recorder
+    recorder.addEventListener('dataavailable', (e) => {
+      if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data)
+    })
+    recorder.start(250)
+
+    setRecording(true)
+    setRecSeconds(0)
+
+    recTimerRef.current = setInterval(() => {
+      setRecSeconds((prev) => {
+        if (prev + 1 >= MAX_REC_SECONDS) {
+          // Авто-стоп через 0ms чтобы не вызывать setState внутри setState
+          setTimeout(() => stopAndSend(), 0)
+          return prev
+        }
+        return prev + 1
+      })
+    }, 1000)
+  }
+
+  async function stopAndSend() {
+    if (stoppingRef.current) return
+    stoppingRef.current = true
+
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null }
+    setRecording(false)
+    setRecSeconds(0)
+
+    const recorder = mediaRecorderRef.current
+    mediaRecorderRef.current = null
+
+    if (!recorder || recorder.state === 'inactive') {
+      if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
+      stoppingRef.current = false
+      return
+    }
+
+    // Ждём финального flush данных
+    await new Promise((resolve) => {
+      recorder.addEventListener('stop', resolve, { once: true })
+      recorder.stop()
+    })
+
+    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
+
+    const chunks = audioChunksRef.current
+    audioChunksRef.current = []
+    stoppingRef.current = false
+
+    if (chunks.length === 0) {
+      setVoiceError('Не удалось записать голосовое, попробуй ещё раз')
+      return
+    }
+
+    const mimeType = chunks[0].type || 'audio/webm'
+    const blob = new Blob(chunks, { type: mimeType })
+
+    if (blob.size > MAX_FILE_BYTES) {
+      setVoiceError('Запись слишком длинная. Максимум 15 МБ.')
+      return
+    }
+
+    await sendVoiceBlob(blob, mimeType)
+  }
+
+  function cancelRecording() {
+    if (stoppingRef.current) return
+    stoppingRef.current = true
+
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null }
+    setRecording(false)
+    setRecSeconds(0)
+
+    const recorder = mediaRecorderRef.current
+    mediaRecorderRef.current = null
+    audioChunksRef.current = []
+
+    if (recorder && recorder.state !== 'inactive') {
+      try { recorder.stop() } catch (_) {}
+    }
+    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
+    stoppingRef.current = false
+  }
+
+  async function sendVoiceBlob(blob, mimeType) {
+    const dataUrl = await blobToDataUrl(blob)
+    const ext = (mimeType.split('/')[1] ?? 'webm').split(';')[0]
+    const filename = `voice_${Date.now()}.${ext}`
+
+    const msgId = Date.now() + Math.random()
+    setMessages((prev) => [
+      ...prev,
+      { id: msgId, from: 'user', text: '🎤 Голосовое сообщение', retryText: '' },
+    ])
+    scrollToBottom()
+
+    setTyping(true)
+    try {
+      await client.post('/suvvy/message', {
+        text: '',
+        audio_base64: dataUrl,
+        audio_name: filename,
+      })
+      startPolling()
+    } catch (e) {
+      setTyping(false)
+      setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, status: 'failed' } : m))
+      const detail = e?.response?.data?.detail
+      if (detail === 'Suvvy not configured') {
+        addMessage('ai', 'ИИ-ассистент ещё не подключён.')
+      } else if (detail?.includes('too large') || e?.response?.status === 413) {
+        setVoiceError('Голосовое слишком длинное. Попробуй покороче.')
+      } else {
+        setVoiceError('Не удалось отправить голосовое. Попробуй ещё раз.')
+      }
     }
   }
 
   const canSend = (input.trim() || filePreview) && !typing
 
+  // ── Render ────────────────────────────────────────────
   return (
     <div className="ai-page">
       <div className="ai-header">
@@ -320,11 +481,7 @@ export default function AiPage() {
             {msg.status === 'failed' && (
               <div className="ai-msg__failed">
                 <span className="ai-msg__failed-label">Не отправлено</span>
-                <button
-                  className="ai-msg__retry"
-                  onClick={() => handleRetry(msg)}
-                  disabled={typing}
-                >
+                <button className="ai-msg__retry" onClick={() => handleRetry(msg)} disabled={typing}>
                   Повторить
                 </button>
               </div>
@@ -360,40 +517,67 @@ export default function AiPage() {
           <button className="ai-image-remove" onClick={removeFile}>✕</button>
         </div>
       )}
-      {fileError && (
-        <div className="ai-image-error">{fileError}</div>
-      )}
+      {fileError && <div className="ai-image-error">{fileError}</div>}
+      {voiceError && <div className="ai-voice-error">{voiceError}</div>}
 
-      <div className="ai-input-bar">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-        <button
-          className="ai-attach"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={typing}
-          title="Прикрепить файл"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
-        <textarea
-          ref={textareaRef}
-          className="ai-input"
-          placeholder="Напиши вопрос..."
-          value={input}
-          onChange={handleTextareaChange}
-          onKeyDown={handleKey}
-        />
-        <button className="ai-send" onClick={handleSend} disabled={!canSend}>
-          →
-        </button>
-      </div>
+      {/* Recording bar — заменяет input bar во время записи */}
+      {recording ? (
+        <div className="ai-record-bar">
+          <button className="ai-record-cancel" onClick={cancelRecording} title="Отмена">✕</button>
+          <div className="ai-record-indicator">
+            <span className="ai-record-dot" />
+            <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
+            <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
+          </div>
+          <button className="ai-record-send" onClick={stopAndSend}>
+            Отправить →
+          </button>
+        </div>
+      ) : (
+        <div className="ai-input-bar">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <button
+            className="ai-attach"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={typing}
+            title="Прикрепить файл"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
+          <button
+            className="ai-mic"
+            onClick={startRecording}
+            disabled={typing}
+            title="Записать голосовое"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3" />
+              <path d="M19 10a7 7 0 0 1-14 0" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="8"  y1="22" x2="16" y2="22" />
+            </svg>
+          </button>
+          <textarea
+            ref={textareaRef}
+            className="ai-input"
+            placeholder="Напиши вопрос..."
+            value={input}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKey}
+          />
+          <button className="ai-send" onClick={handleSend} disabled={!canSend}>
+            →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
