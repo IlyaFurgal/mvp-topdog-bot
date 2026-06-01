@@ -29,6 +29,44 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 PDF_MAX_PAGES    = 5
 AUDIO_MAX_BYTES  = 15 * 1024 * 1024  # 15 МБ
 
+# ── Display mappings (machine value → Russian) ─────────
+GOAL_DISPLAY: dict[str, str] = {
+    "weight_loss":    "Похудение",
+    "muscle_gain":    "Набор мышечной массы",
+    "maintenance":    "Поддержание формы",
+    "endurance":      "Выносливость",
+    "flexibility":    "Гибкость и растяжка",
+    "rehabilitation": "Реабилитация",
+    "stress":         "Снятие стресса",
+    "sleep_quality":  "Улучшение сна",
+    "competition":    "Подготовка к соревнованиям",
+}
+
+FITNESS_LEVEL_DISPLAY: dict[str, str] = {
+    "beginner":     "Начинающий",
+    "intermediate": "Средний уровень",
+    "advanced":     "Продвинутый",
+}
+
+ACTIVITY_LEVEL_DISPLAY: dict[str, str] = {
+    "sedentary":  "Сидячий образ жизни",
+    "light":      "Лёгкая активность",
+    "moderate":   "Средняя активность",
+    "active":     "Высокая активность",
+    "very_active": "Очень высокая активность",
+}
+
+TONE_DISPLAY: dict[str, str] = {
+    "aggressive": "Жёсткий",
+    "soft":       "Мягкий",
+}
+
+GENDER_DISPLAY: dict[str, str] = {
+    "male":   "Мужской",
+    "female": "Женский",
+    "other":  "Другой",
+}
+
 
 async def _trim_history(session: AsyncSession, user_id: int) -> None:
     """Удаляет старые записи, оставляя только последние MAX_HISTORY."""
@@ -193,21 +231,49 @@ async def send_message(
     )
     profile = profile_result.scalar_one_or_none()
 
-    # Placeholders для системной инструкции Suvvy
+    # ── Raw (machine) values ──────────────────────────────
+    _goal_raw: str = (
+        ", ".join(profile.goals) if profile and profile.goals
+        else (profile.goal.value if profile and profile.goal else "")
+    )
+    _fitness_raw:  str = profile.fitness_level.value  if profile and profile.fitness_level  else ""
+    _activity_raw: str = profile.activity_level.value if profile and profile.activity_level else ""
+    _tone_raw:     str = profile.tone.value            if profile and profile.tone            else "soft"
+    _gender_raw:   str = profile.gender.value          if profile and profile.gender          else ""
+
+    # ── Display (human-readable) values ──────────────────
+    def _goals_display(raw: str) -> str:
+        if not raw:
+            return ""
+        return ", ".join(GOAL_DISPLAY.get(g.strip(), g.strip()) for g in raw.split(","))
+
+    _goal_display:     str = _goals_display(_goal_raw)
+    _fitness_display:  str = FITNESS_LEVEL_DISPLAY.get(_fitness_raw,  _fitness_raw)
+    _activity_display: str = ACTIVITY_LEVEL_DISPLAY.get(_activity_raw, _activity_raw)
+    _tone_display:     str = TONE_DISPLAY.get(_tone_raw,   _tone_raw)
+    _gender_display:   str = GENDER_DISPLAY.get(_gender_raw, _gender_raw)
+
+    # ── Placeholders для системной инструкции Suvvy ───────
     placeholders = {
-        "name":                user.first_name or "",
-        "username":            user.username or "",
-        "goal":                ", ".join(profile.goals) if profile and profile.goals else (
-                               profile.goal.value if profile and profile.goal else ""
-                           ),
-        "fitness_level":       (profile.fitness_level.value if profile and profile.fitness_level else ""),
-        "sport_type":          (profile.sport_type or "" if profile else ""),
-        "activity_level":      (profile.activity_level.value if profile and profile.activity_level else ""),
-        "health_restrictions": (profile.health_restrictions or "" if profile else ""),
-        "tone":                (profile.tone.value if profile and profile.tone else "soft"),
-        "subscription_type":   (user.subscription_type or ""),
-        "age":                 _calc_age(profile.birth_date if profile else None),
-        "gender":              (profile.gender.value if profile and profile.gender else ""),
+        # Базовые
+        "name":             user.first_name or "",
+        "username":         user.username or "",
+        "subscription_type": user.subscription_type or "",
+        "age":              _calc_age(profile.birth_date if profile else None),
+        "sport_type":       profile.sport_type or "" if profile else "",
+        "health_restrictions": profile.health_restrictions or "" if profile else "",
+        # Сырые (machine)
+        "goal":             _goal_raw,
+        "fitness_level":    _fitness_raw,
+        "activity_level":   _activity_raw,
+        "tone":             _tone_raw,
+        "gender":           _gender_raw,
+        # Человекочитаемые (_display) — используются в промптах Suvvy
+        "goal_display":            _goal_display,
+        "fitness_level_display":   _fitness_display,
+        "activity_level_display":  _activity_display,
+        "tone_display":            _tone_display,
+        "gender_display":          _gender_display,
     }
 
     # Attachments + saved image path
