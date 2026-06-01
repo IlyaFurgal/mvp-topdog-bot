@@ -352,12 +352,13 @@ async def send_message(
         "api_version":    1,
         "message_id":     str(uuid.uuid4()),
         "chat_id":        str(user.telegram_id),
-        "text":           body.text,
         "message_sender": "customer",
         "source":         f"MVP TopDog | {user.username or user.telegram_id}",
         "client_name":    user.first_name or "",
         "placeholders":   placeholders,
     }
+    if body.text:
+        payload["text"] = body.text
     if attachments:
         payload["attachments"] = attachments
 
