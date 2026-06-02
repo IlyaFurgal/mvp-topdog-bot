@@ -2,12 +2,42 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <script>
+  (function () {
+    function show(msg) {
+      var el = document.getElementById('root') || document.body;
+      el.innerHTML = '<div style="background:#111;color:#fff;min-height:100vh;padding:20px;'
+        + 'font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;box-sizing:border-box">'
+        + '<div style="color:#C8FF00;font-size:16px;margin-bottom:12px">Диагностика загрузки</div>'
+        + msg
+        + '<div style="margin-top:16px;color:#666">Сфотографируй и пришли в поддержку.</div></div>';
+    }
+    window.addEventListener('error', function (e) {
+      var src = (e.target && (e.target.src || e.target.href)) || '';
+      show('ERROR: ' + (e.message || 'resource failed') + '\n'
+        + (src ? 'SRC: ' + src + '\n' : '')
+        + 'UA: ' + navigator.userAgent);
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      show('PROMISE REJECTED: ' + ((e.reason && (e.reason.message || e.reason)) || '') + '\n'
+        + 'UA: ' + navigator.userAgent);
+    });
+    setTimeout(function () {
+      var root = document.getElementById('root');
+      if (root && root.children.length === 0) {
+        show('TIMEOUT: React не смонтировался за 6с\n'
+          + 'Telegram WebApp: ' + (window.Telegram && window.Telegram.WebApp ? 'есть' : 'НЕТ') + '\n'
+          + 'UA: ' + navigator.userAgent);
+      }
+    }, 6000);
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>TopDog MVP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script async src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div id="root"></div>
