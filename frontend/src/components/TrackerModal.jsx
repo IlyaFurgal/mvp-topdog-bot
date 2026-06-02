@@ -114,6 +114,7 @@ function WeightInput({ value, onChange }) {
         <button className="weight-btn" onClick={() => adjust(-0.1)}>−0.1</button>
         <input
           type="number"
+          inputMode="decimal"
           className="weight-num-input"
           value={value}
           step="0.1"
@@ -152,10 +153,14 @@ function WaterInput({ amount, onChange, total }) {
       <div className="water-custom">
         <input
           type="number"
+          inputMode="numeric"
           className="weight-num-input"
-          value={amount}
+          value={amount === 0 ? '' : amount}
           min="1"
-          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const v = e.target.value.replace(/^0+(?=\d)/, '')
+            onChange(v === '' ? 0 : parseInt(v, 10) || 0)
+          }}
         />
         <span className="weight-unit">мл</span>
       </div>
@@ -196,10 +201,14 @@ function CaloriesInput({ amount, onChange, total, limit = 2000 }) {
       <div className="water-custom">
         <input
           type="number"
+          inputMode="numeric"
           className="weight-num-input"
-          value={amount}
+          value={amount === 0 ? '' : amount}
           min="0"
-          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const v = e.target.value.replace(/^0+(?=\d)/, '')
+            onChange(v === '' ? 0 : parseInt(v, 10) || 0)
+          }}
         />
         <span className="weight-unit">ккал</span>
       </div>
