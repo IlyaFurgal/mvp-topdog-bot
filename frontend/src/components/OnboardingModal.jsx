@@ -20,9 +20,27 @@ const SLIDES = [
 
 const KEY = 'mvp_onboarding_done'
 
+// localStorage can be unavailable or throw in some WebViews (notably iOS
+// Telegram with "Prevent Cross-Site Tracking" on). Never let it crash render.
+function safeGet(key) {
+  try {
+    return window.localStorage?.getItem(key) ?? null
+  } catch {
+    return null
+  }
+}
+
+function safeSet(key, value) {
+  try {
+    window.localStorage?.setItem(key, value)
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
+
 export default function OnboardingModal() {
   const [step, setStep] = useState(0)
-  const [visible, setVisible] = useState(() => !localStorage.getItem(KEY))
+  const [visible, setVisible] = useState(() => !safeGet(KEY))
 
   if (!visible) return null
 
@@ -31,7 +49,7 @@ export default function OnboardingModal() {
 
   function handleNext() {
     if (isLast) {
-      localStorage.setItem(KEY, '1')
+      safeSet(KEY, '1')
       setVisible(false)
     } else {
       setStep((s) => s + 1)
