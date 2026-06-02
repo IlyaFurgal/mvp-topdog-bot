@@ -167,6 +167,100 @@ const COMPLETION_MESSAGES = {
   },
 }
 
+const MESSAGES = {
+  soft: {
+    morning: {
+      care:    'Вижу, тебе сейчас непросто. Сегодня главное — поберечь себя и восстановиться, без геройства 💛',
+      neutral: 'Принято! День только начинается — двигайся в своём темпе.',
+      praise:  'Отличный настрой с утра! Используй эту энергию по полной 💪',
+    },
+    post_workout: {
+      care:    'Ты прислушался к телу — это правильно. Если что-то беспокоит, не игнорируй и дай себе восстановиться.',
+      neutral: 'Тренировка засчитана. Каждый шаг важен, даже если сегодня было тяжело.',
+      praise:  'Сильная работа! Ты выложился и довёл до конца — так и растёт результат 🔥',
+    },
+    evening: {
+      care:    'День выдался тяжёлым. Дай себе отдых и восстановись — завтра будет легче 💛',
+      neutral: 'День позади. Отдохни как следует.',
+      praise:  'Отличный день! Хорошее восстановление — залог завтрашнего прогресса.',
+    },
+  },
+  hard: {
+    morning: {
+      care:    'Тело просит паузы — услышь это. Сегодня восстановление, не нагрузка.',
+      neutral: 'Подъём принят. В работу.',
+      praise:  'Готов к бою. Используй этот настрой.',
+    },
+    post_workout: {
+      care:    'Боль — сигнал, не игнорируй. Восстановись прежде чем грузить дальше.',
+      neutral: 'Чекин закрыт. Результат внесён.',
+      praise:  'План выполнен. Так держать — без поблажек.',
+    },
+    evening: {
+      care:    'Тяжёлый день. Восстановление обязательно — это часть работы.',
+      neutral: 'День закрыт. Восстанавливайся.',
+      praise:  'День отработан чисто. Восстановление — и завтра снова в бой.',
+    },
+  },
+}
+
+function getCheckinMood(type, data) {
+  if (type === 'morning') {
+    if (
+      data.body_feeling === 'sick' ||
+      (data.body_feeling === 'heavy' && data.sleep_quality === 'bad') ||
+      data.training_desire === 'no_desire' ||
+      data.mood === 'bad' ||
+      data.motivation === 'low'
+    ) return 'care'
+    if (
+      data.body_feeling === 'fresh' &&
+      (data.sleep_quality === 'great' || data.sleep_quality === 'normal') &&
+      (data.mood === 'good' || data.motivation === 'high' || data.training_desire === 'want')
+    ) return 'praise'
+    return 'neutral'
+  }
+
+  if (type === 'post_workout') {
+    if (
+      data.pain === 'pain' ||
+      data.dizziness === 'yes' ||
+      (data.plan_completed === 'not' && data.plan_reason === 'injury')
+    ) return 'care'
+    if (
+      data.plan_completed === 'fully' &&
+      (data.satisfaction === 'yes' || data.satisfaction === 'mostly') &&
+      data.pain !== 'pain'
+    ) return 'praise'
+    return 'neutral'
+  }
+
+  if (type === 'evening') {
+    if (
+      (data.recovery === 'poor' && data.energy === 'low') ||
+      data.day_rating === 'hard'
+    ) return 'care'
+    if (
+      data.day_rating === 'good' &&
+      data.energy === 'high' &&
+      data.recovery === 'great'
+    ) return 'praise'
+    return 'neutral'
+  }
+
+  return 'neutral'
+}
+
+function getCompletionMessage(type, data, tone) {
+  const safeTone = tone === 'hard' ? 'hard' : 'soft'
+  const mood = getCheckinMood(type, data) ?? 'neutral'
+  return (
+    MESSAGES[safeTone]?.[type]?.[mood] ??
+    COMPLETION_MESSAGES[safeTone]?.[type] ??
+    COMPLETION_MESSAGES.soft[type]
+  )
+}
+
 export default function CheckinFlow({ type, onClose }) {
   const { tone } = useProfile()
   const allSteps = STEPS[type]
@@ -235,7 +329,7 @@ export default function CheckinFlow({ type, onClose }) {
   }
 
   if (done) {
-    const msg = COMPLETION_MESSAGES[tone]?.[type] ?? COMPLETION_MESSAGES.soft[type]
+    const msg = getCompletionMessage(type, data, tone)
     return (
       <div className="checkin-flow checkin-flow--done">
         <div className="checkin-flow__completion">
