@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
@@ -144,6 +144,21 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   // Body metrics
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
+
+  // Sync all form fields when profile loads or changes
+  useEffect(() => {
+    if (!profile) return
+    setPreferredName(profile.preferred_name ?? '')
+    setTone(profile.tone ?? 'soft')
+    setSelectedGoals(profile.goals ?? (profile.goal ? [profile.goal] : []))
+    setFitnessLevel(profile.fitness_level ?? '')
+    setSportType(profile.sport_type ?? '')
+    setTz(profile.timezone ?? 'UTC+3')
+    setMorningTime(profile.morning_reminder_time ?? profile.push_time ?? '08:00')
+    setEveningTime(profile.evening_reminder_time ?? '21:00')
+    setWeight(profile.weight != null ? String(profile.weight) : '')
+    setHeight(profile.height != null ? String(profile.height) : '')
+  }, [profile])
 
   function toggleGoal(key) {
     setSelectedGoals((prev) =>
@@ -318,6 +333,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             marginBottom: 16,
           }}
         >
+          {!TIMEZONE_OPTIONS.some(([k]) => k === tz) && tz && (
+            <option value={tz}>{tz}</option>
+          )}
           {TIMEZONE_OPTIONS.map(([key, label]) => (
             <option key={key} value={key}>{label}</option>
           ))}
@@ -339,6 +357,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             marginBottom: 16,
           }}
         >
+          {!MORNING_TIMES.includes(morningTime) && morningTime && (
+            <option value={morningTime}>{morningTime}</option>
+          )}
           {MORNING_TIMES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
@@ -360,6 +381,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             marginBottom: 16,
           }}
         >
+          {!EVENING_TIMES.includes(eveningTime) && eveningTime && (
+            <option value={eveningTime}>{eveningTime}</option>
+          )}
           {EVENING_TIMES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
