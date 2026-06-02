@@ -13,6 +13,10 @@ class RegistrationForm(StatesGroup):
     # 2. Дата рождения
     birth_date_input = State()
 
+    # 2a. Вес и рост (обязательные для расчёта нормы)
+    weight_input = State()
+    height_input = State()
+
     # 3. Уровень подготовки
     fitness_level = State()
 

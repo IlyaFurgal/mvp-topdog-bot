@@ -42,6 +42,8 @@ async def get_my_profile(
         "push_time":            profile.push_time if profile else None,
         "morning_reminder_time": profile.morning_reminder_time if profile else "08:00",
         "evening_reminder_time": profile.evening_reminder_time if profile else "21:00",
+        "weight":                profile.weight if profile else None,
+        "height":                profile.height if profile else None,
         # Subscription
         "subscription_type":    user.subscription_type,
         "subscription_active":  user.subscription_active,
@@ -62,6 +64,8 @@ class ProfileUpdate(BaseModel):
     timezone:               Optional[str]       = None
     morning_reminder_time:  Optional[str]       = None   # "HH:MM"
     evening_reminder_time:  Optional[str]       = None   # "HH:MM"
+    weight:                 Optional[float]     = None   # кг (стартовый/референсный)
+    height:                 Optional[float]     = None   # см
 
 
 @router.patch("/me")
@@ -120,6 +124,12 @@ async def update_my_profile(
 
     if body.evening_reminder_time is not None:
         profile.evening_reminder_time = _validate_time(body.evening_reminder_time, "evening_reminder_time")
+
+    if body.weight is not None:
+        profile.weight = body.weight
+
+    if body.height is not None:
+        profile.height = body.height
 
     await session.commit()
     return {"status": "ok"}

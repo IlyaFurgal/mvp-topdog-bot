@@ -22,14 +22,14 @@ class TrackerUpdate(BaseModel):
     value: float
 
 
-def calculate_calorie_limit(profile) -> int:
+def calculate_calorie_limit(profile, current_weight: float | None = None) -> int:
     if not profile:
-        return 2000
-    weight = profile.weight
+        return 2500
+    weight = current_weight or profile.weight
     height = profile.height
     birth_date = profile.birth_date
     if not weight or not height or not birth_date:
-        return 2000
+        return 2500
 
     today = date.today()
     age = today.year - birth_date.year - (
@@ -158,7 +158,21 @@ async def get_today_trackers(
     if has_calories:
         out["calories"] = {"value": cal_total, "unit": "kcal", "id": last_cal_id}
 
-    out["calorie_limit"] = calculate_calorie_limit(profile)
+    # Актуальный вес: сначала трекер сегодня, иначе последний из истории
+    current_weight: float | None = None
+    if out["weight"]:
+        current_weight = out["weight"]["value"]
+    else:
+        latest_w = (await session.execute(
+            select(Tracker)
+            .where(and_(Tracker.user_id == user.id, Tracker.type == TrackerType.weight))
+            .order_by(Tracker.created_at.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+        if latest_w:
+            current_weight = latest_w.value
+
+    out["calorie_limit"] = calculate_calorie_limit(profile, current_weight=current_weight)
     return out
 
 
@@ -209,6 +223,11 @@ async def get_tracker_stats(
     today = _today_start()
     since_period = _since(days)
     since_7 = _since(7)
+
+    profile_result = await session.execute(
+        select(Profile).where(Profile.user_id == user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
 
     result = await session.execute(
         select(Tracker).where(
@@ -275,6 +294,12 @@ async def get_tracker_stats(
         today_cal = sum(t.value for t in cal_list if t.created_at >= today)
         last7_cal = {d: v for d, v in by_date_cal.items() if d >= (date.today() - timedelta(days=7))}
         avg7_cal = round(sum(last7_cal.values()) / len(last7_cal)) if last7_cal else 0
-        cal_stat = {"today": round(today_cal), "avg_7days": avg7_cal, "goal": 2000}
+        # Используем актуальный вес (последний трекер веса в выборке) для расчёта нормы
+        latest_weight_val = weights[-1].value if weights else None
+        cal_stat = {
+            "today": round(today_cal),
+            "avg_7days": avg7_cal,
+            "goal": calculate_calorie_limit(profile, current_weight=latest_weight_val),
+        }
 
     return {"weight": weight_stat, "water": water_stat, "sleep": sleep_stat, "calories": cal_stat}

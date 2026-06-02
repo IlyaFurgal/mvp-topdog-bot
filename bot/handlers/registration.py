@@ -22,7 +22,7 @@ from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from bot.states import RegistrationForm
 from core.config import settings
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
-from database.models import ActivityLevel, FitnessLevel, Gender, Goal, Profile, SubscriptionStatus, Tone, User
+from database.models import ActivityLevel, FitnessLevel, Gender, Goal, Profile, SubscriptionStatus, Tone, Tracker, TrackerType, User
 from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -233,6 +233,46 @@ async def step_fitness(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(birth_date=birth.isoformat())
+    await state.set_state(RegistrationForm.weight_input)
+    await message.answer("Укажи свой вес в кг 💪\n\nНапример: 75 или 75.5")
+
+
+# ── Ввод веса → запросить рост ────────────────────────────────────────────────
+
+@router.message(RegistrationForm.weight_input)
+async def step_height_from_weight(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip().replace(",", ".")
+    try:
+        weight = float(raw)
+        if weight < 30 or weight > 300:
+            raise ValueError
+    except ValueError:
+        await message.answer(
+            "⚠️ Введи вес числом от 30 до 300 кг\n"
+            "Например: 75 или 75.5"
+        )
+        return
+    await state.update_data(weight=weight)
+    await state.set_state(RegistrationForm.height_input)
+    await message.answer("Укажи свой рост в см 📏\n\nНапример: 178")
+
+
+# ── Ввод роста → уровень подготовки ───────────────────────────────────────────
+
+@router.message(RegistrationForm.height_input)
+async def step_fitness_from_height(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip().replace(",", ".")
+    try:
+        height = int(float(raw))
+        if height < 100 or height > 250:
+            raise ValueError
+    except ValueError:
+        await message.answer(
+            "⚠️ Введи рост числом от 100 до 250 см\n"
+            "Например: 178"
+        )
+        return
+    await state.update_data(height=height)
     await state.set_state(RegistrationForm.fitness_level)
     await message.answer("Какой у тебя уровень подготовки?", reply_markup=kb_fitness())
 
@@ -507,6 +547,10 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
     morning_time = data.get("push_time") or "08:00"
     evening_time = data.get("evening_reminder_time") or "21:00"
 
+    # Weight / height collected in FSM
+    weight_val: float | None = data.get("weight")
+    height_val: float | None = data.get("height")
+
     saved_profile = None
     async with AsyncSessionLocal() as session:
         telegram_id = target.from_user.id
@@ -532,7 +576,18 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
                 push_time=morning_time,
                 morning_reminder_time=morning_time,
                 evening_reminder_time=evening_time,
+                weight=weight_val,
+                height=height_val,
             )
+            # First weight tracker → стартовая точка в истории/графике
+            if saved_profile and weight_val is not None:
+                session.add(Tracker(
+                    user_id=user.id,
+                    type=TrackerType.weight,
+                    value=weight_val,
+                    unit="kg",
+                ))
+                await session.commit()
             if saved_profile:
                 await _register_in_getcourse(user, saved_profile)
 

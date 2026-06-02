@@ -141,6 +141,10 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   const [morningTime, setMorningTime] = useState(profile?.morning_reminder_time ?? '08:00')
   const [eveningTime, setEveningTime] = useState(profile?.evening_reminder_time ?? '21:00')
 
+  // Body metrics
+  const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
+  const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
+
   function toggleGoal(key) {
     setSelectedGoals((prev) =>
       prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]
@@ -151,6 +155,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     setError(null)
     setSaving(true)
     try {
+      const weightNum = weight !== '' ? parseFloat(weight.replace(',', '.')) : undefined
+      const heightNum = height !== '' ? parseInt(height, 10) : undefined
       await client.patch('/profile/me', {
         preferred_name:        preferredName || undefined,
         tone:                  tone || undefined,
@@ -160,6 +166,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         timezone:              tz || undefined,
         morning_reminder_time: morningTime || undefined,
         evening_reminder_time: eveningTime || undefined,
+        weight:                (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
+        height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
       })
       onSaved()
     } catch (e) {
@@ -357,6 +365,56 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           ))}
         </select>
 
+        {/* Weight */}
+        <p className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          placeholder="Например: 75.5"
+          min="30"
+          max="300"
+          step="0.1"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            boxSizing: 'border-box',
+            marginBottom: 4,
+          }}
+        />
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+          Стартовый вес для расчёта нормы калорий. Текущий вес меняй через трекер.
+        </p>
+
+        {/* Height */}
+        <p className="section-label" style={{ marginBottom: 8 }}>РОСТ (см)</p>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={height}
+          onChange={(e) => setHeight(e.target.value)}
+          placeholder="Например: 178"
+          min="100"
+          max="250"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            boxSizing: 'border-box',
+            marginBottom: 16,
+          }}
+        />
+
         {error && (
           <p style={{ color: '#ff4444', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>
         )}
@@ -478,6 +536,18 @@ export default function ProfilePage() {
         <div className="profile-row">
           <span className="profile-label">ВЕЧЕР</span>
           <span className="profile-value">{profile?.evening_reminder_time ?? '21:00'}</span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">ВЕС (старт)</span>
+          <span className="profile-value">
+            {profile?.weight != null ? `${profile.weight} кг` : '—'}
+          </span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">РОСТ</span>
+          <span className="profile-value">
+            {profile?.height != null ? `${profile.height} см` : '—'}
+          </span>
         </div>
         <div className="profile-row">
           <span className="profile-label">ТАРИФ</span>
