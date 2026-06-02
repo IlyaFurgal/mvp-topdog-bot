@@ -5,9 +5,26 @@ import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
 import TrackerModal from '../components/TrackerModal'
 import TrackerRow from '../components/TrackerRow'
+import { useProfile } from '../context/ProfileContext'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
 const TRACKER_TYPES = ['weight', 'water', 'sleep', 'calories']
+
+function getOverrunMessage(over, tone) {
+  const safeTone = tone === 'hard' ? 'hard' : 'soft'
+  const level = over > 200 ? 'big' : 'small'
+  const MESSAGES = {
+    soft: {
+      small: `Чуть превысил норму — на ${over} ккал. Ничего страшного, просто учитывай это завтра 💛`,
+      big:   `Сегодня перебор на ${over} ккал. Для твоей цели стоит сбалансировать — завтра вернись в норму, и всё ок.`,
+    },
+    hard: {
+      small: `Перебор на ${over} ккал. Держи норму — мелочи решают.`,
+      big:   `Норма превышена на ${over} ккал. Это работает против цели. Завтра — в рамках.`,
+    },
+  }
+  return MESSAGES[safeTone][level]
+}
 
 function getOverallStatus(checkins) {
   const done = CHECKIN_TYPES.filter((t) => checkins[t]).length
@@ -21,6 +38,7 @@ function nextUndone(checkins) {
 }
 
 export default function TrackersPage() {
+  const { tone } = useProfile()
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
   const [calorieLimit, setCalorieLimit] = useState(2000)
@@ -110,7 +128,7 @@ export default function TrackersPage() {
           </div>
           {trackers.calories && trackers.calories.value > calorieLimit && (
             <p className="calorie-overrun">
-              Вы превысили норму калорий на {Math.round(trackers.calories.value - calorieLimit)} ккал
+              {getOverrunMessage(Math.round(trackers.calories.value - calorieLimit), tone)}
             </p>
           )}
         </>
