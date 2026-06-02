@@ -197,7 +197,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
-      <div className="modal-sheet" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+      <div className="modal-sheet modal-sheet--scroll">
         <div className="modal-header">
           <span className="modal-title">РЕДАКТИРОВАТЬ ПРОФИЛЬ</span>
           <button className="modal-close" onClick={onClose}>✕</button>

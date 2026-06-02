@@ -843,10 +843,18 @@ html, body {
   background: var(--surface);
   border-radius: 12px 12px 0 0;
   border-top: 1px solid var(--border);
-  padding: 20px 16px 32px;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-sheet--scroll {
+  /* scrollable profile modal — styles inherited from .modal-sheet */
 }
 
 .modal-header {
