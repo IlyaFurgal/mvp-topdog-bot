@@ -9,6 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import and_, func, select, or_
 
+from api.routers.trackers import calculate_calorie_limit
 from api.services.getcourse import sync_progress_to_gc
 from core.config import settings
 from database.models import (
@@ -52,6 +53,24 @@ async def _has_morning_checkin_today(session, user_id: int) -> bool:
         )
     )
     return result.scalar_one_or_none() is not None
+
+
+async def _today_tracker_sum(session, user_id: int, tracker_type: TrackerType) -> float:
+    """Return the sum of tracker values for the given type logged today (UTC day).
+    Returns 0.0 if no records exist."""
+    today_start = datetime.combine(date.today(), datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )
+    result = await session.scalar(
+        select(func.sum(Tracker.value)).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == tracker_type,
+                Tracker.created_at >= today_start,
+            )
+        )
+    )
+    return float(result) if result is not None else 0.0
 
 
 
@@ -125,6 +144,55 @@ async def check_reminders(bot: Bot) -> None:
                         text="Время вечернего чекина. Как прошёл день? 🌙",
                         reply_markup=_webapp_kb(),
                     )
+                    _reminder_sent[key] = today
+
+            # ── Water top-up at 16:00 ─────────────────────────────────
+            if hhmm == "16:00":
+                key = (user.id, "water_topup")
+                if _reminder_sent.get(key) != today:
+                    async with AsyncSessionLocal() as s:
+                        water_today = await _today_tracker_sum(s, user.id, TrackerType.water)
+                    if water_today < 1000:  # < 50 % от цели 2000 мл
+                        tone = (profile.tone if profile and profile.tone else "soft")
+                        if tone == "hard":
+                            text = "Воды сегодня мало. Добери норму — это базовая дисциплина."
+                        else:
+                            text = (
+                                "Не забывай про воду 💧 За день выпито меньше половины нормы — "
+                                "сделай пару глотков, организму это важно."
+                            )
+                        await bot.send_message(
+                            chat_id=user.telegram_id,
+                            text=text,
+                            reply_markup=_webapp_kb(),
+                        )
+                    _reminder_sent[key] = today
+
+            # ── Calorie under-eating at 20:00 ─────────────────────────
+            if hhmm == "20:00":
+                key = (user.id, "calories_topup")
+                if _reminder_sent.get(key) != today:
+                    async with AsyncSessionLocal() as s:
+                        cal_today = await _today_tracker_sum(s, user.id, TrackerType.calories)
+                    if cal_today > 0:  # не пушим если данных нет совсем
+                        cal_limit = calculate_calorie_limit(profile)
+                        if cal_today < cal_limit * 0.70:  # существенный недобор < 70 %
+                            tone = (profile.tone if profile and profile.tone else "soft")
+                            if tone == "hard":
+                                text = (
+                                    "Калорий сегодня недобор. "
+                                    "Без топлива нет роста — добери норму."
+                                )
+                            else:
+                                text = (
+                                    "Сегодня ты ел заметно меньше нормы. "
+                                    "Для твоей цели важно добрать — недоедание тормозит результат 💛"
+                                )
+                            await bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=text,
+                                reply_markup=_webapp_kb(),
+                            )
                     _reminder_sent[key] = today
 
         except Exception as exc:
