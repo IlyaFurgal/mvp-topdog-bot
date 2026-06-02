@@ -996,6 +996,17 @@ html, body {
   background: #0d1f3c;
 }
 
+.water-btn--reset {
+  flex: 0 0 auto;
+  padding: 14px 12px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.water-btn--reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .water-custom {
   display: flex;
   align-items: center;

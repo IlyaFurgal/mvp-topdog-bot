@@ -143,12 +143,19 @@ function WaterInput({ amount, onChange, total }) {
         {[200, 300, 500].map((ml) => (
           <button
             key={ml}
-            className={`water-btn ${amount === ml ? 'water-btn--active' : ''}`}
-            onClick={() => onChange(ml)}
+            className="water-btn"
+            onClick={() => onChange(amount + ml)}
           >
             +{ml} мл
           </button>
         ))}
+        <button
+          className="water-btn water-btn--reset"
+          onClick={() => onChange(0)}
+          disabled={amount === 0}
+        >
+          Сброс
+        </button>
       </div>
       <div className="water-custom">
         <input
@@ -191,12 +198,19 @@ function CaloriesInput({ amount, onChange, total, limit = 2000 }) {
         {[100, 300, 500].map((kcal) => (
           <button
             key={kcal}
-            className={`water-btn ${amount === kcal ? 'water-btn--active' : ''}`}
-            onClick={() => onChange(kcal)}
+            className="water-btn"
+            onClick={() => onChange(amount + kcal)}
           >
             +{kcal}
           </button>
         ))}
+        <button
+          className="water-btn water-btn--reset"
+          onClick={() => onChange(0)}
+          disabled={amount === 0}
+        >
+          Сброс
+        </button>
       </div>
       <div className="water-custom">
         <input
