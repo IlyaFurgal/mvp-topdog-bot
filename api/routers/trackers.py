@@ -1,7 +1,8 @@
 from datetime import date, datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,10 +13,23 @@ from database.session import get_session
 router = APIRouter(prefix="/trackers", tags=["trackers"])
 
 
+_VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
+
+
 class TrackerCreate(BaseModel):
     type: str
     value: float
     unit: str
+    meal_type: Optional[str] = None   # breakfast|lunch|dinner|snack; только для calories
+    label:     Optional[str] = None   # название блюда (задел под фото→калории)
+    source:    Optional[str] = "manual"  # manual|photo
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _VALID_MEAL_TYPES:
+            raise ValueError(f"meal_type must be one of {_VALID_MEAL_TYPES}")
+        return v
 
 
 class TrackerUpdate(BaseModel):
@@ -85,6 +99,9 @@ async def create_tracker(
         type=TrackerType(body.type),
         value=body.value,
         unit=body.unit,
+        meal_type=body.meal_type,
+        label=body.label,
+        source=body.source or "manual",
     )
     session.add(tracker)
     await session.commit()
@@ -138,6 +155,7 @@ async def get_today_trackers(
     cal_total = 0.0
     has_calories = False
     last_cal_id: int | None = None
+    cal_meals: dict[str, float] = {"breakfast": 0.0, "lunch": 0.0, "dinner": 0.0, "snack": 0.0, "uncategorized": 0.0}
 
     for t in trackers:
         if t.type == TrackerType.weight:
@@ -152,11 +170,14 @@ async def get_today_trackers(
             cal_total += t.value
             has_calories = True
             last_cal_id = t.id
+            meal_key = t.meal_type if t.meal_type in _VALID_MEAL_TYPES else "uncategorized"
+            cal_meals[meal_key] += t.value
 
     if has_water:
         out["water"] = {"value": water_total, "unit": "ml", "id": last_water_id}
     if has_calories:
         out["calories"] = {"value": cal_total, "unit": "kcal", "id": last_cal_id}
+    out["calories_meals"] = {k: round(v) for k, v in cal_meals.items()}
 
     # Актуальный вес: сначала трекер сегодня, иначе последний из истории
     current_weight: float | None = None

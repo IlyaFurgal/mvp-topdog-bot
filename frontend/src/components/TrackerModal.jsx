@@ -3,6 +3,22 @@ import { saveTracker } from '../api/trackers'
 
 const GOAL_WATER = 2000
 
+const MEAL_OPTIONS = [
+  { value: 'breakfast', label: 'Завтрак' },
+  { value: 'lunch',     label: 'Обед'   },
+  { value: 'dinner',    label: 'Ужин'   },
+  { value: 'snack',     label: 'Перекус'},
+]
+
+function getDefaultMealType() {
+  const h = new Date().getHours()
+  if (h >= 5  && h < 11) return 'breakfast'
+  if (h >= 11 && h < 15) return 'lunch'
+  if (h >= 15 && h < 18) return 'snack'
+  if (h >= 18 && h < 23) return 'dinner'
+  return null
+}
+
 const TITLES = {
   weight:   'ЗАПИСАТЬ ВЕС',
   water:    'ЗАПИСАТЬ ВОДУ',
@@ -17,6 +33,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
   const [waterAmount, setWaterAmount] = useState(200)
   const [caloriesAmount, setCaloriesAmount] = useState(0)
+  const [mealType, setMealType] = useState(() => type === 'calories' ? getDefaultMealType() : null)
   const [sleepHours, setSleepHours] = useState(() => {
     if (todayData?.value) return Math.floor(todayData.value)
     return 8
@@ -40,7 +57,10 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
         await saveTracker('water', waterAmount, 'ml')
         onSaved('water', waterTotal + waterAmount)
       } else if (type === 'calories') {
-        await saveTracker('calories', caloriesAmount, 'kcal')
+        await saveTracker('calories', caloriesAmount, 'kcal', {
+          meal_type: mealType || undefined,
+          source: 'manual',
+        })
         onSaved('calories', caloriesTotal + caloriesAmount)
       } else {
         const val = parseFloat((sleepHours + sleepMinutes / 60).toFixed(2))
@@ -87,6 +107,8 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
             onChange={setCaloriesAmount}
             total={caloriesTotal}
             limit={calorieLimit ?? 2000}
+            mealType={mealType}
+            onMealType={setMealType}
           />
         )}
 
@@ -175,12 +197,24 @@ function WaterInput({ amount, onChange, total }) {
   )
 }
 
-function CaloriesInput({ amount, onChange, total, limit = 2000 }) {
+function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMealType }) {
   const newTotal = total + amount
   const pct = Math.min((newTotal / limit) * 100, 100)
   const overLimit = newTotal > limit
   return (
     <div className="tracker-input">
+      {/* Выбор приёма пищи */}
+      <div className="meal-type-row">
+        {MEAL_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            className={`meal-type-btn${mealType === value ? ' meal-type-btn--active' : ''}`}
+            onClick={() => onMealType(mealType === value ? null : value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <p className="water-today">
         Сегодня: <strong>{Math.round(total).toLocaleString('ru')} ккал</strong>
         {' '}/ норма {limit.toLocaleString('ru')} ккал

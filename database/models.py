@@ -147,6 +147,10 @@ class Tracker(Base):
     type: Mapped[TrackerType] = mapped_column(Enum(TrackerType), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Meal metadata (calories only); nullable for backward compat
+    meal_type: Mapped[str | None] = mapped_column(String(16), nullable=True)   # breakfast|lunch|dinner|snack
+    label: Mapped[str | None] = mapped_column(String(256), nullable=True)      # название блюда (задел под фото→калории)
+    source: Mapped[str | None] = mapped_column(String(16), nullable=True)      # manual|photo
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="trackers")

@@ -42,6 +42,7 @@ export default function TrackersPage() {
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
   const [calorieLimit, setCalorieLimit] = useState(2000)
+  const [calorieMeals, setCalorieMeals] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
@@ -53,9 +54,10 @@ export default function TrackersPage() {
         getTodayTrackers(),
       ])
       setCheckins(checkData)
-      const { calorie_limit, ...rest } = trackData
+      const { calorie_limit, calories_meals, ...rest } = trackData
       setTrackers(rest)
       if (calorie_limit) setCalorieLimit(calorie_limit)
+      if (calories_meals) setCalorieMeals(calories_meals)
     } catch (_) {}
     setLoading(false)
   }
@@ -126,6 +128,23 @@ export default function TrackersPage() {
               />
             ))}
           </div>
+          {/* Разбивка калорий по приёмам пищи */}
+          {calorieMeals && Object.values(calorieMeals).some(v => v > 0) && (
+            <div className="meals-breakdown">
+              {[
+                ['breakfast', 'Завтрак'],
+                ['lunch',     'Обед'],
+                ['dinner',    'Ужин'],
+                ['snack',     'Перекус'],
+                ['uncategorized', 'Без категории'],
+              ].filter(([key]) => calorieMeals[key] > 0).map(([key, label]) => (
+                <div key={key} className="meals-breakdown__row">
+                  <span className="meals-breakdown__label">{label}</span>
+                  <span className="meals-breakdown__value">{calorieMeals[key]} ккал</span>
+                </div>
+              ))}
+            </div>
+          )}
           {trackers.calories && trackers.calories.value > calorieLimit && (
             <p className="calorie-overrun">
               {getOverrunMessage(Math.round(trackers.calories.value - calorieLimit), tone)}

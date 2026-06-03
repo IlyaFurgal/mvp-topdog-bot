@@ -1029,6 +1029,32 @@ html, body {
   cursor: default;
 }
 
+.meal-type-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.meal-type-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+
+.meal-type-btn--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
 .water-custom {
   display: flex;
   align-items: center;
@@ -1190,6 +1216,35 @@ html, body {
   font-size: 0.65rem;
   color: var(--text-muted);
   letter-spacing: 0.06em;
+}
+
+/* ── Meal breakdown ───────────────────────────────────── */
+
+.meals-breakdown {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meals-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.meals-breakdown__label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.meals-breakdown__value {
+  color: var(--text);
+  font-weight: 700;
 }
 
 /* ── Calorie overrun warning ──────────────────────────── */

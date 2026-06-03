@@ -5,8 +5,8 @@ export async function getTodayTrackers() {
   return data
 }
 
-export async function saveTracker(type, value, unit) {
-  const { data } = await client.post('/trackers', { type, value, unit })
+export async function saveTracker(type, value, unit, extras = {}) {
+  const { data } = await client.post('/trackers', { type, value, unit, ...extras })
   return data
 }
 
