@@ -14,6 +14,14 @@
     }
     window.addEventListener('error', function (e) {
       var src = (e.target && (e.target.src || e.target.href)) || '';
+      var isCritical =
+        src.indexOf('/assets/') !== -1 ||
+        src.indexOf('telegram-web-app.js') !== -1 ||
+        src.indexOf('/telegram-web-app.js') !== -1;
+      var isResourceError = !!(e.target && (e.target.src || e.target.href));
+      if (isResourceError && !isCritical) {
+        return;
+      }
       show('ERROR: ' + (e.message || 'resource failed') + '\n'
         + (src ? 'SRC: ' + src + '\n' : '')
         + 'UA: ' + navigator.userAgent);
