@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
+import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
@@ -140,22 +141,24 @@ function AppContent() {
     <>
       <OnboardingModal />
       <main className="main-content">
-        <Suspense fallback={
-          <div style={{
-            minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-muted, #888)', fontFamily: 'system-ui',
-          }}>Загрузка…</div>
-        }>
-          <Routes>
-            <Route path="/" element={<Navigate to="/profile" replace />} />
-            <Route path="/ai"        element={<AiPage />} />
-            <Route path="/trackers"  element={<TrackersPage />} />
-            <Route path="/progress"  element={<ProgressPage />} />
-            <Route path="/knowledge" element={<KnowledgePage />} />
-            <Route path="/residents" element={<ResidentsChatPage />} />
-            <Route path="/profile"   element={<ProfilePage />} />
-          </Routes>
-        </Suspense>
+        <SwipeNavigator>
+          <Suspense fallback={
+            <div style={{
+              minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-muted, #888)', fontFamily: 'system-ui',
+            }}>Загрузка…</div>
+          }>
+            <Routes>
+              <Route path="/" element={<Navigate to="/profile" replace />} />
+              <Route path="/ai"        element={<AiPage />} />
+              <Route path="/trackers"  element={<TrackersPage />} />
+              <Route path="/progress"  element={<ProgressPage />} />
+              <Route path="/knowledge" element={<KnowledgePage />} />
+              <Route path="/residents" element={<ResidentsChatPage />} />
+              <Route path="/profile"   element={<ProfilePage />} />
+            </Routes>
+          </Suspense>
+        </SwipeNavigator>
       </main>
       <BottomNav />
     </>
