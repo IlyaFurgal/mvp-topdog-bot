@@ -462,6 +462,7 @@ export default function ProfilePage() {
   const { user } = useTelegram()
   const { profile, subscriptionType, subscriptionPeriod, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
 
   // Prefer the name the user set during registration
   const displayName = profile?.preferred_name
@@ -512,7 +513,18 @@ export default function ProfilePage() {
       </button>
 
       <div className="profile-header">
-        <div className="avatar">{initials}</div>
+        {user?.photo_url && !imgFailed ? (
+          <div className="avatar avatar--photo">
+            <img
+              src={user.photo_url}
+              alt=""
+              className="avatar-img"
+              onError={() => setImgFailed(true)}
+            />
+          </div>
+        ) : (
+          <div className="avatar">{initials}</div>
+        )}
         <div className="profile-name">
           <div className="profile-name-row">
             <span className="profile-name-text">{displayName}</span>
