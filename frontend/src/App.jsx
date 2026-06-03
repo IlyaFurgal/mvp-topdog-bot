@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
@@ -6,12 +6,13 @@ import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { useTelegram } from './hooks/useTelegram'
-import AiPage from './pages/AiPage'
-import KnowledgePage from './pages/KnowledgePage'
-import ProfilePage from './pages/ProfilePage'
-import ProgressPage from './pages/ProgressPage'
-import ResidentsChatPage from './pages/ResidentsChatPage'
-import TrackersPage from './pages/TrackersPage'
+import ProfilePage from './pages/ProfilePage'   // стартовая страница — статический импорт
+
+const AiPage            = lazy(() => import('./pages/AiPage'))
+const KnowledgePage     = lazy(() => import('./pages/KnowledgePage'))
+const ProgressPage      = lazy(() => import('./pages/ProgressPage'))
+const ResidentsChatPage = lazy(() => import('./pages/ResidentsChatPage'))
+const TrackersPage      = lazy(() => import('./pages/TrackersPage'))
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
@@ -139,15 +140,22 @@ function AppContent() {
     <>
       <OnboardingModal />
       <main className="main-content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/profile" replace />} />
-          <Route path="/ai"        element={<AiPage />} />
-          <Route path="/trackers"  element={<TrackersPage />} />
-          <Route path="/progress"  element={<ProgressPage />} />
-          <Route path="/knowledge" element={<KnowledgePage />} />
-          <Route path="/residents" element={<ResidentsChatPage />} />
-          <Route path="/profile"   element={<ProfilePage />} />
-        </Routes>
+        <Suspense fallback={
+          <div style={{
+            minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-muted, #888)', fontFamily: 'system-ui',
+          }}>Загрузка…</div>
+        }>
+          <Routes>
+            <Route path="/" element={<Navigate to="/profile" replace />} />
+            <Route path="/ai"        element={<AiPage />} />
+            <Route path="/trackers"  element={<TrackersPage />} />
+            <Route path="/progress"  element={<ProgressPage />} />
+            <Route path="/knowledge" element={<KnowledgePage />} />
+            <Route path="/residents" element={<ResidentsChatPage />} />
+            <Route path="/profile"   element={<ProfilePage />} />
+          </Routes>
+        </Suspense>
       </main>
       <BottomNav />
     </>
