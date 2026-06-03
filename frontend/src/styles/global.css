@@ -1285,6 +1285,12 @@ html, body {
   to   { opacity: 1; }
 }
 
+.meals-breakdown--inline {
+  padding: 4px 0 8px 12px;
+  border-left: 2px solid var(--accent, #aaff00);
+  margin: 0 0 4px 4px;
+}
+
 .meals-breakdown__label {
   color: var(--text-muted);
   font-weight: 600;

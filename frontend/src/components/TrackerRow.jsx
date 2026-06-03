@@ -32,7 +32,7 @@ function rawValue(type, data) {
   return String(Math.round(data.value))
 }
 
-export default function TrackerRow({ type, data, calorieLimit, onAdd, onEdited }) {
+export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, onAdd, onEdited }) {
   const cfg = CONFIG[type]
   const formatted = formatValue(type, data)
 
@@ -72,42 +72,62 @@ export default function TrackerRow({ type, data, calorieLimit, onAdd, onEdited }
     if (e.key === 'Escape') cancelEdit()
   }
 
+  const hasMeals = mealsBreakdown && Object.values(mealsBreakdown).some(v => v > 0)
+
   return (
-    <div className="tracker-row">
-      <div className="tracker-row__left">
-        <span className="tracker-row__label">{cfg.label}</span>
+    <div className="tracker-row-wrap">
+      <div className="tracker-row">
+        <div className="tracker-row__left">
+          <span className="tracker-row__label">{cfg.label}</span>
+        </div>
+        <div className="tracker-row__right">
+          {editing ? (
+            <>
+              <input
+                ref={inputRef}
+                className="tracker-row__edit-input"
+                type="number"
+                value={editVal}
+                step={type === 'weight' ? '0.1' : '1'}
+                min="0"
+                onChange={(e) => setEditVal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={saving}
+              />
+              <button className="tracker-row__edit-btn tracker-row__edit-btn--confirm" onClick={confirmEdit} disabled={saving}>✓</button>
+              <button className="tracker-row__edit-btn tracker-row__edit-btn--cancel" onClick={cancelEdit} disabled={saving}>✗</button>
+            </>
+          ) : (
+            <>
+              <span className={`tracker-row__value ${formatted ? 'tracker-row__value--filled' : ''}`}>
+                {formatted ?? '—'}
+              </span>
+              {data?.id && (
+                <button className="tracker-row__edit" onClick={startEdit} title="Редактировать">
+                  ✏
+                </button>
+              )}
+              <button className="tracker-row__add" onClick={onAdd}>+</button>
+            </>
+          )}
+        </div>
       </div>
-      <div className="tracker-row__right">
-        {editing ? (
-          <>
-            <input
-              ref={inputRef}
-              className="tracker-row__edit-input"
-              type="number"
-              value={editVal}
-              step={type === 'weight' ? '0.1' : '1'}
-              min="0"
-              onChange={(e) => setEditVal(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={saving}
-            />
-            <button className="tracker-row__edit-btn tracker-row__edit-btn--confirm" onClick={confirmEdit} disabled={saving}>✓</button>
-            <button className="tracker-row__edit-btn tracker-row__edit-btn--cancel" onClick={cancelEdit} disabled={saving}>✗</button>
-          </>
-        ) : (
-          <>
-            <span className={`tracker-row__value ${formatted ? 'tracker-row__value--filled' : ''}`}>
-              {formatted ?? '—'}
-            </span>
-            {data?.id && (
-              <button className="tracker-row__edit" onClick={startEdit} title="Редактировать">
-                ✏
-              </button>
-            )}
-            <button className="tracker-row__add" onClick={onAdd}>+</button>
-          </>
-        )}
-      </div>
+      {hasMeals && (
+        <div className="meals-breakdown meals-breakdown--inline">
+          {[
+            ['breakfast',    'Завтрак'],
+            ['lunch',        'Обед'],
+            ['dinner',       'Ужин'],
+            ['snack',        'Перекус'],
+            ['uncategorized','Без категории'],
+          ].filter(([key]) => mealsBreakdown[key] > 0).map(([key, label]) => (
+            <div key={key} className="meals-breakdown__row">
+              <span className="meals-breakdown__label">{label}</span>
+              <span className="meals-breakdown__value">{mealsBreakdown[key]} ккал</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
