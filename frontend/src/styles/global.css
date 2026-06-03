@@ -733,16 +733,19 @@ html, body {
   overflow: hidden;
 }
 
+.tracker-row-wrap {
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.tracker-row-wrap:last-child {
+  border-bottom: none;
+}
+
 .tracker-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #2e2e2e;
-}
-
-.tracker-row:last-child {
-  border-bottom: none;
 }
 
 .tracker-row__left {
@@ -1286,9 +1289,34 @@ html, body {
 }
 
 .meals-breakdown--inline {
-  padding: 4px 0 8px 12px;
-  border-left: 2px solid var(--accent, #aaff00);
-  margin: 0 0 4px 4px;
+  background: none;
+  border-radius: 0;
+  border-left: 3px solid var(--accent, #aaff00);
+  border-right: 3px solid var(--accent, #aaff00);
+  margin: 0 16px 10px 16px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meals-breakdown--inline .meals-breakdown__row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 0.82rem;
+}
+
+.meals-breakdown--inline .meals-breakdown__label {
+  min-width: 90px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.meals-breakdown--inline .meals-breakdown__value {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .meals-breakdown__label {
