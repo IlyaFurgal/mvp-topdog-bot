@@ -43,6 +43,7 @@ export default function TrackersPage() {
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
   const [calorieLimit, setCalorieLimit] = useState(2000)
   const [calorieMeals, setCalorieMeals] = useState(null)
+  const [mealsExpanded, setMealsExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
@@ -131,18 +132,29 @@ export default function TrackersPage() {
           {/* Разбивка калорий по приёмам пищи */}
           {calorieMeals && Object.values(calorieMeals).some(v => v > 0) && (
             <div className="meals-breakdown">
-              {[
-                ['breakfast', 'Завтрак'],
-                ['lunch',     'Обед'],
-                ['dinner',    'Ужин'],
-                ['snack',     'Перекус'],
-                ['uncategorized', 'Без категории'],
-              ].filter(([key]) => calorieMeals[key] > 0).map(([key, label]) => (
-                <div key={key} className="meals-breakdown__row">
-                  <span className="meals-breakdown__label">{label}</span>
-                  <span className="meals-breakdown__value">{calorieMeals[key]} ккал</span>
+              <button
+                className="meals-breakdown__toggle"
+                onClick={() => setMealsExpanded(v => !v)}
+              >
+                <span>Калории по приёмам</span>
+                <span className={`meals-breakdown__chevron${mealsExpanded ? ' open' : ''}`}>▾</span>
+              </button>
+              {mealsExpanded && (
+                <div className="meals-breakdown__list">
+                  {[
+                    ['breakfast',    'Завтрак'],
+                    ['lunch',        'Обед'],
+                    ['dinner',       'Ужин'],
+                    ['snack',        'Перекус'],
+                    ['uncategorized','Без категории'],
+                  ].filter(([key]) => calorieMeals[key] > 0).map(([key, label]) => (
+                    <div key={key} className="meals-breakdown__row">
+                      <span className="meals-breakdown__label">{label}</span>
+                      <span className="meals-breakdown__value">{calorieMeals[key]} ккал</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
           {trackers.calories && trackers.calories.value > calorieLimit && (
@@ -161,7 +173,9 @@ export default function TrackersPage() {
           onClose={() => setActiveTracker(null)}
           onSaved={(type, newValue) => {
             setActiveTracker(null)
-            if (type && newValue !== undefined) {
+            if (type === 'calories') {
+              load()  // перечитать разбивку по приёмам
+            } else if (type && newValue !== undefined) {
               setTrackers(prev => ({ ...prev, [type]: { ...prev[type], value: newValue } }))
             } else {
               load()
