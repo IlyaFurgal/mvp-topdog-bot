@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy import select, text
@@ -26,11 +26,13 @@ _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
 def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
     """
     Extract [[MEAL:{...}]] markers from AI response text.
+    Only `food` and `calories` are read; `meal` field (if present) is ignored —
+    meal_type is determined server-side by user timezone via _meal_type_by_time().
 
     Returns:
         (cleaned_text, list_of_meal_dicts)
         cleaned_text — text with markers removed and excess blank lines trimmed.
-        Each meal_dict: {"food": str, "calories": int, "meal_type": str|None}
+        Each meal_dict: {"food": str, "calories": int}
 
     Errors in JSON are logged as warnings; the marker is always removed from text.
     """
@@ -41,18 +43,15 @@ def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
             payload = json.loads(m.group(1))
             food = payload.get("food", "")
             calories = payload.get("calories")
-            meal = payload.get("meal")
 
             if not food or not isinstance(food, str):
                 raise ValueError("missing or invalid food field")
             if not isinstance(calories, (int, float)) or not (1 <= float(calories) <= 5000):
                 raise ValueError(f"invalid calories: {calories!r}")
 
-            meal_type = meal if meal in _VALID_MEAL_TYPES else None
             meals.append({
                 "food": food.strip(),
                 "calories": int(calories),
-                "meal_type": meal_type,
             })
         except Exception as exc:
             logger.warning("Suvvy meal marker parse error: %s | raw=%r", exc, m.group(0))
@@ -61,6 +60,26 @@ def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
     cleaned = _MEAL_MARKER_RE.sub(_handle_match, text)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, meals
+
+
+def _meal_type_by_time(profile) -> str:
+    """Determine meal type from current local time in user's timezone."""
+    offset = 3  # default МСК
+    tz = getattr(profile, "timezone", None) if profile else None
+    if tz and tz.startswith("UTC"):
+        try:
+            offset = int(tz.replace("UTC", "").replace("+", "") or "0")
+        except ValueError:
+            offset = 3
+    local_hour = (datetime.now(timezone.utc) + timedelta(hours=offset)).hour
+    if local_hour < 6:
+        return "snack"      # 00:00–05:59 — ночь/перекус
+    elif local_hour < 12:
+        return "breakfast"  # 06:00–11:59
+    elif local_hour < 18:
+        return "lunch"      # 12:00–17:59
+    else:
+        return "dinner"     # 18:00–23:59
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -315,20 +334,27 @@ async def suvvy_webhook(
                 session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
 
         # Auto-create calorie trackers from photo recognition
-        for meal in all_meals:
-            session.add(Tracker(
-                user_id=user.id,
-                type=TrackerType.calories,
-                value=meal["calories"],
-                unit="kcal",
-                meal_type=meal["meal_type"],
-                label=meal["food"],
-                source="photo",
-            ))
-            logger.info(
-                "Photo calories logged: user=%s food=%r kcal=%s meal=%s",
-                chat_id, meal["food"], meal["calories"], meal["meal_type"],
+        if all_meals:
+            profile_result = await session.execute(
+                select(Profile).where(Profile.user_id == user.id)
             )
+            profile = profile_result.scalar_one_or_none()
+            meal_type = _meal_type_by_time(profile)
+
+            for meal in all_meals:
+                session.add(Tracker(
+                    user_id=user.id,
+                    type=TrackerType.calories,
+                    value=meal["calories"],
+                    unit="kcal",
+                    meal_type=meal_type,
+                    label=meal["food"],
+                    source="photo",
+                ))
+                logger.info(
+                    "Photo calories logged: user=%s food=%r kcal=%s meal=%s",
+                    chat_id, meal["food"], meal["calories"], meal_type,
+                )
 
         await session.flush()
         await _trim_ai_history(session, user.id)
