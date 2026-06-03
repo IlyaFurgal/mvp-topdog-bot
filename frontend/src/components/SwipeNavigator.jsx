@@ -41,7 +41,13 @@ export default function SwipeNavigator({ children }) {
   }
 
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ minHeight: '100%' }}>
+    <div
+      key={location.pathname}
+      className="page-slide"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{ minHeight: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+    >
       {children}
     </div>
   )

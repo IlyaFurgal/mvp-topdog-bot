@@ -43,6 +43,20 @@ html, body {
 .main-content {
   flex: 1;
   padding-bottom: var(--nav-height);
+  min-height: calc(100vh - var(--nav-height, 64px));
+  min-height: calc(100dvh - var(--nav-height, 64px));
+  display: flex;
+  flex-direction: column;
+}
+
+.page-slide {
+  animation: pageSlideIn 0.22s ease-out;
+  flex: 1;
+}
+
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 /* ── Splash / loading ─────────────────────────────────── */
