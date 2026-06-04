@@ -42,7 +42,7 @@ async def on_startup(app: web.Application) -> None:
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
                 text="Открыть MVP",
-                web_app=WebAppInfo(url=settings.MINI_APP_URL),
+                web_app=WebAppInfo(url=settings.mini_app_url_versioned),
             )
         )
         logger.info("Menu button set")

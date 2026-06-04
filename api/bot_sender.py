@@ -49,7 +49,7 @@ def webapp_kb(text: str = "ОТКРЫТЬ MVP APP →") -> dict:
     """Inline keyboard with a single WebApp button."""
     return {
         "inline_keyboard": [[
-            {"text": text, "web_app": {"url": settings.MINI_APP_URL}}
+            {"text": text, "web_app": {"url": settings.mini_app_url_versioned}}
         ]]
     }
 

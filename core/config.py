@@ -23,6 +23,11 @@ class Settings(BaseSettings):
 
     JWT_SECRET: str = "change-me-in-production"
     MINI_APP_URL: str = "https://topdogmvp.ru"
+    MINI_APP_VERSION: int = 2
+
+    @property
+    def mini_app_url_versioned(self) -> str:
+        return f"{self.MINI_APP_URL}?v={self.MINI_APP_VERSION}"
 
     # GetCourse integration — base
     GC_API_KEY: str = ""

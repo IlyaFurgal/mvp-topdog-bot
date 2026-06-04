@@ -624,7 +624,7 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
     welcome_kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="ОТКРЫТЬ MVP APP",
-            web_app=WebAppInfo(url=settings.MINI_APP_URL),
+            web_app=WebAppInfo(url=settings.mini_app_url_versioned),
         )
     ]])
     await send(welcome_text, reply_markup=welcome_kb)

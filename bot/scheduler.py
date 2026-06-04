@@ -28,7 +28,7 @@ def _webapp_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="Открыть приложение",
-            web_app=WebAppInfo(url=settings.MINI_APP_URL),
+            web_app=WebAppInfo(url=settings.mini_app_url_versioned),
         )
     ]])
 
