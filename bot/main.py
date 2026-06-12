@@ -1,7 +1,10 @@
 import logging
+import os
 
 from aiohttp import web
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -15,7 +18,14 @@ logger = logging.getLogger(__name__)
 
 WEBHOOK_PATH = "/webhook/bot"
 
-bot = Bot(token=settings.BOT_TOKEN)
+bot = Bot(
+    token=settings.BOT_TOKEN,
+    session=AiohttpSession(
+        api=TelegramAPIServer.from_base(
+            os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org")
+        )
+    ),
+)
 dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(registration.router)
