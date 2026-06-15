@@ -33,6 +33,8 @@ _REJECT_RE      = re.compile(r'\[\[REJECT:([^\]]*)\]\]', re.IGNORECASE)
 _RISK_VALIDATIONS: dict[str, "asyncio.Future[str]"] = {}
 # Pending futures: specialist rewrite responses keyed by original user chat_id
 _RISK_REWRITES: dict[str, "asyncio.Future[str]"] = {}
+# Strong references to prevent GC of background tasks before completion
+_RISK_TASKS: set[asyncio.Task] = set()
 
 SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
 
@@ -502,7 +504,9 @@ async def suvvy_webhook(
         # Launch RISK validation in background (max 1 round, then safe default)
         for risk_text in risk_texts:
             logger.info("RISK: launching validation for chat_id=%s", chat_id)
-            asyncio.create_task(_handle_risk_async(chat_id, risk_text, user.id))
+            task = asyncio.create_task(_handle_risk_async(chat_id, risk_text, user.id))
+            _RISK_TASKS.add(task)
+            task.add_done_callback(_RISK_TASKS.discard)
 
     else:
         logger.warning("Suvvy webhook: user not found for chat_id=%s", chat_id)

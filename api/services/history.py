@@ -13,6 +13,7 @@ from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 MAX_HISTORY = 20
+_BG_TASKS: set[asyncio.Task] = set()
 
 
 async def fold_history(user_id: int) -> None:
@@ -98,7 +99,9 @@ async def fold_history(user_id: int) -> None:
 
 def schedule_fold(user_id: int) -> None:
     """Schedule fold_history as a background asyncio task (fire-and-forget)."""
-    asyncio.create_task(fold_history(user_id))
+    task = asyncio.create_task(fold_history(user_id))
+    _BG_TASKS.add(task)
+    task.add_done_callback(_BG_TASKS.discard)
 
 
 # ── Profile update candidate logger ─────────────────────────────────────────
