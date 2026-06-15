@@ -71,6 +71,18 @@ GENDER_DISPLAY: dict[str, str] = {
     "female": "Женский",
     "other":  "Другой",
 }
+SLEEP_QUALITY_DISPLAY: dict[str, str] = {
+    "good":   "хороший",
+    "normal": "нормальный",
+    "bad":    "плохой",
+}
+
+_MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн",
+                 "июл", "авг", "сен", "окт", "ноя", "дек"]
+
+
+def _date_label(d) -> str:
+    return f"{d.day} {_MONTHS_SHORT[d.month - 1]}"
 
 
 def _calc_age(birth_date: date | None) -> str:
@@ -111,11 +123,78 @@ async def _weekly_progress_str(session: AsyncSession, user_id: int) -> str:
     return f"дисциплина {disc_pct}%, {count} тренировок за неделю"
 
 
+async def _sum_today_or_last_day(
+    session: AsyncSession,
+    user_id: int,
+    tracker_type: TrackerType,
+    today_start: datetime,
+) -> tuple[float | None, object | None]:
+    """Return (total, fallback_date): today's sum if > 0, else last active day's sum."""
+    today_res = await session.execute(
+        select(func.sum(Tracker.value)).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == tracker_type,
+                Tracker.created_at >= today_start,
+            )
+        )
+    )
+    today_total: float | None = today_res.scalar_one_or_none()
+    if today_total:
+        return today_total, None
+
+    last_date_res = await session.execute(
+        select(func.max(func.date(Tracker.created_at))).where(
+            and_(Tracker.user_id == user_id, Tracker.type == tracker_type)
+        )
+    )
+    last_date = last_date_res.scalar_one_or_none()
+    if not last_date:
+        return None, None
+
+    fallback_res = await session.execute(
+        select(func.sum(Tracker.value)).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == tracker_type,
+                func.date(Tracker.created_at) == last_date,
+            )
+        )
+    )
+    return fallback_res.scalar_one_or_none(), last_date
+
+
+async def _sleep_str(session: AsyncSession, user_id: int) -> str:
+    """Sleep quality: primary from last morning checkin, fallback to trackers.sleep."""
+    checkin_res = await session.execute(
+        select(Checkin)
+        .where(and_(Checkin.user_id == user_id, Checkin.type == CheckinType.morning))
+        .order_by(Checkin.created_at.desc())
+        .limit(1)
+    )
+    checkin = checkin_res.scalar_one_or_none()
+    if checkin and checkin.data:
+        sq = checkin.data.get("sleep_quality")
+        label = SLEEP_QUALITY_DISPLAY.get(sq, "") if sq else ""
+        if label:
+            return f"сон: {label}"
+
+    sleep_res = await session.execute(
+        select(Tracker)
+        .where(and_(Tracker.user_id == user_id, Tracker.type == TrackerType.sleep))
+        .order_by(Tracker.created_at.desc())
+        .limit(1)
+    )
+    rec = sleep_res.scalar_one_or_none()
+    return f"{rec.value:g} ч" if rec else ""
+
+
 async def _tracker_placeholders(session: AsyncSession, user_id: int) -> dict[str, str]:
     today_start = datetime.combine(
         date.today(), datetime.min.time()
     ).replace(tzinfo=timezone.utc)
 
+    # Weight — last record (unchanged)
     weight_row = await session.execute(
         select(Tracker)
         .where(and_(Tracker.user_id == user_id, Tracker.type == TrackerType.weight))
@@ -124,41 +203,36 @@ async def _tracker_placeholders(session: AsyncSession, user_id: int) -> dict[str
     )
     weight_rec = weight_row.scalar_one_or_none()
 
-    sleep_row = await session.execute(
-        select(Tracker)
-        .where(and_(Tracker.user_id == user_id, Tracker.type == TrackerType.sleep))
-        .order_by(Tracker.created_at.desc())
-        .limit(1)
-    )
-    sleep_rec = sleep_row.scalar_one_or_none()
+    # Sleep — morning checkin first, trackers.sleep fallback
+    sleep_s = await _sleep_str(session, user_id)
 
-    water_rows = await session.execute(
-        select(func.sum(Tracker.value)).where(
-            and_(
-                Tracker.user_id == user_id,
-                Tracker.type == TrackerType.water,
-                Tracker.created_at >= today_start,
-            )
-        )
+    # Water — today or last active day with date label
+    water_total, water_date = await _sum_today_or_last_day(
+        session, user_id, TrackerType.water, today_start
     )
-    water_total: float | None = water_rows.scalar_one_or_none()
+    if water_total and water_date:
+        water_s = f"{_date_label(water_date)}: {water_total / 1000:.1f} л"
+    elif water_total:
+        water_s = f"{water_total / 1000:.1f} л"
+    else:
+        water_s = ""
 
-    cal_rows = await session.execute(
-        select(func.sum(Tracker.value)).where(
-            and_(
-                Tracker.user_id == user_id,
-                Tracker.type == TrackerType.calories,
-                Tracker.created_at >= today_start,
-            )
-        )
+    # Calories — today or last active day with date label
+    cal_total, cal_date = await _sum_today_or_last_day(
+        session, user_id, TrackerType.calories, today_start
     )
-    cal_total: float | None = cal_rows.scalar_one_or_none()
+    if cal_total and cal_date:
+        cal_s = f"{_date_label(cal_date)}: {int(cal_total)} ккал"
+    elif cal_total:
+        cal_s = f"{int(cal_total)} ккал"
+    else:
+        cal_s = ""
 
     return {
         "tracker_weight":         f"{weight_rec.value:g} кг" if weight_rec else "",
-        "tracker_sleep":          f"{sleep_rec.value:g} ч"   if sleep_rec  else "",
-        "tracker_water_today":    f"{water_total / 1000:.1f} л" if water_total else "",
-        "tracker_calories_today": f"{int(cal_total)} ккал"      if cal_total  else "",
+        "tracker_sleep":          sleep_s,
+        "tracker_water_today":    water_s,
+        "tracker_calories_today": cal_s,
     }
 
 
