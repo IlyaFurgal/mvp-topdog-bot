@@ -2,97 +2,31 @@ import base64
 import json
 import logging
 import uuid
-from datetime import date
 from pathlib import Path
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
+from api.services.ai_context import build_ai_context
+from api.services.history import schedule_fold
 from api.suvvy_queue import pop
 from core.config import settings
-from database.models import AiMessage, Profile, User
+from database.models import AiMessage, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/suvvy", tags=["suvvy"])
 
 SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
-MAX_HISTORY = 20
 UPLOADS_DIR = Path("/app/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-PDF_MAX_PAGES    = 5
-AUDIO_MAX_BYTES  = 15 * 1024 * 1024  # 15 МБ
-
-# ── Display mappings (machine value → Russian) ─────────
-GOAL_DISPLAY: dict[str, str] = {
-    "weight_loss":    "Похудение",
-    "muscle_gain":    "Набор мышечной массы",
-    "maintenance":    "Поддержание формы",
-    "endurance":      "Выносливость",
-    "flexibility":    "Гибкость и растяжка",
-    "rehabilitation": "Реабилитация",
-    "stress":         "Снятие стресса",
-    "sleep_quality":  "Улучшение сна",
-    "competition":    "Подготовка к соревнованиям",
-}
-
-FITNESS_LEVEL_DISPLAY: dict[str, str] = {
-    "beginner":     "Начинающий",
-    "intermediate": "Средний уровень",
-    "advanced":     "Продвинутый",
-}
-
-ACTIVITY_LEVEL_DISPLAY: dict[str, str] = {
-    "sedentary":  "Сидячий образ жизни",
-    "light":      "Лёгкая активность",
-    "moderate":   "Средняя активность",
-    "active":     "Высокая активность",
-    "very_active": "Очень высокая активность",
-}
-
-TONE_DISPLAY: dict[str, str] = {
-    "aggressive": "Жёсткий",
-    "soft":       "Мягкий",
-}
-
-GENDER_DISPLAY: dict[str, str] = {
-    "male":   "Мужской",
-    "female": "Женский",
-    "other":  "Другой",
-}
-
-
-async def _trim_history(session: AsyncSession, user_id: int) -> None:
-    """Удаляет старые записи, оставляя только последние MAX_HISTORY."""
-    await session.execute(
-        text(
-            "DELETE FROM ai_messages "
-            "WHERE user_id = :user_id "
-            "AND id NOT IN ("
-            "  SELECT id FROM ai_messages "
-            "  WHERE user_id = :user_id "
-            "  ORDER BY created_at DESC "
-            "  LIMIT :limit"
-            ")"
-        ),
-        {"user_id": user_id, "limit": MAX_HISTORY},
-    )
-
-
-def _calc_age(birth_date: date | None) -> str:
-    if not birth_date:
-        return ""
-    today = date.today()
-    age = today.year - birth_date.year - (
-        (today.month, today.day) < (birth_date.month, birth_date.day)
-    )
-    return str(age)
+PDF_MAX_PAGES   = 5
+AUDIO_MAX_BYTES = 15 * 1024 * 1024  # 15 МБ
 
 
 def _save_image_from_dataurl(data_url: str, name: str | None) -> tuple[str, str, str]:
@@ -225,56 +159,7 @@ async def send_message(
             detail="text, image_base64, pdf_base64 or audio_base64 required",
         )
 
-    # Загружаем профиль для placeholders
-    profile_result = await session.execute(
-        select(Profile).where(Profile.user_id == user.id)
-    )
-    profile = profile_result.scalar_one_or_none()
-
-    # ── Raw (machine) values ──────────────────────────────
-    _goal_raw: str = (
-        ", ".join(profile.goals) if profile and profile.goals
-        else (profile.goal.value if profile and profile.goal else "")
-    )
-    _fitness_raw:  str = profile.fitness_level.value  if profile and profile.fitness_level  else ""
-    _activity_raw: str = profile.activity_level.value if profile and profile.activity_level else ""
-    _tone_raw:     str = profile.tone.value            if profile and profile.tone            else "soft"
-    _gender_raw:   str = profile.gender.value          if profile and profile.gender          else ""
-
-    # ── Display (human-readable) values ──────────────────
-    def _goals_display(raw: str) -> str:
-        if not raw:
-            return ""
-        return ", ".join(GOAL_DISPLAY.get(g.strip(), g.strip()) for g in raw.split(","))
-
-    _goal_display:     str = _goals_display(_goal_raw)
-    _fitness_display:  str = FITNESS_LEVEL_DISPLAY.get(_fitness_raw,  _fitness_raw)
-    _activity_display: str = ACTIVITY_LEVEL_DISPLAY.get(_activity_raw, _activity_raw)
-    _tone_display:     str = TONE_DISPLAY.get(_tone_raw,   _tone_raw)
-    _gender_display:   str = GENDER_DISPLAY.get(_gender_raw, _gender_raw)
-
-    # ── Placeholders для системной инструкции Suvvy ───────
-    placeholders = {
-        # Базовые
-        "name":             user.first_name or "",
-        "username":         user.username or "",
-        "subscription_type": user.subscription_type or "",
-        "age":              _calc_age(profile.birth_date if profile else None),
-        "sport_type":       profile.sport_type or "" if profile else "",
-        "health_restrictions": profile.health_restrictions or "" if profile else "",
-        # Сырые (machine)
-        "goal":             _goal_raw,
-        "fitness_level":    _fitness_raw,
-        "activity_level":   _activity_raw,
-        "tone":             _tone_raw,
-        "gender":           _gender_raw,
-        # Человекочитаемые (_display) — используются в промптах Suvvy
-        "goal_display":            _goal_display,
-        "fitness_level_display":   _fitness_display,
-        "activity_level_display":  _activity_display,
-        "tone_display":            _tone_display,
-        "gender_display":          _gender_display,
-    }
+    placeholders = await build_ai_context(session, user)
 
     # Attachments + saved image path
     attachments = []
@@ -391,9 +276,8 @@ async def send_message(
         text=display_text or "📎 Файл",
         image_path=saved_image_path,
     ))
-    await session.flush()
-    await _trim_history(session, user.id)
     await session.commit()
+    schedule_fold(user.id)
 
     return {"status": "sent"}
 

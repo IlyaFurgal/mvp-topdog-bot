@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     SUVVY_API_KEY: str = ""
     SUVVY_API_URL: str = "https://api.suvvy.ai"
+    # Validator agent — same Suvvy base, separate agent key. Leave empty to skip validation.
+    SUVVY_VALIDATOR_KEY: str = ""
+    # Max seconds for the full RISK validation cycle (validator + optional rewrite)
+    SUVVY_RISK_TIMEOUT: int = 50
 
     JWT_SECRET: str = "change-me-in-production"
     MINI_APP_URL: str = "https://topdogmvp.ru"

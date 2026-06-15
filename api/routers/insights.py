@@ -5,6 +5,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
+from api.services.ai_context import calc_weekly_discipline
 from database.models import Checkin, CheckinType, User
 from database.session import get_session
 
@@ -34,8 +35,7 @@ async def get_weekly_insight(
     if not checkins:
         return {"text": "НАЧНИ ЗАПИСЫВАТЬ ТРЕНИРОВКИ — И УВИДИШЬ ПРОГРЕСС.", "discipline_pct": None}
 
-    fully = sum(1 for c in checkins if c.data.get("plan_completed") == "fully")
-    discipline = round(fully / len(checkins) * 100)
+    discipline, _ = calc_weekly_discipline(checkins)
 
     if discipline > 80:
         text = "РЕЖИМ ДЕРЖИШЬ. ПРОДОЛЖАЙ."

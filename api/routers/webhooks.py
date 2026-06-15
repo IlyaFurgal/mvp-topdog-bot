@@ -1,14 +1,18 @@
+import asyncio
 import json
 import logging
 import re
+import uuid
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, Form, Request
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.bot_sender import send_message, send_video_note, webapp_kb
 from api.services.getcourse import sync_user_to_gc
+from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
 from database.models import AiMessage, Profile, Tracker, TrackerType, User
@@ -17,10 +21,20 @@ from database.session import get_session
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-MAX_HISTORY = 20
-
 _MEAL_MARKER_RE = re.compile(r'\[\[MEAL:(\{.*?\})\]\]', re.DOTALL)
 _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
+
+# ── RISK marker protocol ──────────────────────────────────────────────────────
+_RISK_MARKER_RE = re.compile(r'\[\[RISK\]\]', re.IGNORECASE)
+_APPROVED_RE    = re.compile(r'\[\[APPROVED\]\]', re.IGNORECASE)
+_REJECT_RE      = re.compile(r'\[\[REJECT:([^\]]*)\]\]', re.IGNORECASE)
+
+# Pending futures: validator responses keyed by risk_val_{uuid} chat_id
+_RISK_VALIDATIONS: dict[str, "asyncio.Future[str]"] = {}
+# Pending futures: specialist rewrite responses keyed by original user chat_id
+_RISK_REWRITES: dict[str, "asyncio.Future[str]"] = {}
+
+SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
 
 
 def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
@@ -82,6 +96,124 @@ def _meal_type_by_time(profile) -> str:
         return "dinner"     # 18:00–23:59
 
 
+# ── RISK helpers ──────────────────────────────────────────────────────────────
+
+def _safe_default_text() -> str:
+    return (
+        "По этому вопросу рекомендую проконсультироваться со специалистом. "
+        f"Если нужна помощь — свяжись с поддержкой: {settings.SUPPORT_TG_URL}"
+    )
+
+
+async def _send_to_suvvy(chat_id: str, text_body: str, api_key: str) -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=10) as http:
+            resp = await http.post(
+                SUVVY_URL,
+                json={
+                    "api_version": 1,
+                    "message_id": str(uuid.uuid4()),
+                    "chat_id": chat_id,
+                    "message_sender": "customer",
+                    "source": "RISK_INTERNAL",
+                    "text": text_body,
+                },
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp.raise_for_status()
+            return True
+    except Exception as exc:
+        logger.error("RISK send_to_suvvy chat_id=%s error: %s", chat_id, exc)
+        return False
+
+
+async def _handle_risk_async(
+    original_chat_id: str,
+    risk_text: str,
+    user_id: int,
+) -> None:
+    """
+    Background task: validate a [[RISK]]-tagged specialist response.
+    Pushes final text to user and saves to DB regardless of outcome.
+    Max 1 validation round + 1 rewrite attempt; on failure → safe default.
+    """
+    from database.session import AsyncSessionLocal
+
+    half_budget = settings.SUVVY_RISK_TIMEOUT // 2
+
+    final_text: str
+
+    if not settings.SUVVY_VALIDATOR_KEY:
+        # Validator not configured — pass through immediately
+        final_text = risk_text
+    else:
+        # ── Step 1: send to validator agent ───────────────────────────────
+        val_id = f"risk_val_{uuid.uuid4().hex[:12]}"
+        loop = asyncio.get_event_loop()
+        val_future: asyncio.Future[str] = loop.create_future()
+        _RISK_VALIDATIONS[val_id] = val_future
+
+        sent = await _send_to_suvvy(val_id, risk_text, settings.SUVVY_VALIDATOR_KEY)
+        if not sent:
+            _RISK_VALIDATIONS.pop(val_id, None)
+            final_text = _safe_default_text()
+        else:
+            # ── Step 2: wait for [[APPROVED]] or [[REJECT:...]] ───────────
+            try:
+                val_response = await asyncio.wait_for(val_future, timeout=half_budget)
+            except asyncio.TimeoutError:
+                logger.warning("RISK: validator timeout chat_id=%s", original_chat_id)
+                _RISK_VALIDATIONS.pop(val_id, None)
+                final_text = _safe_default_text()
+            else:
+                _RISK_VALIDATIONS.pop(val_id, None)
+
+                if _APPROVED_RE.search(val_response):
+                    logger.info("RISK: approved chat_id=%s", original_chat_id)
+                    final_text = risk_text
+                else:
+                    # ── Step 3: rejected — request specialist rewrite ──────
+                    match = _REJECT_RE.search(val_response)
+                    reason = match.group(1).strip() if match else "general"
+                    logger.warning(
+                        "RISK: rejected reason=%r chat_id=%s", reason, original_chat_id
+                    )
+
+                    rw_future: asyncio.Future[str] = loop.create_future()
+                    _RISK_REWRITES[original_chat_id] = rw_future
+
+                    rewrite_prompt = (
+                        f"ВАЛИДАТОР ОТКЛОНИЛ ОТВЕТ [{reason}]. "
+                        f"Перепиши безопаснее:\n\n{risk_text}"
+                    )
+                    sent_rw = await _send_to_suvvy(
+                        original_chat_id, rewrite_prompt, settings.SUVVY_API_KEY
+                    )
+
+                    if not sent_rw:
+                        _RISK_REWRITES.pop(original_chat_id, None)
+                        final_text = _safe_default_text()
+                    else:
+                        try:
+                            final_text = await asyncio.wait_for(
+                                rw_future, timeout=half_budget
+                            )
+                            logger.info("RISK: rewrite received chat_id=%s", original_chat_id)
+                        except asyncio.TimeoutError:
+                            logger.warning(
+                                "RISK: rewrite timeout chat_id=%s", original_chat_id
+                            )
+                            final_text = _safe_default_text()
+                        finally:
+                            _RISK_REWRITES.pop(original_chat_id, None)
+
+    # ── Deliver to user ───────────────────────────────────────────────────────
+    push(original_chat_id, [final_text])
+    async with AsyncSessionLocal() as db:
+        db.add(AiMessage(user_id=user_id, role="ai", text=final_text))
+        await db.commit()
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
@@ -109,22 +241,6 @@ def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
     if offer_code and offer_code in plus_codes:
         return "plus", plus_codes[offer_code]
     return None, 0
-
-
-async def _trim_ai_history(session: AsyncSession, user_id: int) -> None:
-    await session.execute(
-        text(
-            "DELETE FROM ai_messages "
-            "WHERE user_id = :user_id "
-            "AND id NOT IN ("
-            "  SELECT id FROM ai_messages "
-            "  WHERE user_id = :user_id "
-            "  ORDER BY created_at DESC "
-            "  LIMIT :limit"
-            ")"
-        ),
-        {"user_id": user_id, "limit": MAX_HISTORY},
-    )
 
 
 # ── GetCourse webhook ─────────────────────────────────────────────────────────
@@ -308,6 +424,21 @@ async def suvvy_webhook(
     if not texts or not chat_id:
         return {"status": "ok"}
 
+    # ── Route internal RISK responses ─────────────────────────────────────────
+    # Validator agent responds to a synthetic chat_id "risk_val_{uuid}"
+    if chat_id.startswith("risk_val_"):
+        fut = _RISK_VALIDATIONS.pop(chat_id, None)
+        if fut and not fut.done():
+            fut.set_result("\n".join(texts))
+        return {"status": "ok"}
+
+    # Specialist rewrite response for a pending risk cycle
+    rw_fut = _RISK_REWRITES.get(chat_id)
+    if rw_fut and not rw_fut.done():
+        rw_fut.set_result("\n".join(texts))
+        _RISK_REWRITES.pop(chat_id, None)
+        return {"status": "ok"}
+
     # ── Parse [[MEAL:...]] markers ─────────────────────────────────────────────
     cleaned_texts: list[str] = []
     all_meals: list[dict] = []
@@ -316,8 +447,17 @@ async def suvvy_webhook(
         cleaned_texts.append(cleaned)   # may be empty string if text was only a marker
         all_meals.extend(meals)
 
-    # Push only non-empty cleaned texts to the user-facing queue
-    texts_to_send = [t for t in cleaned_texts if t.strip()]
+    # ── Detect and handle [[RISK]] marker ─────────────────────────────────────
+    risk_texts: list[str] = []
+    safe_texts: list[str] = []
+    for t in cleaned_texts:
+        if _RISK_MARKER_RE.search(t):
+            risk_texts.append(_RISK_MARKER_RE.sub("", t).strip())
+        else:
+            safe_texts.append(t)
+
+    # Non-risk messages push immediately
+    texts_to_send = [t for t in safe_texts if t.strip()]
     if texts_to_send:
         push(chat_id, texts_to_send)
         logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts_to_send), chat_id)
@@ -328,8 +468,8 @@ async def suvvy_webhook(
     user = result.scalar_one_or_none()
 
     if user:
-        # Save cleaned AI messages (markers stripped)
-        for text_body in cleaned_texts:
+        # Save safe (non-RISK) AI messages
+        for text_body in safe_texts:
             if text_body.strip():
                 session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
 
@@ -356,9 +496,14 @@ async def suvvy_webhook(
                     chat_id, meal["food"], meal["calories"], meal_type,
                 )
 
-        await session.flush()
-        await _trim_ai_history(session, user.id)
         await session.commit()
+        schedule_fold(user.id)
+
+        # Launch RISK validation in background (max 1 round, then safe default)
+        for risk_text in risk_texts:
+            logger.info("RISK: launching validation for chat_id=%s", chat_id)
+            asyncio.create_task(_handle_risk_async(chat_id, risk_text, user.id))
+
     else:
         logger.warning("Suvvy webhook: user not found for chat_id=%s", chat_id)
 

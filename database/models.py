@@ -175,3 +175,13 @@ class UpgradeIntent(Base):
     clicked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     remind_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class ConversationSummary(Base):
+    __tablename__ = "conversation_summaries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(String(4096))
+    covers_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
