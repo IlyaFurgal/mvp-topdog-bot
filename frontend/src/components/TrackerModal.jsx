@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { saveTracker } from '../api/trackers'
 
 const GOAL_WATER = 2000
@@ -121,8 +121,22 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
 }
 
 function WeightInput({ value, onChange }) {
+  const [draft, setDraft] = useState(() => value.toFixed(1))
+
+  // Sync draft when value changes via adjust buttons
+  useEffect(() => { setDraft(value.toFixed(1)) }, [value])
+
   function adjust(delta) {
-    onChange((v) => parseFloat(Math.max(0, v + delta).toFixed(1)))
+    onChange((v) => parseFloat(Math.max(30, Math.min(300, v + delta)).toFixed(1)))
+  }
+
+  function handleBlur() {
+    const parsed = parseFloat(draft)
+    if (!isNaN(parsed) && parsed >= 30 && parsed <= 300) {
+      onChange(parseFloat(parsed.toFixed(1)))
+    } else {
+      setDraft(value.toFixed(1))  // revert on invalid
+    }
   }
 
   return (
@@ -138,10 +152,13 @@ function WeightInput({ value, onChange }) {
           type="number"
           inputMode="decimal"
           className="weight-num-input"
-          value={value}
+          value={draft}
           step="0.1"
-          min="0"
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          min="30"
+          max="300"
+          placeholder="кг"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={handleBlur}
         />
         <button className="weight-btn" onClick={() => adjust(0.1)}>+0.1</button>
         <button className="weight-btn" onClick={() => adjust(0.5)}>+0.5</button>
@@ -271,6 +288,25 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
 }
 
 function SleepInput({ hours, minutes, onHours, onMinutes }) {
+  const [draftH, setDraftH] = useState(() => String(hours))
+  const [draftM, setDraftM] = useState(() => String(minutes))
+
+  // Sync drafts when preset buttons update the parent state
+  useEffect(() => { setDraftH(String(hours)) }, [hours])
+  useEffect(() => { setDraftM(String(minutes)) }, [minutes])
+
+  function commitH() {
+    const n = parseInt(draftH, 10)
+    if (!isNaN(n) && n >= 0 && n <= 23) onHours(n)
+    else setDraftH(String(hours))  // revert on invalid
+  }
+
+  function commitM() {
+    const n = parseInt(draftM, 10)
+    if (!isNaN(n) && n >= 0 && n <= 59) onMinutes(n)
+    else setDraftM(String(minutes))  // revert on invalid
+  }
+
   return (
     <div className="tracker-input">
       <div className="sleep-quick">
@@ -289,10 +325,12 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
           <input
             type="number"
             className="weight-num-input"
-            value={hours}
+            value={draftH}
             min="0"
             max="23"
-            onChange={(e) => onHours(parseInt(e.target.value) || 0)}
+            placeholder="0"
+            onChange={(e) => setDraftH(e.target.value)}
+            onBlur={commitH}
           />
           <span className="weight-unit">ч</span>
         </div>
@@ -300,11 +338,13 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
           <input
             type="number"
             className="weight-num-input"
-            value={minutes}
+            value={draftM}
             min="0"
             max="59"
             step="15"
-            onChange={(e) => onMinutes(parseInt(e.target.value) || 0)}
+            placeholder="0"
+            onChange={(e) => setDraftM(e.target.value)}
+            onBlur={commitM}
           />
           <span className="weight-unit">м</span>
         </div>
