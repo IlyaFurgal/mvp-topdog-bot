@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { saveTracker } from '../api/trackers'
+import { saveTracker, setCaloriesToday, setWaterToday } from '../api/trackers'
 
 const GOAL_WATER = 2000
 
@@ -31,8 +31,8 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   const [saving, setSaving] = useState(false)
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
-  const [waterAmount, setWaterAmount] = useState(200)
-  const [caloriesAmount, setCaloriesAmount] = useState(0)
+  const [waterAmount, setWaterAmount] = useState(() => Math.round(todayData?.value ?? 0))
+  const [caloriesAmount, setCaloriesAmount] = useState(() => Math.round(todayData?.manual_value ?? 0))
   const [mealType, setMealType] = useState(() => type === 'calories' ? getDefaultMealType() : null)
   const [sleepHours, setSleepHours] = useState(() => {
     if (todayData?.value) return Math.floor(todayData.value)
@@ -54,14 +54,11 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
         await saveTracker('weight', val, 'kg')
         onSaved('weight', val)
       } else if (type === 'water') {
-        await saveTracker('water', waterAmount, 'ml')
-        onSaved('water', waterTotal + waterAmount)
+        await setWaterToday(waterAmount)
+        onSaved('water')
       } else if (type === 'calories') {
-        await saveTracker('calories', caloriesAmount, 'kcal', {
-          meal_type: mealType || undefined,
-          source: 'manual',
-        })
-        onSaved('calories', caloriesTotal + caloriesAmount)
+        await setCaloriesToday(caloriesAmount, mealType || undefined)
+        onSaved('calories')
       } else {
         const val = parseFloat((sleepHours + sleepMinutes / 60).toFixed(2))
         await saveTracker('sleep', val, 'h')
@@ -77,7 +74,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
     if (e.target === overlayRef.current) onClose()
   }
 
-  const addLabel = type === 'water' || type === 'calories' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
+  const addLabel = 'СОХРАНИТЬ'
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
@@ -169,39 +166,22 @@ function WeightInput({ value, onChange }) {
 
 function WaterInput({ amount, onChange, total }) {
   const pct = Math.min((total / GOAL_WATER) * 100, 100)
-  const newTotal = total + amount
   return (
     <div className="tracker-input">
-      {/* Текущий дневной итог — явно, чтобы видно было накопление */}
       <p className="water-today">
         Сегодня: <strong>{Math.round(total).toLocaleString('ru')} мл</strong> из {GOAL_WATER} мл
       </p>
       <div className="progress-bar">
         <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
       </div>
-
-      {/* Пресеты: каждое нажатие задаёт порцию (SET, не накопление) */}
-      <div className="water-quick">
-        {[100, 250, 500].map((ml) => (
-          <button
-            key={ml}
-            className={`water-btn${amount === ml ? ' water-btn--active' : ''}`}
-            onClick={() => onChange(ml)}
-          >
-            +{ml} мл
-          </button>
-        ))}
-      </div>
-
-      {/* Мелкий ручной ввод */}
       <div className="water-custom">
         <input
           type="number"
           inputMode="numeric"
           className="weight-num-input"
           value={amount === 0 ? '' : amount}
-          min="1"
-          placeholder="другое"
+          min="0"
+          placeholder="итог за день, мл"
           onChange={(e) => {
             const v = e.target.value.replace(/^0+(?=\d)/, '')
             onChange(v === '' ? 0 : parseInt(v, 10) || 0)
@@ -209,24 +189,15 @@ function WaterInput({ amount, onChange, total }) {
         />
         <span className="weight-unit">мл</span>
       </div>
-
-      {/* Предпросмотр результата */}
-      {amount > 0 && (
-        <p className="progress-label">
-          +{amount} мл → итого {Math.round(newTotal).toLocaleString('ru')} мл
-        </p>
-      )}
     </div>
   )
 }
 
 function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMealType }) {
-  const newTotal = total + amount
-  const pct = Math.min((newTotal / limit) * 100, 100)
-  const overLimit = newTotal > limit
+  const pct = Math.min((total / limit) * 100, 100)
+  const overLimit = total > limit
   return (
     <div className="tracker-input">
-      {/* Выбор приёма пищи */}
       <div className="meal-type-row">
         {MEAL_OPTIONS.map(({ value, label }) => (
           <button
@@ -248,27 +219,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
           style={{ width: `${pct}%`, background: overLimit ? 'var(--danger)' : undefined }}
         />
       </div>
-      <p className="progress-label" style={{ color: overLimit ? 'var(--danger)' : undefined }}>
-        {Math.round(newTotal)} / {limit} ккал{overLimit ? ` (+${Math.round(newTotal - limit)} сверх нормы)` : ''}
-      </p>
-      <div className="water-quick">
-        {[100, 300, 500].map((kcal) => (
-          <button
-            key={kcal}
-            className="water-btn"
-            onClick={() => onChange(amount + kcal)}
-          >
-            +{kcal}
-          </button>
-        ))}
-        <button
-          className="water-btn water-btn--reset"
-          onClick={() => onChange(0)}
-          disabled={amount === 0}
-        >
-          Сброс
-        </button>
-      </div>
       <div className="water-custom">
         <input
           type="number"
@@ -276,6 +226,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
           className="weight-num-input"
           value={amount === 0 ? '' : amount}
           min="0"
+          placeholder="ручной итог, ккал"
           onChange={(e) => {
             const v = e.target.value.replace(/^0+(?=\d)/, '')
             onChange(v === '' ? 0 : parseInt(v, 10) || 0)

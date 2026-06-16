@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
@@ -38,6 +38,18 @@ class TrackerUpdate(BaseModel):
 
 class WaterTodayUpdate(BaseModel):
     value: float
+
+
+class CaloriesTodayUpdate(BaseModel):
+    value: float
+    meal_type: Optional[str] = None
+
+    @field_validator("meal_type")
+    @classmethod
+    def validate_meal_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _VALID_MEAL_TYPES:
+            raise ValueError(f"meal_type must be one of {_VALID_MEAL_TYPES}")
+        return v
 
 
 def calculate_calorie_limit(profile, current_weight: float | None = None) -> int:
@@ -184,6 +196,40 @@ async def delete_tracker(
     return {"id": tracker_id, "deleted": True}
 
 
+@router.put("/calories/today")
+async def set_calories_today(
+    body: CaloriesTodayUpdate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    today = _today_start()
+    await session.execute(
+        delete(Tracker).where(
+            and_(
+                Tracker.user_id == user.id,
+                Tracker.type == TrackerType.calories,
+                Tracker.created_at >= today,
+                or_(Tracker.source.is_(None), Tracker.source != "photo"),
+            )
+        )
+    )
+    new_id: int | None = None
+    if body.value > 0:
+        new_tracker = Tracker(
+            user_id=user.id,
+            type=TrackerType.calories,
+            value=body.value,
+            unit="kcal",
+            meal_type=body.meal_type,
+            source="manual",
+        )
+        session.add(new_tracker)
+        await session.flush()
+        new_id = new_tracker.id
+    await session.commit()
+    return {"value": body.value if body.value > 0 else 0, "unit": "kcal", "id": new_id}
+
+
 @router.get("/today")
 async def get_today_trackers(
     user: User = Depends(get_current_user),
@@ -208,6 +254,7 @@ async def get_today_trackers(
     has_water = False
     last_water_id: int | None = None
     cal_total = 0.0
+    manual_cal_total = 0.0
     has_calories = False
     last_cal_id: int | None = None
     cal_meals: dict[str, float] = {"breakfast": 0.0, "lunch": 0.0, "dinner": 0.0, "snack": 0.0, "uncategorized": 0.0}
@@ -225,13 +272,20 @@ async def get_today_trackers(
             cal_total += t.value
             has_calories = True
             last_cal_id = t.id
+            if t.source != "photo":
+                manual_cal_total += t.value
             meal_key = t.meal_type if t.meal_type in _VALID_MEAL_TYPES else "uncategorized"
             cal_meals[meal_key] += t.value
 
     if has_water:
         out["water"] = {"value": water_total, "unit": "ml", "id": last_water_id}
     if has_calories:
-        out["calories"] = {"value": cal_total, "unit": "kcal", "id": last_cal_id}
+        out["calories"] = {
+            "value": cal_total,
+            "unit": "kcal",
+            "id": last_cal_id,
+            "manual_value": round(manual_cal_total),
+        }
     out["calories_meals"] = {k: round(v) for k, v in cal_meals.items()}
 
     # Актуальный вес: сначала трекер сегодня, иначе последний из истории

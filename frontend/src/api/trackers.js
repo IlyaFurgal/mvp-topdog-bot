@@ -35,6 +35,13 @@ export async function setWaterToday(value) {
   return data
 }
 
+export async function setCaloriesToday(value, mealType) {
+  const body = { value }
+  if (mealType) body.meal_type = mealType
+  const { data } = await client.put('/trackers/calories/today', body)
+  return data
+}
+
 export async function getWeeklyInsight() {
   const { data } = await client.get('/insights/weekly')
   return data

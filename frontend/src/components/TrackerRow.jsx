@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { deleteTracker, setWaterToday, updateTracker } from '../api/trackers'
+import { deleteTracker, setCaloriesToday, setWaterToday, updateTracker } from '../api/trackers'
 
 const CONFIG = {
   weight:   { label: 'ВЕС' },
@@ -29,6 +29,7 @@ function formatValue(type, data) {
 function rawValue(type, data) {
   if (!data) return ''
   if (type === 'weight') return data.value.toFixed(1)
+  if (type === 'calories') return String(Math.round(data.manual_value ?? data.value))
   return String(Math.round(data.value))
 }
 
@@ -64,6 +65,10 @@ export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, o
         await setWaterToday(num)
         setEditing(false)
         onDeleted?.(type)
+      } else if (type === 'calories') {
+        await setCaloriesToday(num)
+        setEditing(false)
+        onDeleted?.(type)
       } else {
         await updateTracker(data.id, num)
         onEdited?.(type, num)
@@ -79,6 +84,8 @@ export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, o
     try {
       if (type === 'water') {
         await setWaterToday(0)
+      } else if (type === 'calories') {
+        await setCaloriesToday(0)
       } else {
         await deleteTracker(data.id)
       }
@@ -122,12 +129,12 @@ export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, o
               <span className={`tracker-row__value ${formatted ? 'tracker-row__value--filled' : ''}`}>
                 {formatted ?? '—'}
               </span>
-              {data?.id && type !== 'calories' && (
+              {data?.id && (
                 <button className="tracker-row__edit" onClick={startEdit} title="Редактировать">
                   ✏
                 </button>
               )}
-              {data?.id && type !== 'calories' && (
+              {data?.id && (type !== 'calories' || (data?.manual_value ?? 0) > 0) && (
                 <button className="tracker-row__del" onClick={handleDelete} disabled={saving} title="Удалить">
                   🗑
                 </button>
