@@ -25,6 +25,16 @@ export async function updateTracker(trackerId, value) {
   return data
 }
 
+export async function deleteTracker(trackerId) {
+  const { data } = await client.delete(`/trackers/${trackerId}`)
+  return data
+}
+
+export async function setWaterToday(value) {
+  const { data } = await client.put('/trackers/water/today', { value })
+  return data
+}
+
 export async function getWeeklyInsight() {
   const { data } = await client.get('/insights/weekly')
   return data

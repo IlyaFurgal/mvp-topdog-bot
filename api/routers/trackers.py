@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
-from sqlalchemy import and_, select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
@@ -33,6 +33,10 @@ class TrackerCreate(BaseModel):
 
 
 class TrackerUpdate(BaseModel):
+    value: float
+
+
+class WaterTodayUpdate(BaseModel):
     value: float
 
 
@@ -127,6 +131,57 @@ async def update_tracker(
     tracker.value = body.value
     await session.commit()
     return {"id": tracker.id, "value": tracker.value, "unit": tracker.unit}
+
+
+@router.put("/water/today")
+async def set_water_today(
+    body: WaterTodayUpdate,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    today = _today_start()
+    await session.execute(
+        delete(Tracker).where(
+            and_(
+                Tracker.user_id == user.id,
+                Tracker.type == TrackerType.water,
+                Tracker.created_at >= today,
+            )
+        )
+    )
+    new_id: int | None = None
+    if body.value > 0:
+        new_tracker = Tracker(
+            user_id=user.id,
+            type=TrackerType.water,
+            value=body.value,
+            unit="ml",
+            source="manual_edit",
+        )
+        session.add(new_tracker)
+        await session.flush()
+        new_id = new_tracker.id
+    await session.commit()
+    return {"value": body.value if body.value > 0 else 0, "unit": "ml", "id": new_id}
+
+
+@router.delete("/{tracker_id}")
+async def delete_tracker(
+    tracker_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Tracker).where(Tracker.id == tracker_id)
+    )
+    tracker = result.scalar_one_or_none()
+    if not tracker:
+        raise HTTPException(status_code=404, detail="Tracker not found")
+    if tracker.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    await session.delete(tracker)
+    await session.commit()
+    return {"id": tracker_id, "deleted": True}
 
 
 @router.get("/today")

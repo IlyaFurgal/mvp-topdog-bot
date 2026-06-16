@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { updateTracker } from '../api/trackers'
+import { deleteTracker, setWaterToday, updateTracker } from '../api/trackers'
 
 const CONFIG = {
   weight:   { label: 'ВЕС' },
@@ -32,7 +32,7 @@ function rawValue(type, data) {
   return String(Math.round(data.value))
 }
 
-export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, onAdd, onEdited }) {
+export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, onAdd, onEdited, onDeleted }) {
   const cfg = CONFIG[type]
   const formatted = formatValue(type, data)
 
@@ -60,9 +60,29 @@ export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, o
     if (isNaN(num) || num < 0 || !data?.id) { cancelEdit(); return }
     setSaving(true)
     try {
-      await updateTracker(data.id, num)
-      onEdited?.(type, num)
-      setEditing(false)
+      if (type === 'water') {
+        await setWaterToday(num)
+        setEditing(false)
+        onDeleted?.(type)
+      } else {
+        await updateTracker(data.id, num)
+        onEdited?.(type, num)
+        setEditing(false)
+      }
+    } catch (_) {}
+    setSaving(false)
+  }
+
+  async function handleDelete() {
+    if (!data?.id) return
+    setSaving(true)
+    try {
+      if (type === 'water') {
+        await setWaterToday(0)
+      } else {
+        await deleteTracker(data.id)
+      }
+      onDeleted?.(type)
     } catch (_) {}
     setSaving(false)
   }
@@ -102,9 +122,14 @@ export default function TrackerRow({ type, data, calorieLimit, mealsBreakdown, o
               <span className={`tracker-row__value ${formatted ? 'tracker-row__value--filled' : ''}`}>
                 {formatted ?? '—'}
               </span>
-              {data?.id && (
+              {data?.id && type !== 'calories' && (
                 <button className="tracker-row__edit" onClick={startEdit} title="Редактировать">
                   ✏
+                </button>
+              )}
+              {data?.id && type !== 'calories' && (
+                <button className="tracker-row__del" onClick={handleDelete} disabled={saving} title="Удалить">
+                  🗑
                 </button>
               )}
               <button className="tracker-row__add" onClick={onAdd}>+</button>

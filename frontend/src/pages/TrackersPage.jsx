@@ -118,6 +118,7 @@ export default function TrackersPage() {
                   ...prev,
                   [t]: { ...prev[t], value: newVal },
                 }))}
+                onDeleted={load}
               />
             ))}
           </div>
