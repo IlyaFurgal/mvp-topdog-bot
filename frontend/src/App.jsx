@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import BottomNav from './components/BottomNav'
@@ -6,14 +6,15 @@ import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
+import { lazyWithRetry } from './utils/lazyWithRetry'
 import { useTelegram } from './hooks/useTelegram'
 import ProfilePage from './pages/ProfilePage'   // стартовая страница — статический импорт
 
-const AiPage            = lazy(() => import('./pages/AiPage'))
-const KnowledgePage     = lazy(() => import('./pages/KnowledgePage'))
-const ProgressPage      = lazy(() => import('./pages/ProgressPage'))
-const ResidentsChatPage = lazy(() => import('./pages/ResidentsChatPage'))
-const TrackersPage      = lazy(() => import('./pages/TrackersPage'))
+const AiPage            = lazyWithRetry(() => import('./pages/AiPage'))
+const KnowledgePage     = lazyWithRetry(() => import('./pages/KnowledgePage'))
+const ProgressPage      = lazyWithRetry(() => import('./pages/ProgressPage'))
+const ResidentsChatPage = lazyWithRetry(() => import('./pages/ResidentsChatPage'))
+const TrackersPage      = lazyWithRetry(() => import('./pages/TrackersPage'))
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
