@@ -26,6 +26,7 @@ SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
 UPLOADS_DIR = Path("/app/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_HISTORY     = 20
 PDF_MAX_PAGES   = 5
 AUDIO_MAX_BYTES = 15 * 1024 * 1024  # 15 МБ
 
