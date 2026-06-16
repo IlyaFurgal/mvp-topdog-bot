@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { saveTracker, setCaloriesToday, setWaterToday } from '../api/trackers'
+import { saveTracker } from '../api/trackers'
 
 const GOAL_WATER = 2000
 
@@ -31,8 +31,8 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   const [saving, setSaving] = useState(false)
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
-  const [waterAmount, setWaterAmount] = useState(() => Math.round(todayData?.value ?? 0))
-  const [caloriesAmount, setCaloriesAmount] = useState(() => Math.round(todayData?.manual_value ?? 0))
+  const [waterAmount, setWaterAmount] = useState(0)
+  const [caloriesAmount, setCaloriesAmount] = useState(0)
   const [mealType, setMealType] = useState(() => type === 'calories' ? getDefaultMealType() : null)
   const [sleepHours, setSleepHours] = useState(() => {
     if (todayData?.value) return Math.floor(todayData.value)
@@ -54,10 +54,13 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
         await saveTracker('weight', val, 'kg')
         onSaved('weight', val)
       } else if (type === 'water') {
-        await setWaterToday(waterAmount)
+        await saveTracker('water', waterAmount, 'ml')
         onSaved('water')
       } else if (type === 'calories') {
-        await setCaloriesToday(caloriesAmount, mealType || undefined)
+        await saveTracker('calories', caloriesAmount, 'kcal', {
+          meal_type: mealType || undefined,
+          source: 'manual',
+        })
         onSaved('calories')
       } else {
         const val = parseFloat((sleepHours + sleepMinutes / 60).toFixed(2))
@@ -74,7 +77,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
     if (e.target === overlayRef.current) onClose()
   }
 
-  const addLabel = 'СОХРАНИТЬ'
+  const addLabel = type === 'water' || type === 'calories' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
 
   return (
     <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
@@ -165,7 +168,22 @@ function WeightInput({ value, onChange }) {
 }
 
 function WaterInput({ amount, onChange, total }) {
+  const [draft, setDraft] = useState('')
   const pct = Math.min((total / GOAL_WATER) * 100, 100)
+
+  function addPreset(ml) {
+    const current = parseInt(draft, 10) || 0
+    const newVal = current + ml
+    setDraft(String(newVal))
+    onChange(newVal)
+  }
+
+  function handleBlur() {
+    const n = parseInt(draft, 10)
+    if (!isNaN(n) && n >= 0) onChange(n)
+    else setDraft(amount > 0 ? String(amount) : '')
+  }
+
   return (
     <div className="tracker-input">
       <p className="water-today">
@@ -174,28 +192,62 @@ function WaterInput({ amount, onChange, total }) {
       <div className="progress-bar">
         <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
       </div>
+      <div className="water-quick">
+        {[100, 250, 500].map((ml) => (
+          <button key={ml} className="water-btn" onClick={() => addPreset(ml)}>
+            +{ml} мл
+          </button>
+        ))}
+        <button
+          className="water-btn water-btn--reset"
+          onClick={() => { setDraft(''); onChange(0) }}
+          disabled={!draft}
+        >
+          Сброс
+        </button>
+      </div>
       <div className="water-custom">
         <input
           type="number"
           inputMode="numeric"
           className="weight-num-input"
-          value={amount === 0 ? '' : amount}
+          value={draft}
           min="0"
-          placeholder="итог за день, мл"
-          onChange={(e) => {
-            const v = e.target.value.replace(/^0+(?=\d)/, '')
-            onChange(v === '' ? 0 : parseInt(v, 10) || 0)
-          }}
+          placeholder="или введи, мл"
+          onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
+          onBlur={handleBlur}
         />
         <span className="weight-unit">мл</span>
       </div>
+      {amount > 0 && (
+        <p className="progress-label">
+          +{amount} мл → итого {Math.round(total + amount).toLocaleString('ru')} мл
+        </p>
+      )}
     </div>
   )
 }
 
 function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMealType }) {
+  const [draft, setDraft] = useState('')
   const pct = Math.min((total / limit) * 100, 100)
   const overLimit = total > limit
+
+  function addPreset(kcal) {
+    const current = parseInt(draft, 10) || 0
+    const newVal = current + kcal
+    setDraft(String(newVal))
+    onChange(newVal)
+  }
+
+  function handleBlur() {
+    const n = parseInt(draft, 10)
+    if (!isNaN(n) && n >= 0) onChange(n)
+    else setDraft(amount > 0 ? String(amount) : '')
+  }
+
+  const previewTotal = total + amount
+
   return (
     <div className="tracker-input">
       <div className="meal-type-row">
@@ -219,21 +271,39 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
           style={{ width: `${pct}%`, background: overLimit ? 'var(--danger)' : undefined }}
         />
       </div>
+      <div className="water-quick">
+        {[100, 300, 500].map((kcal) => (
+          <button key={kcal} className="water-btn" onClick={() => addPreset(kcal)}>
+            +{kcal}
+          </button>
+        ))}
+        <button
+          className="water-btn water-btn--reset"
+          onClick={() => { setDraft(''); onChange(0) }}
+          disabled={!draft}
+        >
+          Сброс
+        </button>
+      </div>
       <div className="water-custom">
         <input
           type="number"
           inputMode="numeric"
           className="weight-num-input"
-          value={amount === 0 ? '' : amount}
+          value={draft}
           min="0"
-          placeholder="ручной итог, ккал"
-          onChange={(e) => {
-            const v = e.target.value.replace(/^0+(?=\d)/, '')
-            onChange(v === '' ? 0 : parseInt(v, 10) || 0)
-          }}
+          placeholder="или введи, ккал"
+          onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
+          onBlur={handleBlur}
         />
         <span className="weight-unit">ккал</span>
       </div>
+      {amount > 0 && (
+        <p className="progress-label" style={{ color: previewTotal > limit ? 'var(--danger)' : undefined }}>
+          +{amount} ккал → итого {Math.round(previewTotal).toLocaleString('ru')} ккал
+          {previewTotal > limit ? ` (+${Math.round(previewTotal - limit)} сверх нормы)` : ''}
+        </p>
+      )}
     </div>
   )
 }
