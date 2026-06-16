@@ -152,33 +152,31 @@ function WeightInput({ value, onChange }) {
 
 function WaterInput({ amount, onChange, total }) {
   const pct = Math.min((total / GOAL_WATER) * 100, 100)
+  const newTotal = total + amount
   return (
     <div className="tracker-input">
+      {/* Текущий дневной итог — явно, чтобы видно было накопление */}
       <p className="water-today">
-        Сегодня: <strong>{total.toLocaleString('ru')} мл</strong>
+        Сегодня: <strong>{Math.round(total).toLocaleString('ru')} мл</strong> из {GOAL_WATER} мл
       </p>
       <div className="progress-bar">
         <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="progress-label">{Math.round(total)} / {GOAL_WATER} мл</p>
+
+      {/* Пресеты: каждое нажатие задаёт порцию (SET, не накопление) */}
       <div className="water-quick">
-        {[200, 300, 500].map((ml) => (
+        {[100, 250, 500].map((ml) => (
           <button
             key={ml}
-            className="water-btn"
-            onClick={() => onChange(amount + ml)}
+            className={`water-btn${amount === ml ? ' water-btn--active' : ''}`}
+            onClick={() => onChange(ml)}
           >
             +{ml} мл
           </button>
         ))}
-        <button
-          className="water-btn water-btn--reset"
-          onClick={() => onChange(0)}
-          disabled={amount === 0}
-        >
-          Сброс
-        </button>
       </div>
+
+      {/* Мелкий ручной ввод */}
       <div className="water-custom">
         <input
           type="number"
@@ -186,6 +184,7 @@ function WaterInput({ amount, onChange, total }) {
           className="weight-num-input"
           value={amount === 0 ? '' : amount}
           min="1"
+          placeholder="другое"
           onChange={(e) => {
             const v = e.target.value.replace(/^0+(?=\d)/, '')
             onChange(v === '' ? 0 : parseInt(v, 10) || 0)
@@ -193,6 +192,13 @@ function WaterInput({ amount, onChange, total }) {
         />
         <span className="weight-unit">мл</span>
       </div>
+
+      {/* Предпросмотр результата */}
+      {amount > 0 && (
+        <p className="progress-label">
+          +{amount} мл → итого {Math.round(newTotal).toLocaleString('ru')} мл
+        </p>
+      )}
     </div>
   )
 }
