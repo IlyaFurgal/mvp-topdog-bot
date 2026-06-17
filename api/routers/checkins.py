@@ -6,7 +6,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import Checkin, CheckinType, User
+from database.models import Checkin, CheckinType, Tracker, TrackerType, User
 from database.session import get_session
 
 router = APIRouter(prefix="/checkins", tags=["checkins"])
@@ -29,6 +29,32 @@ async def create_checkin(
         data=body.data,
     )
     session.add(checkin)
+    await session.flush()
+
+    # Sync sleep tracker from morning checkin sleep_hours field
+    if body.type == "morning" and body.data.get("sleep_hours"):
+        sleep_val = float(body.data["sleep_hours"])
+        today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        existing = (await session.execute(
+            select(Tracker).where(
+                and_(
+                    Tracker.user_id == user.id,
+                    Tracker.type == TrackerType.sleep,
+                    Tracker.created_at >= today_start,
+                )
+            ).limit(1)
+        )).scalar_one_or_none()
+        if existing:
+            existing.value = sleep_val
+        else:
+            session.add(Tracker(
+                user_id=user.id,
+                type=TrackerType.sleep,
+                value=sleep_val,
+                unit="h",
+                source="manual",
+            ))
+
     await session.commit()
     await session.refresh(checkin)
     return {"id": checkin.id, "created_at": checkin.created_at}

@@ -17,20 +17,32 @@ const STEPS = {
       key: 'body_feeling',
       question: 'Ощущение тела после сна',
       options: [
-        { value: 'fresh',         label: 'Свежий' },
-        { value: 'slightly_tired', label: 'Немного устал' },
-        { value: 'heavy',         label: 'Тяжело' },
-        { value: 'sick',          label: 'Болею' },
+        { value: 'fresh',          label: 'Свежий',        labelF: 'Свежая' },
+        { value: 'slightly_tired', label: 'Немного устал', labelF: 'Немного устала' },
+        { value: 'heavy',          label: 'Тяжело' },
+        { value: 'sick',           label: 'Болею' },
       ],
     },
     {
       key: 'sleep_quality',
       question: 'Качество сна',
       options: [
-        { value: 'great',  label: 'Выспался' },
+        { value: 'great',  label: 'Выспался', labelF: 'Выспалась' },
         { value: 'normal', label: 'Средне' },
         { value: 'bad',    label: 'Плохо' },
       ],
+    },
+    {
+      key: 'sleep_hours',
+      question: 'Сколько часов спал?',
+      questionF: 'Сколько часов спала?',
+      type: 'number',
+      float: true,
+      min: 0,
+      max: 24,
+      step: 0.5,
+      hint: 'Например: 7.5 = 7 ч 30 мин',
+      placeholder: 'Часы сна...',
     },
     {
       key: 'mood',
@@ -63,10 +75,11 @@ const STEPS = {
     {
       key: 'plan_completed',
       question: 'Выполнил план тренировки?',
+      questionF: 'Выполнила план тренировки?',
       options: [
         { value: 'fully',     label: 'Полностью' },
         { value: 'partially', label: 'Частично' },
-        { value: 'not',       label: 'Не выполнил' },
+        { value: 'not',       label: 'Не выполнил', labelF: 'Не выполнила' },
       ],
     },
     {
@@ -115,6 +128,7 @@ const STEPS = {
     {
       key: 'satisfaction',
       question: 'Доволен тренировкой?',
+      questionF: 'Довольна тренировкой?',
       options: [
         { value: 'yes',    label: 'Да' },
         { value: 'mostly', label: 'В целом да' },
@@ -143,8 +157,15 @@ const STEPS = {
       ],
     },
     {
+      key: 'stress',
+      question: 'Уровень стресса за день',
+      type: 'rpe',
+      scaleHint: '1 — очень мало, 10 — максимальный',
+    },
+    {
       key: 'recovery',
       question: 'Как восстановление?',
+      condition: (data, ctx) => !ctx?.hasPostWorkout,
       options: [
         { value: 'great',  label: 'Отлично' },
         { value: 'normal', label: 'Нормально' },
@@ -261,8 +282,9 @@ function getCompletionMessage(type, data, tone) {
   )
 }
 
-export default function CheckinFlow({ type, onClose }) {
-  const { tone } = useProfile()
+export default function CheckinFlow({ type, onClose, ctx = {} }) {
+  const { tone, profile } = useProfile()
+  const isFemale = profile?.gender === 'female'
   const allSteps = STEPS[type]
   const [stepIndex, setStepIndex] = useState(0)
   const [data, setData] = useState({})
@@ -271,7 +293,7 @@ export default function CheckinFlow({ type, onClose }) {
   const [animating, setAnimating] = useState(false)
   const [inputVal, setInputVal] = useState('')
 
-  const activeSteps = allSteps.filter((s) => !s.condition || s.condition(data))
+  const activeSteps = allSteps.filter((s) => !s.condition || s.condition(data, ctx))
   const currentStep = activeSteps[stepIndex]
   const totalSteps = activeSteps.length
 
@@ -297,7 +319,7 @@ export default function CheckinFlow({ type, onClose }) {
   function handleSelect(value) { advance(value) }
 
   function handleNumberSubmit() {
-    const num = parseInt(inputVal, 10)
+    const num = currentStep.float ? parseFloat(inputVal) : parseInt(inputVal, 10)
     const min = currentStep.min ?? 1
     const max = currentStep.max ?? 300
     if (isNaN(num) || num < min || num > max) return
@@ -358,10 +380,15 @@ export default function CheckinFlow({ type, onClose }) {
       </div>
 
       <div className={`checkin-flow__body ${animating ? 'checkin-flow__body--exit' : ''}`}>
-        <p className="checkin-flow__question">{currentStep.question}</p>
+        <p className="checkin-flow__question">
+          {isFemale && currentStep.questionF ? currentStep.questionF : currentStep.question}
+        </p>
 
         {currentStep.type === 'rpe' && (
           <div className="checkin-flow__rpe">
+            {currentStep.scaleHint && (
+              <p className="checkin-flow__hint">{currentStep.scaleHint}</p>
+            )}
             {[1,2,3,4,5,6,7,8,9,10].map((n) => (
               <button
                 key={n}
@@ -386,6 +413,7 @@ export default function CheckinFlow({ type, onClose }) {
               value={inputVal}
               min={currentStep.min}
               max={currentStep.max}
+              step={currentStep.step ?? 1}
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleNumberSubmit()}
               autoFocus
@@ -428,7 +456,7 @@ export default function CheckinFlow({ type, onClose }) {
                 className="checkin-flow__option"
                 onClick={() => handleSelect(opt.value)}
               >
-                {opt.label}
+                {isFemale && opt.labelF ? opt.labelF : opt.label}
               </button>
             ))}
           </div>

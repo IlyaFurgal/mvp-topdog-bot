@@ -717,6 +717,20 @@ html, body {
   line-height: 1.3;
 }
 
+/* ── Tracker tip ─────────────────────────────────────── */
+
+.tracker-tip {
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+
+.tracker-tip__text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* ── Trackers on CheckPage ────────────────────────────── */
 
 .section-label {

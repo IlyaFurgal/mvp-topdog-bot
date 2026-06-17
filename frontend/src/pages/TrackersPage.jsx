@@ -68,6 +68,7 @@ export default function TrackersPage() {
     return (
       <CheckinFlow
         type={activeFlow}
+        ctx={{ hasPostWorkout: !!checkins.post_workout }}
         onClose={() => { setActiveFlow(null); load() }}
       />
     )
@@ -90,6 +91,14 @@ export default function TrackersPage() {
         <div className="card"><p className="card-muted">Загрузка...</p></div>
       ) : (
         <>
+          {/* Подсказка */}
+          <div className="card tracker-tip">
+            <p className="tracker-tip__text">
+              💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
+              Чекины и трекеры можно заполнить в любое время дня.
+            </p>
+          </div>
+
           {/* Чекины */}
           <p className="section-label">ЧЕКИНЫ</p>
           <div className="checkin-cards">
