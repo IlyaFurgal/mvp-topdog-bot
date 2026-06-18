@@ -98,10 +98,12 @@ const STEPS = {
       key: 'rpe',
       question: 'Оцени нагрузку (RPE)',
       type: 'rpe',
+      condition: (data) => data.plan_completed !== 'not',
     },
     {
       key: 'comparison',
       question: 'Сравнение с прошлой тренировкой',
+      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'easier', label: 'Легче' },
         { value: 'same',   label: 'Так же' },
@@ -111,6 +113,7 @@ const STEPS = {
     {
       key: 'pain',
       question: 'Болело что-то во время тренировки?',
+      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'no',  label: 'Нет' },
         { value: 'yes', label: 'Да' },
@@ -129,6 +132,7 @@ const STEPS = {
       key: 'satisfaction',
       question: 'Доволен тренировкой?',
       questionF: 'Довольна тренировкой?',
+      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'yes',    label: 'Да' },
         { value: 'mostly', label: 'В целом да' },

@@ -184,7 +184,10 @@ export default function ProgressPage() {
         )
       : null
 
-  const rpeVals = postWorkouts.map((c) => c.data?.rpe).filter((v) => v != null)
+  const rpeVals = postWorkouts
+    .filter((c) => c.data?.plan_completed !== 'not')
+    .map((c) => Number(c.data?.rpe))
+    .filter((v) => Number.isFinite(v) && v >= 1 && v <= 10)
   const avgRpe =
     rpeVals.length > 0
       ? (rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length).toFixed(1)
