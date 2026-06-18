@@ -8,28 +8,28 @@ const STEPS = {
       key: 'resting_pulse',
       question: 'Пульс покоя (уд/мин)',
       type: 'number',
-      hint: 'Измерь лёжа сразу после пробуждения: нащупай пульс, посчитай за 15 сек, умножь на 4',
+      hint: 'Измерь лёжа сразу после пробуждения: нащупай пульс, посчитай за 15 секунд количество ударов, умножь на 4. Это твой пульс покоя.',
       placeholder: 'Введи пульс...',
       min: 30,
       max: 200,
     },
     {
-      key: 'body_feeling',
-      question: 'Ощущение тела после сна',
+      key: 'feeling',
+      question: 'Как твоё самочувствие?',
       options: [
-        { value: 'fresh',          label: 'Свежий',        labelF: 'Свежая' },
-        { value: 'slightly_tired', label: 'Немного устал', labelF: 'Немного устала' },
-        { value: 'heavy',          label: 'Тяжело' },
-        { value: 'sick',           label: 'Болею' },
+        { value: 'excellent', label: 'Отличное' },
+        { value: 'okay',      label: 'Удовлетворительное' },
+        { value: 'broken',    label: 'Разбитое' },
+        { value: 'custom',    label: 'Свой вариант', custom: true },
       ],
     },
     {
       key: 'sleep_quality',
-      question: 'Качество сна',
+      question: 'Качество сна?',
       options: [
         { value: 'great',  label: 'Выспался', labelF: 'Выспалась' },
-        { value: 'normal', label: 'Средне' },
-        { value: 'bad',    label: 'Плохо' },
+        { value: 'normal', label: 'Среднее' },
+        { value: 'bad',    label: 'Плохое' },
       ],
     },
     {
@@ -45,27 +45,22 @@ const STEPS = {
       placeholder: 'Часы сна...',
     },
     {
-      key: 'mood',
-      question: 'Настроение прямо сейчас',
+      key: 'training_today',
+      question: 'У тебя сегодня тренировка, или день восстановления?',
       options: [
-        { value: 'good',    label: 'Хорошее' },
-        { value: 'neutral', label: 'Нейтральное' },
-        { value: 'bad',     label: 'Плохое' },
+        { value: 'train', label: 'Сегодня тренируюсь' },
+        { value: 'rest',  label: 'Сегодня восстанавливаюсь' },
       ],
     },
     {
-      key: 'training_desire',
-      question: 'Желание тренироваться сегодня',
-      options: [
-        { value: 'want',       label: 'Хочу' },
-        { value: 'okay',       label: 'Нормально' },
-        { value: 'no_desire',  label: 'Совсем не хочу' },
-        { value: 'no_chance',  label: 'Нет возможности' },
-      ],
+      key: 'training_time',
+      question: 'Во сколько тренировка?',
+      type: 'time',
+      condition: (data) => data.training_today === 'train',
     },
     {
       key: 'note',
-      question: 'Хочешь чем-то поделиться?',
+      question: 'Есть что добавить?',
       type: 'text_optional',
       placeholder: 'Напиши заметку (необязательно)...',
     },
@@ -74,24 +69,23 @@ const STEPS = {
   post_workout: [
     {
       key: 'plan_completed',
-      question: 'Выполнил план тренировки?',
-      questionF: 'Выполнила план тренировки?',
+      question: 'Выполнил(а) план тренировки?',
       options: [
-        { value: 'fully',     label: 'Полностью' },
-        { value: 'partially', label: 'Частично' },
-        { value: 'not',       label: 'Не выполнил', labelF: 'Не выполнила' },
+        { value: 'fully',     label: 'Выполнил полностью',  labelF: 'Выполнила полностью' },
+        { value: 'partially', label: 'Выполнил частично',    labelF: 'Выполнила частично' },
+        { value: 'not',       label: 'Не тренировался',      labelF: 'Не тренировалась' },
+        { value: 'custom',    label: 'Свой вариант', custom: true },
       ],
     },
     {
       key: 'plan_reason',
-      question: 'Почему не до конца?',
+      question: 'Почему не выполнил(а) план?',
       condition: (data) => data.plan_completed !== 'fully',
       options: [
-        { value: 'no_time',   label: 'Не хватило времени' },
-        { value: 'no_energy', label: 'Не хватило сил' },
-        { value: 'sick',      label: 'Заболело' },
-        { value: 'boring',    label: 'Скучно' },
-        { value: 'other',     label: 'Другое' },
+        { value: 'no_time',    label: 'Не хватило времени на все упражнения' },
+        { value: 'tired',      label: 'Устал(а)' },
+        { value: 'discomfort', label: 'Дискомфорт в теле' },
+        { value: 'other',      label: 'Другое (свой вариант)', custom: true },
       ],
     },
     {
@@ -115,49 +109,34 @@ const STEPS = {
       question: 'Болело что-то во время тренировки?',
       condition: (data) => data.plan_completed !== 'not',
       options: [
-        { value: 'no',  label: 'Нет' },
-        { value: 'yes', label: 'Да' },
-      ],
-    },
-    {
-      key: 'dizziness',
-      question: 'Было головокружение, одышка не по нагрузке?',
-      condition: (data) => data.pain === 'yes',
-      options: [
-        { value: 'no',  label: 'Нет' },
-        { value: 'yes', label: 'Да' },
+        { value: 'muscle', label: 'Мышечная боль' },
+        { value: 'joint',  label: 'Суставная боль' },
+        { value: 'bad',    label: 'Стало плохо' },
+        { value: 'none',   label: 'Ничего не болело' },
+        { value: 'custom', label: 'Свой вариант', custom: true },
       ],
     },
     {
       key: 'satisfaction',
-      question: 'Доволен тренировкой?',
-      questionF: 'Довольна тренировкой?',
+      question: 'Доволен(льна) результативностью?',
       condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'yes',    label: 'Да' },
-        { value: 'mostly', label: 'В целом да' },
-        { value: 'no',     label: 'Нет' },
+        { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше' },
+        { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя' },
+        { value: 'custom', label: 'Свой вариант', custom: true },
       ],
     },
   ],
 
   evening: [
     {
-      key: 'day_rating',
-      question: 'Как прошёл день?',
+      key: 'productivity',
+      question: 'Оцени продуктивность в течение дня',
       options: [
-        { value: 'good', label: 'Хорошо' },
-        { value: 'okay', label: 'Нормально' },
-        { value: 'hard', label: 'Тяжело' },
-      ],
-    },
-    {
-      key: 'energy',
-      question: 'Уровень энергии сейчас?',
-      options: [
-        { value: 'high',   label: 'Высокий' },
-        { value: 'medium', label: 'Средний' },
-        { value: 'low',    label: 'Низкий' },
+        { value: 'high',   label: 'Бодрый весь день',     labelF: 'Бодрая весь день' },
+        { value: 'medium', label: 'Средний уровень энергии' },
+        { value: 'low',    label: 'Разбит весь день',      labelF: 'Разбита весь день' },
       ],
     },
     {
@@ -168,12 +147,12 @@ const STEPS = {
     },
     {
       key: 'recovery',
-      question: 'Как восстановление?',
+      question: 'Как прошло восстановление?',
       condition: (data, ctx) => !ctx?.hasPostWorkout,
       options: [
-        { value: 'great',  label: 'Отлично' },
-        { value: 'normal', label: 'Нормально' },
-        { value: 'poor',   label: 'Плохо' },
+        { value: 'passive', label: 'Восстанавливался пассивно (без нагрузки)', labelF: 'Восстанавливалась пассивно (без нагрузки)' },
+        { value: 'active',  label: 'Восстанавливался активно (кардио)',         labelF: 'Восстанавливалась активно (кардио)' },
+        { value: 'skip',    label: 'Пропустить' },
       ],
     },
   ],
@@ -231,45 +210,20 @@ const MESSAGES = {
 
 function getCheckinMood(type, data) {
   if (type === 'morning') {
-    if (
-      data.body_feeling === 'sick' ||
-      (data.body_feeling === 'heavy' && data.sleep_quality === 'bad') ||
-      data.training_desire === 'no_desire' ||
-      data.mood === 'bad' ||
-      data.motivation === 'low'
-    ) return 'care'
-    if (
-      data.body_feeling === 'fresh' &&
-      (data.sleep_quality === 'great' || data.sleep_quality === 'normal') &&
-      (data.mood === 'good' || data.motivation === 'high' || data.training_desire === 'want')
-    ) return 'praise'
+    if (data.feeling === 'broken' || (data.feeling === 'okay' && data.sleep_quality === 'bad')) return 'care'
+    if (data.feeling === 'excellent' && (data.sleep_quality === 'great' || data.sleep_quality === 'normal')) return 'praise'
     return 'neutral'
   }
 
   if (type === 'post_workout') {
-    if (
-      data.pain === 'pain' ||
-      data.dizziness === 'yes' ||
-      (data.plan_completed === 'not' && data.plan_reason === 'injury')
-    ) return 'care'
-    if (
-      data.plan_completed === 'fully' &&
-      (data.satisfaction === 'yes' || data.satisfaction === 'mostly') &&
-      data.pain !== 'pain'
-    ) return 'praise'
+    if (data.pain === 'bad' || data.pain === 'joint') return 'care'
+    if (data.plan_completed === 'fully' && (data.satisfaction === 'yes') && data.pain === 'none') return 'praise'
     return 'neutral'
   }
 
   if (type === 'evening') {
-    if (
-      (data.recovery === 'poor' && data.energy === 'low') ||
-      data.day_rating === 'hard'
-    ) return 'care'
-    if (
-      data.day_rating === 'good' &&
-      data.energy === 'high' &&
-      data.recovery === 'great'
-    ) return 'praise'
+    if (data.productivity === 'low') return 'care'
+    if (data.productivity === 'high') return 'praise'
     return 'neutral'
   }
 
@@ -296,6 +250,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
   const [done, setDone] = useState(false)
   const [animating, setAnimating] = useState(false)
   const [inputVal, setInputVal] = useState('')
+  const [customMode, setCustomMode] = useState(false)
 
   const activeSteps = allSteps.filter((s) => !s.condition || s.condition(data, ctx))
   const currentStep = activeSteps[stepIndex]
@@ -307,6 +262,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
       ? { ...data }
       : { ...data, [currentStep.key]: value }
     setData(newData)
+    setCustomMode(false)
 
     setAnimating(true)
     setTimeout(() => {
@@ -330,9 +286,20 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
     advance(num)
   }
 
+  function handleTimeSubmit() {
+    if (!inputVal) return
+    advance(inputVal)
+  }
+
   function handleTextSubmit() {
     const val = inputVal.trim()
     val ? advance(val) : advance(null, true)
+  }
+
+  function handleCustomSubmit() {
+    const val = inputVal.trim()
+    if (!val) return
+    advance(val)
   }
 
   async function finish(finalData) {
@@ -346,6 +313,11 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
   }
 
   function handleBack() {
+    if (customMode) {
+      setCustomMode(false)
+      setInputVal('')
+      return
+    }
     if (stepIndex === 0) {
       onClose()
     } else {
@@ -432,6 +404,25 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
           </div>
         )}
 
+        {currentStep.type === 'time' && (
+          <div className="checkin-flow__number-wrap">
+            <input
+              type="time"
+              className="checkin-flow__numfield"
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              autoFocus
+            />
+            <button
+              className="btn btn-accent checkin-flow__number-submit"
+              onClick={handleTimeSubmit}
+              disabled={!inputVal}
+            >
+              Продолжить →
+            </button>
+          </div>
+        )}
+
         {currentStep.type === 'text_optional' && (
           <div className="checkin-flow__text-wrap">
             <textarea
@@ -452,17 +443,49 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
           </div>
         )}
 
-        {!currentStep.type && (
+        {!currentStep.type && !customMode && (
           <div className="checkin-flow__options">
             {currentStep.options.map((opt) => (
               <button
                 key={opt.value}
                 className="checkin-flow__option"
-                onClick={() => handleSelect(opt.value)}
+                onClick={() => {
+                  if (opt.custom) {
+                    setCustomMode(true)
+                    setInputVal('')
+                  } else {
+                    handleSelect(opt.value)
+                  }
+                }}
               >
                 {isFemale && opt.labelF ? opt.labelF : opt.label}
               </button>
             ))}
+          </div>
+        )}
+
+        {!currentStep.type && customMode && (
+          <div className="checkin-flow__text-wrap">
+            <textarea
+              className="checkin-flow__textfield"
+              placeholder="Напиши свой вариант..."
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              rows={3}
+              autoFocus
+            />
+            <div className="checkin-flow__text-actions">
+              <button className="checkin-flow__text-skip" onClick={() => { setCustomMode(false); setInputVal('') }}>
+                Назад
+              </button>
+              <button
+                className="btn btn-accent checkin-flow__text-submit"
+                onClick={handleCustomSubmit}
+                disabled={!inputVal.trim()}
+              >
+                Продолжить →
+              </button>
+            </div>
           </div>
         )}
       </div>
