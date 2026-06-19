@@ -8,23 +8,29 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = '0011_workouts'
 down_revision: Union[str, None] = '0010_conversation_summaries'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+workout_metric = postgresql.ENUM(
+    'strength', 'distance_time', 'duration_rounds', 'duration_only',
+    name='workoutmetrictype',
+    create_type=False,
+)
+
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE workoutmetrictype AS ENUM ('strength', 'distance_time', 'duration_rounds', 'duration_only')")
+    workout_metric.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         'workout_categories',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('code', sa.String(32), nullable=False),
         sa.Column('name', sa.String(128), nullable=False),
-        sa.Column('metric_type', sa.Enum('strength', 'distance_time', 'duration_rounds', 'duration_only',
-                                          name='workoutmetrictype', create_type=False), nullable=False),
+        sa.Column('metric_type', postgresql.ENUM(name='workoutmetrictype', create_type=False), nullable=False),
         sa.Column('item_label', sa.String(64), nullable=True),
         sa.Column('sort_order', sa.Integer(), nullable=False, server_default='0'),
         sa.PrimaryKeyConstraint('id'),
@@ -148,4 +154,4 @@ def downgrade() -> None:
     op.drop_index('ix_workout_items_category_id', table_name='workout_items')
     op.drop_table('workout_items')
     op.drop_table('workout_categories')
-    op.execute("DROP TYPE workoutmetrictype")
+    workout_metric.drop(op.get_bind(), checkfirst=True)
