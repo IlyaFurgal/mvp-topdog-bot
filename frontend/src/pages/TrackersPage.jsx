@@ -5,6 +5,7 @@ import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
 import TrackerModal from '../components/TrackerModal'
 import TrackerRow from '../components/TrackerRow'
+import WorkoutBlock from '../components/WorkoutBlock'
 import { useProfile } from '../context/ProfileContext'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
@@ -155,6 +156,10 @@ export default function TrackersPage() {
               {getOverrunMessage(Math.round(trackers.calories.value - calorieLimit), tone)}
             </p>
           )}
+
+          {/* Тренировки */}
+          <p className="section-label">ТРЕНИРОВКИ</p>
+          <WorkoutBlock />
         </>
       )}
 
