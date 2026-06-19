@@ -23,6 +23,11 @@ MOSCOW = pytz.timezone("Europe/Moscow")
 # ── In-memory dedup: (user_id, checkin_type) → date last sent ────────────────
 _reminder_sent: dict[tuple[int, str], date] = {}
 
+# ── Per-user training notify target cache: user_id → (target_hhmm | None, cached_date)
+# Populated once per day per user from morning checkin; None means no push needed.
+# Cleared automatically when date changes (stale cleanup at end of check_reminders).
+_training_notify_cache: dict[int, tuple[str | None, date]] = {}
+
 
 def _webapp_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -53,6 +58,57 @@ async def _has_morning_checkin_today(session, user_id: int) -> bool:
         )
     )
     return result.scalar_one_or_none() is not None
+
+
+async def _has_post_workout_today(session, user_id: int) -> bool:
+    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    result = await session.execute(
+        select(Checkin).where(
+            and_(
+                Checkin.user_id == user_id,
+                Checkin.type == CheckinType.post_workout,
+                Checkin.created_at >= today_start,
+            )
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def _get_morning_training_time(session, user_id: int) -> tuple[bool, str | None]:
+    """Return (is_training_today, training_time_hhmm) from today's latest morning checkin."""
+    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    result = await session.execute(
+        select(Checkin).where(
+            and_(
+                Checkin.user_id == user_id,
+                Checkin.type == CheckinType.morning,
+                Checkin.created_at >= today_start,
+            )
+        ).order_by(Checkin.created_at.desc()).limit(1)
+    )
+    checkin = result.scalar_one_or_none()
+    if not checkin or not checkin.data:
+        return False, None
+    data = checkin.data
+    if data.get("training_today") != "train":
+        return False, None
+    raw = data.get("training_time")
+    if isinstance(raw, str) and ":" in raw:
+        return True, raw
+    return True, None
+
+
+def _compute_notify_hhmm(training_time_hhmm: str) -> str | None:
+    """Return notify time = training_time + 3h, or None if result > 20:30 or >= 24:00."""
+    try:
+        h, m = map(int, training_time_hhmm.split(":"))
+    except (ValueError, AttributeError):
+        return None
+    total_minutes = h * 60 + m + 3 * 60
+    notify_h, notify_m = divmod(total_minutes, 60)
+    if notify_h >= 24 or total_minutes > 20 * 60 + 30:
+        return None
+    return f"{notify_h:02d}:{notify_m:02d}"
 
 
 async def _today_tracker_sum(session, user_id: int, tracker_type: TrackerType) -> float:
@@ -195,6 +251,40 @@ async def check_reminders(bot: Bot) -> None:
                             )
                     _reminder_sent[key] = today
 
+            # ── Post-workout reminder (training_time + 3h) ───────────────────────
+            # Rescanner approach: no persistent jobs needed, survives restarts.
+            # Cache prevents repeated DB reads; 15-min grace window handles
+            # the case where the bot was restarted around the notify time.
+            key_tw = (user.id, "training_checkin")
+            if _reminder_sent.get(key_tw) != today:
+                cached = _training_notify_cache.get(user.id)
+                if cached is None or cached[1] != today:
+                    async with AsyncSessionLocal() as s:
+                        is_training, raw_time = await _get_morning_training_time(s, user.id)
+                    target_hhmm = _compute_notify_hhmm(raw_time) if (is_training and raw_time) else None
+                    _training_notify_cache[user.id] = (target_hhmm, today)
+                    cached = (target_hhmm, today)
+
+                target_hhmm = cached[0]
+                if target_hhmm:
+                    now_total = now_local.hour * 60 + now_local.minute
+                    t_h, t_m = map(int, target_hhmm.split(":"))
+                    target_total = t_h * 60 + t_m
+                    # 15-minute grace window: send if we're at or up to 15 min past target
+                    if 0 <= now_total - target_total <= 15:
+                        async with AsyncSessionLocal() as s:
+                            already_done = await _has_post_workout_today(s, user.id)
+                        if not already_done:
+                            await bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=(
+                                    "Как прошла тренировка? "
+                                    "Отметь, как всё прошло — это займёт минуту 💪"
+                                ),
+                                reply_markup=_webapp_kb(),
+                            )
+                        _reminder_sent[key_tw] = today
+
         except Exception as exc:
             logger.warning("check_reminders failed for user %s: %s", user.telegram_id, exc)
 
@@ -202,6 +292,9 @@ async def check_reminders(bot: Bot) -> None:
     stale = [k for k, d in _reminder_sent.items() if d < today]
     for k in stale:
         del _reminder_sent[k]
+    stale_cache = [uid for uid, (_, d) in _training_notify_cache.items() if d < today]
+    for uid in stale_cache:
+        del _training_notify_cache[uid]
 
 
 async def check_upgrade_reminders(bot: Bot) -> None:
