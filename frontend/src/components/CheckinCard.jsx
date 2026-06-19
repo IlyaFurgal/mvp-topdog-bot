@@ -2,24 +2,36 @@ const CONFIG = {
   morning: {
     title: 'УТРО',
     subtitle: 'СОСТОЯНИЕ',
-    summaryKey: 'body_feeling',
-    summaryMap: { fresh: 'Свежий', slightly_tired: 'Немного устал', heavy: 'Тяжело' },
+    summaryKey: 'feeling',
+    summaryMap: {
+      excellent: 'Отличное',
+      okay: 'Удовлетворительное',
+      broken: 'Разбитое',
+    },
   },
   post_workout: {
     title: 'ТРЕНИРОВКА',
     subtitle: 'НАГРУЗКА',
     summaryKey: 'plan_completed',
-    summaryMap: { fully: 'План выполнен', partially: 'Частично', not: 'Не выполнил' },
+    summaryMap: {
+      fully: 'Выполнил полностью',
+      partially: 'Выполнил частично',
+      not: 'Не тренировался',
+    },
   },
   evening: {
     title: 'ВЕЧЕР',
-    subtitle: 'ВОССТАНОВЛЕНИЕ',
-    summaryKey: 'day_rating',
-    summaryMap: { good: 'Хорошо', okay: 'Нормально', hard: 'Тяжело' },
+    subtitle: 'СОСТОЯНИЕ',
+    summaryKey: 'productivity',
+    summaryMap: {
+      high: 'Бодрый',
+      medium: 'Средний',
+      low: 'Разбит',
+    },
   },
 }
 
-export default function CheckinCard({ type, checkin, onClick }) {
+export default function CheckinCard({ type, checkin, onClick, onEdit }) {
   const cfg = CONFIG[type]
   const done = Boolean(checkin)
 
@@ -41,6 +53,15 @@ export default function CheckinCard({ type, checkin, onClick }) {
         </div>
       </div>
       {!done && <span className="checkin-card__caret">›</span>}
+      {done && onEdit && (
+        <button
+          className="checkin-card__edit-btn"
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          aria-label="Редактировать"
+        >
+          ✏
+        </button>
+      )}
     </div>
   )
 }

@@ -10,6 +10,11 @@ export async function saveCheckin(type, data) {
   return result
 }
 
+export async function patchCheckin(id, data) {
+  const { data: result } = await client.patch(`/checkins/${id}`, { data })
+  return result
+}
+
 export async function getCheckinHistory(limit = 30) {
   const { data } = await client.get('/checkins/history', { params: { limit } })
   return data

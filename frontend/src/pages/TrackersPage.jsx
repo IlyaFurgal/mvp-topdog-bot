@@ -45,6 +45,7 @@ export default function TrackersPage() {
   const [calorieMeals, setCalorieMeals] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)
+  const [editCheckin, setEditCheckin] = useState(null) // { type, id, data }
   const [activeTracker, setActiveTracker] = useState(null)
 
   async function load() {
@@ -70,6 +71,19 @@ export default function TrackersPage() {
         type={activeFlow}
         ctx={{ hasPostWorkout: !!checkins.post_workout }}
         onClose={() => { setActiveFlow(null); load() }}
+      />
+    )
+  }
+
+  if (editCheckin) {
+    return (
+      <CheckinFlow
+        type={editCheckin.type}
+        ctx={{ hasPostWorkout: !!checkins.post_workout }}
+        editMode
+        checkinId={editCheckin.id}
+        initialData={editCheckin.data}
+        onClose={() => { setEditCheckin(null); load() }}
       />
     )
   }
@@ -108,6 +122,11 @@ export default function TrackersPage() {
                 type={type}
                 checkin={checkins[type]}
                 onClick={() => setActiveFlow(type)}
+                onEdit={checkins[type] ? () => setEditCheckin({
+                  type,
+                  id: checkins[type].id,
+                  data: checkins[type].data,
+                }) : undefined}
               />
             ))}
           </div>

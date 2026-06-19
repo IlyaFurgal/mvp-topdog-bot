@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { saveCheckin } from '../api/checkins'
+import { useEffect, useState } from 'react'
+import { patchCheckin, saveCheckin } from '../api/checkins'
 import { useProfile } from '../context/ProfileContext'
 
 const STEPS = {
@@ -240,17 +240,30 @@ function getCompletionMessage(type, data, tone) {
   )
 }
 
-export default function CheckinFlow({ type, onClose, ctx = {} }) {
+export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false, checkinId = null, initialData = {} }) {
   const { tone, profile } = useProfile()
   const isFemale = profile?.gender === 'female'
   const allSteps = STEPS[type]
   const [stepIndex, setStepIndex] = useState(0)
-  const [data, setData] = useState({})
+  const [data, setData] = useState(editMode ? { ...initialData } : {})
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
   const [animating, setAnimating] = useState(false)
   const [inputVal, setInputVal] = useState('')
   const [customMode, setCustomMode] = useState(false)
+
+  // Pre-fill text/number inputs when navigating in edit mode
+  useEffect(() => {
+    if (!editMode || !currentStep) return
+    const cur = data[currentStep.key]
+    if (cur == null) return
+    if (currentStep.type === 'number' || currentStep.type === 'time') {
+      setInputVal(String(cur))
+    } else if (currentStep.type === 'text_optional' && typeof cur === 'string') {
+      setInputVal(cur)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIndex])
 
   const activeSteps = allSteps.filter((s) => !s.condition || s.condition(data, ctx))
   const currentStep = activeSteps[stepIndex]
@@ -305,11 +318,35 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
   async function finish(finalData) {
     setSaving(true)
     try {
-      await saveCheckin(type, finalData)
+      if (editMode && checkinId) {
+        const diff = {}
+        for (const [k, v] of Object.entries(finalData)) {
+          if (v !== initialData[k]) diff[k] = v
+        }
+        if (Object.keys(diff).length > 0) {
+          await patchCheckin(checkinId, diff)
+        }
+      } else {
+        await saveCheckin(type, finalData)
+      }
     } catch (_) {}
     setSaving(false)
     setDone(true)
-    setTimeout(() => onClose(), 2000)
+    setTimeout(() => onClose(), editMode ? 1500 : 2000)
+  }
+
+  function skipStep() {
+    if (animating) return
+    setAnimating(true)
+    setTimeout(() => {
+      setAnimating(false)
+      setInputVal('')
+      if (stepIndex + 1 < activeSteps.length) {
+        setStepIndex(stepIndex + 1)
+      } else {
+        finish(data)
+      }
+    }, 250)
   }
 
   function handleBack() {
@@ -327,7 +364,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
   }
 
   if (done) {
-    const msg = getCompletionMessage(type, data, tone)
+    const msg = editMode ? 'Изменения сохранены' : getCompletionMessage(type, data, tone)
     return (
       <div className="checkin-flow checkin-flow--done">
         <div className="checkin-flow__completion">
@@ -369,13 +406,18 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
             {[1,2,3,4,5,6,7,8,9,10].map((n) => (
               <button
                 key={n}
-                className={`checkin-flow__rpe-btn ${n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : ''}`}
+                className={`checkin-flow__rpe-btn ${n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : ''}${editMode && data[currentStep.key] === n ? ' checkin-flow__rpe-btn--selected' : ''}`}
                 onClick={() => handleSelect(n)}
               >
                 {n}
               </button>
             ))}
             </div>
+            {editMode && (
+              <button className="checkin-flow__keep-btn" onClick={skipStep}>
+                Оставить →
+              </button>
+            )}
           </div>
         )}
 
@@ -403,6 +445,11 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
             >
               Продолжить →
             </button>
+            {editMode && (
+              <button className="checkin-flow__keep-btn" onClick={skipStep}>
+                Оставить →
+              </button>
+            )}
           </div>
         )}
 
@@ -422,6 +469,11 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
             >
               Продолжить →
             </button>
+            {editMode && (
+              <button className="checkin-flow__keep-btn" onClick={skipStep}>
+                Оставить →
+              </button>
+            )}
           </div>
         )}
 
@@ -454,7 +506,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
             {currentStep.options.map((opt) => (
               <button
                 key={opt.value}
-                className="checkin-flow__option"
+                className={`checkin-flow__option${editMode && data[currentStep.key] === opt.value ? ' checkin-flow__option--selected' : ''}`}
                 onClick={() => {
                   if (opt.custom) {
                     setCustomMode(true)
@@ -468,6 +520,11 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
               </button>
             ))}
           </div>
+          {editMode && (
+            <button className="checkin-flow__keep-btn" onClick={skipStep}>
+              Оставить →
+            </button>
+          )}
           </div>
         )}
 
