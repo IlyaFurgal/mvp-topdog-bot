@@ -12,8 +12,8 @@ from database.session import get_session
 
 router = APIRouter(prefix="/checkins", tags=["checkins"])
 
-# Keys that become orphaned when plan_completed == 'not'
-_PLAN_NOT_ORPHANS = {"rpe", "comparison", "pain", "satisfaction"}
+# Keys that become orphaned when plan_completed flips to 'skipped'
+_PLAN_SKIPPED_ORPHANS = {"rpe", "prev_comparison", "pain", "satisfaction", "not_completed_reason"}
 
 
 class CheckinCreate(BaseModel):
@@ -85,9 +85,9 @@ async def patch_checkin(
 
     merged = {**(checkin.data or {}), **body.data}
 
-    # Orphan cleanup: if plan_completed flipped to 'not', remove dependent keys
-    if body.data.get("plan_completed") == "not":
-        for k in _PLAN_NOT_ORPHANS:
+    # Orphan cleanup: if plan_completed flipped to 'skipped', remove dependent keys
+    if body.data.get("plan_completed") == "skipped":
+        for k in _PLAN_SKIPPED_ORPHANS:
             merged.pop(k, None)
 
     checkin.data = merged

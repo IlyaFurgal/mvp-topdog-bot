@@ -68,91 +68,35 @@ const STEPS = {
 
   post_workout: [
     {
-      key: 'workout_type',
-      question: 'Что за тренировка?',
-      options: [
-        { value: 'gym',      label: '🏋 Зал' },
-        { value: 'run',      label: '🏃 Бег' },
-        { value: 'mobility', label: '🧘 Растяжка' },
-        { value: 'combat',   label: '🥊 Единоборства' },
-        { value: 'other',    label: '⚡ Другое' },
-      ],
-    },
-    {
-      key: 'duration_min',
-      question: 'Длительность (минуты)',
-      type: 'number',
-      min: 1,
-      max: 480,
-      placeholder: 'Минут...',
-    },
-    {
-      key: 'distance_km',
-      question: 'Дистанция (км)',
-      type: 'number_optional',
-      float: true,
-      min: 0,
-      max: 500,
-      step: 0.1,
-      placeholder: 'Например: 5.5',
-      condition: (data) => data.workout_type === 'run',
-    },
-    {
-      key: 'pace',
-      question: 'Темп (мин/км)',
-      type: 'text_optional',
-      placeholder: 'Например: 5:30',
-      condition: (data) => data.workout_type === 'run',
-    },
-    {
-      key: 'main_lift',
-      question: 'Основное упражнение',
-      type: 'text_optional',
-      placeholder: 'Например: присед, жим, становая...',
-      condition: (data) => data.workout_type === 'gym',
-    },
-    {
-      key: 'main_weight',
-      question: 'Рабочий вес (кг)',
-      type: 'number_optional',
-      float: true,
-      min: 0,
-      max: 600,
-      step: 0.5,
-      placeholder: 'Например: 80',
-      condition: (data) => data.workout_type === 'gym' && !!data.main_lift,
-    },
-    {
       key: 'plan_completed',
       question: 'Выполнил(а) план тренировки?',
       options: [
-        { value: 'fully',     label: 'Выполнил полностью',  labelF: 'Выполнила полностью' },
-        { value: 'partially', label: 'Выполнил частично',    labelF: 'Выполнила частично' },
-        { value: 'not',       label: 'Не тренировался',      labelF: 'Не тренировалась' },
-        { value: 'custom',    label: 'Свой вариант', custom: true },
+        { value: 'full',    label: 'Выполнил полностью',  labelF: 'Выполнила полностью' },
+        { value: 'partial', label: 'Выполнил частично',    labelF: 'Выполнила частично' },
+        { value: 'skipped', label: 'Не тренировался',      labelF: 'Не тренировалась' },
+        { value: 'custom',  label: 'Свой вариант', custom: true },
       ],
     },
     {
-      key: 'plan_reason',
+      key: 'not_completed_reason',
       question: 'Почему не выполнил(а) план?',
-      condition: (data) => data.plan_completed !== 'fully',
+      condition: (data) => data.plan_completed !== 'full',
       options: [
-        { value: 'no_time',    label: 'Не хватило времени на все упражнения' },
+        { value: 'no_time',    label: 'Не хватило времени' },
         { value: 'tired',      label: 'Устал(а)' },
         { value: 'discomfort', label: 'Дискомфорт в теле' },
-        { value: 'other',      label: 'Другое (свой вариант)', custom: true },
+        { value: 'other',      label: 'Другое', custom: true },
       ],
     },
     {
       key: 'rpe',
       question: 'Оцени нагрузку (RPE)',
       type: 'rpe',
-      condition: (data) => data.plan_completed !== 'not',
+      scaleHint: '1 — очень легко, 10 — максимально тяжело',
     },
     {
-      key: 'comparison',
+      key: 'prev_comparison',
       question: 'Сравнение с прошлой тренировкой',
-      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'easier', label: 'Легче' },
         { value: 'same',   label: 'Так же' },
@@ -162,7 +106,6 @@ const STEPS = {
     {
       key: 'pain',
       question: 'Болело что-то во время тренировки?',
-      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'muscle', label: 'Мышечная боль' },
         { value: 'joint',  label: 'Суставная боль' },
@@ -174,20 +117,12 @@ const STEPS = {
     {
       key: 'satisfaction',
       question: 'Доволен(льна) результативностью?',
-      condition: (data) => data.plan_completed !== 'not',
       options: [
         { value: 'yes',    label: 'Да' },
         { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше' },
         { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя' },
         { value: 'custom', label: 'Свой вариант', custom: true },
       ],
-    },
-    {
-      key: 'note',
-      question: 'Что делал на тренировке?',
-      questionF: 'Что делала на тренировке?',
-      type: 'text_optional',
-      placeholder: 'Опиши тренировку свободно (необязательно)...',
     },
   ],
 
@@ -279,7 +214,7 @@ function getCheckinMood(type, data) {
 
   if (type === 'post_workout') {
     if (data.pain === 'bad' || data.pain === 'joint') return 'care'
-    if (data.plan_completed === 'fully' && (data.satisfaction === 'yes') && data.pain === 'none') return 'praise'
+    if (data.plan_completed === 'full' && data.satisfaction === 'yes' && data.pain === 'none') return 'praise'
     return 'neutral'
   }
 

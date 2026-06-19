@@ -99,7 +99,7 @@ def calc_weekly_discipline(checkins: list) -> tuple[int, int]:
     """Return (discipline_pct 0–100, checkin_count) for a list of post_workout Checkins."""
     if not checkins:
         return 0, 0
-    fully = sum(1 for c in checkins if c.data.get("plan_completed") == "fully")
+    fully = sum(1 for c in checkins if c.data.get("plan_completed") == "full")
     return round(fully / len(checkins) * 100), len(checkins)
 
 

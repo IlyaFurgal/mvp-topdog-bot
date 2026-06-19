@@ -178,14 +178,13 @@ export default function ProgressPage() {
   const discipline =
     postWorkouts.length > 0
       ? Math.round(
-          (postWorkouts.filter((c) => c.data?.plan_completed === 'fully').length /
+          (postWorkouts.filter((c) => c.data?.plan_completed === 'full').length /
             postWorkouts.length) *
             100
         )
       : null
 
   const rpeVals = postWorkouts
-    .filter((c) => c.data?.plan_completed !== 'not')
     .map((c) => Number(c.data?.rpe))
     .filter((v) => Number.isFinite(v) && v >= 1 && v <= 10)
   const avgRpe =
