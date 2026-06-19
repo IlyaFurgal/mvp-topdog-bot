@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger, Boolean, Date, DateTime, Enum, Float,
-    ForeignKey, Integer, String, func,
+    ForeignKey, Integer, Numeric, String, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -185,3 +185,73 @@ class ConversationSummary(Base):
     text: Mapped[str] = mapped_column(String(4096))
     covers_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WorkoutMetricType(str, enum.Enum):
+    strength = "strength"
+    distance_time = "distance_time"
+    duration_rounds = "duration_rounds"
+    duration_only = "duration_only"
+
+
+class WorkoutCategory(Base):
+    __tablename__ = "workout_categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    metric_type: Mapped[WorkoutMetricType] = mapped_column(Enum(WorkoutMetricType), nullable=False)
+    item_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    items: Mapped[list["WorkoutItem"]] = relationship(back_populates="category")
+    workouts: Mapped[list["Workout"]] = relationship(back_populates="category")
+
+
+class WorkoutItem(Base):
+    __tablename__ = "workout_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("workout_categories.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    is_custom: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    category: Mapped["WorkoutCategory"] = relationship(back_populates="items")
+
+
+class Workout(Base):
+    __tablename__ = "workouts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    category_id: Mapped[int] = mapped_column(ForeignKey("workout_categories.id"), nullable=False)
+    duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    note: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    category: Mapped["WorkoutCategory"] = relationship(back_populates="workouts")
+    entries: Mapped[list["WorkoutEntry"]] = relationship(back_populates="workout", cascade="all, delete-orphan")
+
+
+class WorkoutEntry(Base):
+    __tablename__ = "workout_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workout_id: Mapped[int] = mapped_column(ForeignKey("workouts.id", ondelete="CASCADE"), index=True)
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("workout_items.id", ondelete="SET NULL"), nullable=True)
+
+    # strength
+    weight_kg: Mapped[float | None] = mapped_column(Numeric(8, 2), nullable=True)
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # distance_time & duration_rounds
+    distance_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    time_sec: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rounds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    workout: Mapped["Workout"] = relationship(back_populates="entries")
+    item: Mapped["WorkoutItem | None"] = relationship()
