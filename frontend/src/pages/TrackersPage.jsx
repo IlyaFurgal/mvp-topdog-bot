@@ -11,14 +11,14 @@ const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
 const TRACKER_TYPES = ['weight', 'water', 'sleep', 'calories']
 
 function getOverrunMessage(over, tone) {
-  const safeTone = tone === 'hard' ? 'hard' : 'soft'
+  const safeTone = tone === 'aggressive' ? 'aggressive' : 'soft'
   const level = over > 200 ? 'big' : 'small'
   const MESSAGES = {
     soft: {
       small: `Чуть превысил норму — на ${over} ккал. Ничего страшного, просто учитывай это завтра 💛`,
       big:   `Сегодня перебор на ${over} ккал. Для твоей цели стоит сбалансировать — завтра вернись в норму, и всё ок.`,
     },
-    hard: {
+    aggressive: {
       small: `Перебор на ${over} ккал. Держи норму — мелочи решают.`,
       big:   `Норма превышена на ${over} ккал. Это работает против цели. Завтра — в рамках.`,
     },

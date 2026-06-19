@@ -210,7 +210,7 @@ async def check_reminders(bot: Bot) -> None:
                         water_today = await _today_tracker_sum(s, user.id, TrackerType.water)
                     if water_today < 1000:  # < 50 % от цели 2000 мл
                         tone = (profile.tone if profile and profile.tone else "soft")
-                        if tone == "hard":
+                        if tone == "aggressive":
                             text = "Воды сегодня мало. Добери норму — это базовая дисциплина."
                         else:
                             text = (
@@ -234,7 +234,7 @@ async def check_reminders(bot: Bot) -> None:
                         cal_limit = calculate_calorie_limit(profile)
                         if cal_today < cal_limit * 0.70:  # существенный недобор < 70 %
                             tone = (profile.tone if profile and profile.tone else "soft")
-                            if tone == "hard":
+                            if tone == "aggressive":
                                 text = (
                                     "Калорий сегодня недобор. "
                                     "Без топлива нет роста — добери норму."

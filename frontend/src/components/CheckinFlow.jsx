@@ -226,7 +226,7 @@ const COMPLETION_MESSAGES = {
     post_workout: 'Тренировка засчитана! Ты молодец.',
     evening:      'Хороший день позади. Отдыхай!',
   },
-  hard: {
+  aggressive: {
     morning:      'Подъём принят. В работу!',
     post_workout: 'Чекин закрыт. Результат внесён.',
     evening:      'День закрыт. Восстанавливайся.',
@@ -251,7 +251,7 @@ const MESSAGES = {
       praise:  'Отличный день! Хорошее восстановление — залог завтрашнего прогресса.',
     },
   },
-  hard: {
+  aggressive: {
     morning: {
       care:    'Тело просит паузы — услышь это. Сегодня восстановление, не нагрузка.',
       neutral: 'Подъём принят. В работу.',
@@ -293,7 +293,7 @@ function getCheckinMood(type, data) {
 }
 
 function getCompletionMessage(type, data, tone) {
-  const safeTone = tone === 'hard' ? 'hard' : 'soft'
+  const safeTone = tone === 'aggressive' ? 'aggressive' : 'soft'
   const mood = getCheckinMood(type, data) ?? 'neutral'
   return (
     MESSAGES[safeTone]?.[type]?.[mood] ??
