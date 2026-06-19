@@ -1,6 +1,5 @@
 import { useProfile } from '../context/ProfileContext'
-
-const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 const GC_BASE = import.meta.env.VITE_GC_BASE_URL || 'https://topdog-mvp.getcourse.ru'
 
 const MATERIALS = [
@@ -19,15 +18,13 @@ function NoSubScreen() {
       <p className="locked-desc">
         Тренировочные программы, записи эфиров, нутрициология и протоколы восстановления.
       </p>
-      <a
-        href={PRO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
         className="btn btn-accent"
-        style={{ textDecoration: 'none', textAlign: 'center' }}
+        style={{ textAlign: 'center' }}
+        onClick={() => openPaymentLink(PAYMENT_URLS.pro1m)}
       >
         УЛУЧШИТЬ ДО PRO →
-      </a>
+      </button>
     </div>
   )
 }
@@ -40,15 +37,13 @@ function PlusScreen() {
       <p className="locked-desc">
         Тренировочные программы, записи эфиров, нутрициология и протоколы восстановления.
       </p>
-      <a
-        href={PRO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
         className="btn btn-accent"
-        style={{ textDecoration: 'none', textAlign: 'center' }}
+        style={{ textAlign: 'center' }}
+        onClick={() => openPaymentLink(PAYMENT_URLS.pro1m)}
       >
         УЛУЧШИТЬ ДО PRO →
-      </a>
+      </button>
     </div>
   )
 }

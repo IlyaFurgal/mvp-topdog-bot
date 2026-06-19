@@ -1,7 +1,7 @@
 import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { useProfile } from '../context/ProfileContext'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
-const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/topdog_residents'
 
 function LockedScreen({ isPlusUser }) {
@@ -30,16 +30,13 @@ function LockedScreen({ isPlusUser }) {
         </div>
       )}
 
-      <a
-        href={PRO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
         className="btn btn-accent"
-        style={{ textDecoration: 'none', textAlign: 'center', width: '100%' }}
-        onClick={() => trackUpgradeIntent()}
+        style={{ textAlign: 'center', width: '100%' }}
+        onClick={() => { trackUpgradeIntent(); openPaymentLink(PAYMENT_URLS.pro1m) }}
       >
         УЛУЧШИТЬ ДО PRO →
-      </a>
+      </button>
     </div>
   )
 }

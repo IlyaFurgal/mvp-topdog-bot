@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
 const DEFAULT_CONFIG = {
-  getcourse_plus_url: '#',
-  getcourse_pro_url:  '#',
+  getcourse_plus_url: PAYMENT_URLS.plus1m,
+  getcourse_pro_url:  PAYMENT_URLS.pro1m,
   subscription_plus_1m_price: 990,
   subscription_pro_1m_price:  2990,
 }
@@ -167,19 +168,17 @@ function PlansModal({ cfg, onClose }) {
               </li>
             ))}
           </ul>
-          <a
-            href={plusUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => openPaymentLink(plusUrl)}
             style={{
-              display: 'block', textAlign: 'center', height: 44, lineHeight: '44px',
+              display: 'block', textAlign: 'center', width: '100%', height: 44, lineHeight: '44px',
               background: '#2a2a2a', color: '#ccc', borderRadius: 4,
               fontWeight: 700, fontSize: 13, letterSpacing: '0.06em',
-              textDecoration: 'none', textTransform: 'uppercase',
+              textTransform: 'uppercase', border: 'none', cursor: 'pointer',
             }}
           >
             ВЫБРАТЬ PLUS →
-          </a>
+          </button>
         </div>
 
         {/* Pro card */}
@@ -222,19 +221,17 @@ function PlansModal({ cfg, onClose }) {
               </li>
             ))}
           </ul>
-          <a
-            href={proUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => openPaymentLink(proUrl)}
             style={{
-              display: 'block', textAlign: 'center', height: 44, lineHeight: '44px',
+              display: 'block', textAlign: 'center', width: '100%', height: 44, lineHeight: '44px',
               background: '#C8FF00', color: '#000', borderRadius: 4,
               fontWeight: 800, fontSize: 13, letterSpacing: '0.06em',
-              textDecoration: 'none', textTransform: 'uppercase',
+              textTransform: 'uppercase', border: 'none', cursor: 'pointer',
             }}
           >
             ВЫБРАТЬ PRO →
-          </a>
+          </button>
         </div>
 
         {/* Footer note */}

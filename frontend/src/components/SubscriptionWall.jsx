@@ -1,12 +1,11 @@
-const AI_URL = import.meta.env.VITE_GC_PAYMENT_URL_AI || '#'
-const MVP_URL = import.meta.env.VITE_GC_PAYMENT_URL_MVP || '#'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
 const PLANS = [
   {
     id: 'ai',
     name: 'AI',
     price: 'до 1 000 ₽/мес',
-    url: AI_URL,
+    url: PAYMENT_URLS.plus1m,
     features: [
       'ИИ-тренер и нутрициолог 24/7',
       'Контроль здоровья и фокуса',
@@ -19,7 +18,7 @@ const PLANS = [
     id: 'mvp',
     name: 'MVP',
     price: '2 990 ₽/мес',
-    url: MVP_URL,
+    url: PAYMENT_URLS.pro1m,
     features: [
       'Всё из тарифа AI',
       'Telegram-группа резидентов',
@@ -52,14 +51,12 @@ export default function SubscriptionWall() {
                 </li>
               ))}
             </ul>
-            <a
-              href={plan.url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
               className={`btn ${plan.accent ? 'btn-accent' : 'btn-outline'}`}
+              onClick={() => openPaymentLink(plan.url)}
             >
               ОФОРМИТЬ →
-            </a>
+            </button>
           </div>
         ))}
       </div>
