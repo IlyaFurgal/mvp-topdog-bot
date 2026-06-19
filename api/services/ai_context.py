@@ -17,14 +17,22 @@ Placeholders returned by build_ai_context():
   Weekly progress:
     progress_week  — "дисциплина 75%, 6 тренировок за неделю" | ""
 
-  Dialogue memory (populated after ТЗ-3):
+  Dialogue memory:
     dialog_summary — text of the latest ConversationSummary | ""
+
+  Workout aggregates (last 28 days):
+    workouts_month   — "за 4 недели 14 тренировок (3.5/нед): зал 8, бег 4" | ""
+    strength_trends  — "жим лёжа 60→67.5 кг, присед 90→100 кг"            | ""
+    cardio_trends    — "бег: 42.0 км за месяц, темп 5:30→5:10 /км"        | ""
+    weight_trend     — "вес 84.0→82.5 кг (−1.5 за месяц)"                 | ""
 
 Methodologist: add {{tracker_weight}}, {{tracker_sleep}},
 {{tracker_water_today}}, {{tracker_calories_today}}, {{progress_week}},
-{{dialog_summary}} to Suvvy specialist system prompts as needed.
+{{dialog_summary}}, {{workouts_month}}, {{strength_trends}},
+{{cardio_trends}}, {{weight_trend}} to Suvvy specialist system prompts.
 """
 import logging
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, func, select
@@ -33,6 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import (
     Checkin, CheckinType, ConversationSummary,
     Profile, Tracker, TrackerType, User,
+    Workout, WorkoutCategory, WorkoutEntry, WorkoutItem, WorkoutMetricType,
 )
 
 logger = logging.getLogger(__name__)
@@ -236,6 +245,157 @@ async def _tracker_placeholders(session: AsyncSession, user_id: int) -> dict[str
     }
 
 
+def _fmt_pace(pace_sec_per_km: float) -> str:
+    m = int(pace_sec_per_km // 60)
+    s = int(pace_sec_per_km % 60)
+    return f"{m}:{s:02d}"
+
+
+async def _workouts_month_str(session: AsyncSession, user_id: int) -> str:
+    """Count of workouts + per-category breakdown over last 28 days."""
+    since = date.today() - timedelta(days=28)
+    rows = (await session.execute(
+        select(WorkoutCategory.name, func.count(Workout.id).label("cnt"))
+        .join(Workout, Workout.category_id == WorkoutCategory.id)
+        .where(and_(Workout.user_id == user_id, Workout.date >= since))
+        .group_by(WorkoutCategory.name)
+        .order_by(func.count(Workout.id).desc())
+    )).all()
+    if not rows:
+        return ""
+    total = sum(r.cnt for r in rows)
+    per_week = total / 4
+    parts = [f"{r.name.lower()} {r.cnt}" for r in rows]
+    return f"за 4 недели {total} тренировок ({per_week:g}/нед): {', '.join(parts)}"
+
+
+async def _strength_trends_str(session: AsyncSession, user_id: int) -> str:
+    """Top-3 strength exercises with first→last max weight over last 28 days."""
+    since = date.today() - timedelta(days=28)
+    rows = (await session.execute(
+        select(
+            WorkoutItem.name.label("item_name"),
+            Workout.date,
+            func.max(WorkoutEntry.weight_kg).label("max_w"),
+        )
+        .join(Workout, WorkoutEntry.workout_id == Workout.id)
+        .join(WorkoutItem, WorkoutEntry.item_id == WorkoutItem.id)
+        .where(and_(
+            Workout.user_id == user_id,
+            Workout.date >= since,
+            WorkoutEntry.weight_kg.isnot(None),
+        ))
+        .group_by(WorkoutItem.name, Workout.date)
+        .order_by(WorkoutItem.name, Workout.date)
+    )).all()
+    if not rows:
+        return ""
+
+    by_exercise: dict[str, list[tuple[date, float]]] = defaultdict(list)
+    for r in rows:
+        by_exercise[r.item_name].append((r.date, float(r.max_w)))
+
+    trends = []
+    for name, entries in by_exercise.items():
+        if len(entries) >= 2:
+            first_w = entries[0][1]
+            last_w = entries[-1][1]
+            trends.append((name, first_w, last_w, len(entries)))
+
+    if not trends:
+        return ""
+
+    trends.sort(key=lambda x: x[3], reverse=True)
+    parts = [f"{t[0]} {t[1]:g}→{t[2]:g} кг" for t in trends[:3]]
+    return ", ".join(parts)
+
+
+async def _cardio_trends_str(session: AsyncSession, user_id: int) -> str:
+    """Total distance + pace trend per cardio category over last 28 days."""
+    since = date.today() - timedelta(days=28)
+    rows = (await session.execute(
+        select(
+            WorkoutCategory.name.label("cat_name"),
+            Workout.date,
+            func.sum(WorkoutEntry.distance_m).label("dist"),
+            func.sum(WorkoutEntry.time_sec).label("time"),
+        )
+        .join(WorkoutCategory, Workout.category_id == WorkoutCategory.id)
+        .join(WorkoutEntry, WorkoutEntry.workout_id == Workout.id)
+        .where(and_(
+            Workout.user_id == user_id,
+            Workout.date >= since,
+            WorkoutCategory.metric_type == WorkoutMetricType.distance_time,
+            WorkoutEntry.distance_m.isnot(None),
+            WorkoutEntry.distance_m > 0,
+        ))
+        .group_by(WorkoutCategory.name, Workout.date)
+        .order_by(WorkoutCategory.name, Workout.date)
+    )).all()
+    if not rows:
+        return ""
+
+    by_cat: dict[str, list] = defaultdict(list)
+    for r in rows:
+        by_cat[r.cat_name].append((r.date, r.dist or 0, r.time or 0))
+
+    parts = []
+    for cat_name, sessions in by_cat.items():
+        total_km = sum(s[1] for s in sessions) / 1000
+        paces = [
+            s[2] / (s[1] / 1000)
+            for s in sessions
+            if s[1] > 0 and s[2] > 0
+        ]
+        if len(paces) >= 2:
+            pace_s = f", темп {_fmt_pace(paces[0])}→{_fmt_pace(paces[-1])} /км"
+        elif len(paces) == 1:
+            pace_s = f", темп {_fmt_pace(paces[0])} /км"
+        else:
+            pace_s = ""
+        parts.append(f"{cat_name.lower()}: {total_km:.1f} км за месяц{pace_s}")
+
+    return "; ".join(parts)
+
+
+async def _weight_trend_str(session: AsyncSession, user_id: int) -> str:
+    """First→last weight value over last 28 days with delta."""
+    since = datetime.combine(
+        date.today() - timedelta(days=28), datetime.min.time()
+    ).replace(tzinfo=timezone.utc)
+
+    first_res = await session.execute(
+        select(Tracker)
+        .where(and_(
+            Tracker.user_id == user_id,
+            Tracker.type == TrackerType.weight,
+            Tracker.created_at >= since,
+        ))
+        .order_by(Tracker.created_at.asc())
+        .limit(1)
+    )
+    first_rec = first_res.scalar_one_or_none()
+
+    last_res = await session.execute(
+        select(Tracker)
+        .where(and_(
+            Tracker.user_id == user_id,
+            Tracker.type == TrackerType.weight,
+            Tracker.created_at >= since,
+        ))
+        .order_by(Tracker.created_at.desc())
+        .limit(1)
+    )
+    last_rec = last_res.scalar_one_or_none()
+
+    if not first_rec or not last_rec or first_rec.id == last_rec.id:
+        return ""
+
+    delta = last_rec.value - first_rec.value
+    sign = "−" if delta < 0 else "+"
+    return f"вес {first_rec.value:g}→{last_rec.value:g} кг ({sign}{abs(delta):.1f} за месяц)"
+
+
 async def _dialog_summary_str(session: AsyncSession, user_id: int) -> str:
     result = await session.execute(
         select(ConversationSummary)
@@ -288,7 +448,11 @@ async def build_ai_context(session: AsyncSession, user: User) -> dict:
     }
 
     placeholders.update(await _tracker_placeholders(session, user.id))
-    placeholders["progress_week"]  = await _weekly_progress_str(session, user.id)
-    placeholders["dialog_summary"] = await _dialog_summary_str(session, user.id)
+    placeholders["progress_week"]   = await _weekly_progress_str(session, user.id)
+    placeholders["dialog_summary"]  = await _dialog_summary_str(session, user.id)
+    placeholders["workouts_month"]  = await _workouts_month_str(session, user.id)
+    placeholders["strength_trends"] = await _strength_trends_str(session, user.id)
+    placeholders["cardio_trends"]   = await _cardio_trends_str(session, user.id)
+    placeholders["weight_trend"]    = await _weight_trend_str(session, user.id)
 
     return placeholders
