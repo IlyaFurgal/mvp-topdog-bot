@@ -130,11 +130,11 @@ async def admin_stats(
     ) or 0
     ai_count = await session.scalar(
         select(func.count()).select_from(User)
-        .where(User.subscription_active == "active", User.subscription_type == "ai")
+        .where(User.subscription_active == "active", User.subscription_type == "plus")
     ) or 0
     mvp_count = await session.scalar(
         select(func.count()).select_from(User)
-        .where(User.subscription_active == "active", User.subscription_type == "mvp")
+        .where(User.subscription_active == "active", User.subscription_type == "pro")
     ) or 0
     new7 = await session.scalar(
         select(func.count()).select_from(User).where(User.created_at >= cut7)

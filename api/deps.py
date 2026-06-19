@@ -38,16 +38,16 @@ def _is_subscription_active(user: User) -> bool:
     return True
 
 
-def require_subscription(required_type: str = "ai"):
+def require_subscription(required_type: str = "plus"):
     """
     Dependency factory.
-    required_type="ai"  → any active subscription (ai or mvp)
-    required_type="mvp" → only mvp subscription
+    required_type="plus" → any active subscription (plus or pro)
+    required_type="pro"  → only pro subscription
     """
     async def _dep(user: User = Depends(get_current_user)) -> User:
         if not _is_subscription_active(user):
             raise HTTPException(status_code=403, detail="Active subscription required")
-        if required_type == "mvp" and user.subscription_type != "mvp":
-            raise HTTPException(status_code=403, detail="MVP subscription required")
+        if required_type == "pro" and user.subscription_type != "pro":
+            raise HTTPException(status_code=403, detail="Pro subscription required")
         return user
     return _dep
