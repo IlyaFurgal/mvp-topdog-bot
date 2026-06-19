@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import re
 from datetime import date
 
 import httpx
@@ -199,6 +200,52 @@ async def step_gender(message: Message, state: FSMContext) -> None:
     await message.answer(f"Отлично, {name}! 💪\n\nТвой пол?", reply_markup=kb_gender())
 
 
+# ── Парсинг даты рождения ────────────────────────────────────────────────────
+
+_BD_FORMATS_HINT = "Примеры: 15.03.1990  15/03/1990  15-03-1990  1990-03-15"
+_MIN_AGE = 10   # лет, минимально допустимый возраст
+_MAX_YEAR = 1900
+
+
+def _parse_birth_date(text: str) -> date:
+    """
+    Parse user-entered birth date, tolerant of separators and year-first format.
+    Raises ValueError with a human-readable message on bad input.
+    """
+    raw = text.strip()
+    # Normalise separators to dot
+    raw = re.sub(r"[/\-]", ".", raw)
+    parts = raw.split(".")
+    if len(parts) != 3:
+        raise ValueError("Нужно три числа (день, месяц, год).")
+
+    try:
+        p0, p1, p2 = int(parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        raise ValueError("В дате должны быть только цифры.")
+
+    # Detect year-first if first component has 4 digits
+    if len(parts[0]) == 4:
+        year, month, day = p0, p1, p2
+    else:
+        day, month, year = p0, p1, p2
+
+    try:
+        birth = date(year, month, day)
+    except ValueError:
+        raise ValueError(f"Такой даты не существует: {day:02d}.{month:02d}.{year}.")
+
+    today = date.today()
+    if year < _MAX_YEAR:
+        raise ValueError(f"Год не может быть раньше {_MAX_YEAR}.")
+    if birth > today:
+        raise ValueError("Дата не может быть в будущем.")
+    if (today - birth).days < _MIN_AGE * 365:
+        raise ValueError(f"Возраст должен быть не менее {_MIN_AGE} лет.")
+
+    return birth
+
+
 # ── Пол → дата рождения ───────────────────────────────────────────────────────
 
 @router.callback_query(RegistrationForm.gender, F.data.startswith("reg_gender_"))
@@ -207,7 +254,7 @@ async def step_birth_date(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(RegistrationForm.birth_date_input)
     await callback.message.edit_text(
         "Введи дату рождения 🎂\n\n"
-        "Форматы: 15.03.1995 или 15/03/1995"
+        f"{_BD_FORMATS_HINT}"
     )
     await callback.answer()
 
@@ -216,19 +263,12 @@ async def step_birth_date(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(RegistrationForm.birth_date_input)
 async def step_fitness(message: Message, state: FSMContext) -> None:
-    raw = (message.text or "").strip().replace("/", ".")
     try:
-        parts = raw.split(".")
-        if len(parts) != 3:
-            raise ValueError
-        day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
-        birth = date(year, month, day)
-        if birth >= date.today() or year < 1900:
-            raise ValueError
-    except (ValueError, IndexError):
+        birth = _parse_birth_date(message.text or "")
+    except ValueError as exc:
         await message.answer(
-            "⚠️ Не получилось распознать дату.\n"
-            "Попробуй ещё раз: 15.03.1995 или 15/03/1995"
+            f"⚠️ {exc}\n\n"
+            f"{_BD_FORMATS_HINT}"
         )
         return
 
