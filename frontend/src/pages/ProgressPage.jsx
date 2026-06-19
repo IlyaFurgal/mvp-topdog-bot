@@ -5,11 +5,19 @@ import {
 } from 'recharts'
 import { getCheckinHistory } from '../api/checkins'
 import { getTrackerHistory, getTrackerStats, getWeeklyInsight } from '../api/trackers'
+import { getWorkoutCategories, getWorkouts } from '../api/workouts'
+import WorkoutCalendar from '../components/WorkoutCalendar'
+import WorkoutCharts from '../components/WorkoutCharts'
 
 const PERIODS = [
   { label: '30 ДНЕЙ', days: 30 },
   { label: '90 ДНЕЙ', days: 90 },
   { label: 'ВСЁ ВРЕМЯ', days: 3650 },
+]
+
+const WO_PERIODS = [
+  { label: '30 ДНЕЙ', days: 30 },
+  { label: '90 ДНЕЙ', days: 90 },
 ]
 
 const TOOLTIP_STYLE = {
@@ -139,15 +147,24 @@ function recoveryGrade(pct) {
 }
 
 export default function ProgressPage() {
+  const [view, setView]           = useState('state')  // 'state' | 'workouts'
   const [periodIdx, setPeriodIdx] = useState(0)
-  const [weightData, setWeightData] = useState([])
-  const [waterData, setWaterData] = useState([])
-  const [sleepData, setSleepData] = useState([])
+  const [woPeriodIdx, setWoPeriodIdx] = useState(0)
+
+  // State tab data
+  const [weightData, setWeightData]     = useState([])
+  const [waterData, setWaterData]       = useState([])
+  const [sleepData, setSleepData]       = useState([])
   const [caloriesData, setCaloriesData] = useState([])
-  const [stats, setStats] = useState(null)
-  const [checkins, setCheckins] = useState([])
-  const [insight, setInsight] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats]               = useState(null)
+  const [checkins, setCheckins]         = useState([])
+  const [insight, setInsight]           = useState(null)
+  const [loading, setLoading]           = useState(true)
+
+  // Workout tab data
+  const [woWorkouts, setWoWorkouts]       = useState([])
+  const [woCategories, setWoCategories]   = useState([])
+  const [woLoading, setWoLoading]         = useState(false)
 
   const days = PERIODS[periodIdx].days
 
@@ -173,6 +190,21 @@ export default function ProgressPage() {
       })
       .finally(() => setLoading(false))
   }, [periodIdx])
+
+  useEffect(() => {
+    if (view !== 'workouts') return
+    setWoLoading(true)
+    const from = new Date()
+    from.setDate(from.getDate() - WO_PERIODS[woPeriodIdx].days)
+    const fromStr = from.toISOString().split('T')[0]
+    Promise.allSettled([
+      getWorkouts(fromStr),
+      getWorkoutCategories(),
+    ]).then(([wo, cats]) => {
+      if (wo.status   === 'fulfilled') setWoWorkouts(wo.value)
+      if (cats.status === 'fulfilled') setWoCategories(cats.value)
+    }).finally(() => setWoLoading(false))
+  }, [view, woPeriodIdx])
 
   const postWorkouts = checkins.filter((c) => c.type === 'post_workout')
   const discipline =
@@ -201,6 +233,49 @@ export default function ProgressPage() {
     <div className="page">
       <h1 className="page-title">ПРОГРЕСС</h1>
 
+      {/* ── View tabs ────────────────────────────────────── */}
+      <div className="progress-views">
+        <button
+          className={`progress-view ${view === 'state'    ? 'active' : ''}`}
+          onClick={() => setView('state')}
+        >СОСТОЯНИЕ</button>
+        <button
+          className={`progress-view ${view === 'workouts' ? 'active' : ''}`}
+          onClick={() => setView('workouts')}
+        >ТРЕНИРОВКИ</button>
+      </div>
+
+      {/* ── Workouts tab ─────────────────────────────────── */}
+      {view === 'workouts' && (
+        <>
+          <WorkoutCalendar />
+
+          <p className="section-label" style={{ marginTop: 24 }}>ДИНАМИКА</p>
+          <div className="period-tabs">
+            {WO_PERIODS.map((p, i) => (
+              <button
+                key={p.label}
+                className={`period-tab ${woPeriodIdx === i ? 'active' : ''}`}
+                onClick={() => setWoPeriodIdx(i)}
+              >{p.label}</button>
+            ))}
+          </div>
+
+          {woLoading ? (
+            <div className="card"><p className="card-muted">Загрузка...</p></div>
+          ) : woWorkouts.length === 0 ? (
+            <div className="card">
+              <p className="chart-empty">Тренировок за период нет — добавь первую во вкладке Трекеры</p>
+            </div>
+          ) : (
+            <WorkoutCharts workouts={woWorkouts} categories={woCategories} />
+          )}
+        </>
+      )}
+
+      {/* ── State tab ────────────────────────────────────── */}
+      {view === 'state' && (
+      <>
       <div className="period-tabs">
         {PERIODS.map((p, i) => (
           <button
@@ -471,6 +546,8 @@ export default function ProgressPage() {
             )}
           </div>
         </>
+      )}
+      </>
       )}
     </div>
   )
