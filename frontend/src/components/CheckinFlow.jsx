@@ -68,6 +68,61 @@ const STEPS = {
 
   post_workout: [
     {
+      key: 'workout_type',
+      question: 'Что за тренировка?',
+      options: [
+        { value: 'gym',      label: '🏋 Зал' },
+        { value: 'run',      label: '🏃 Бег' },
+        { value: 'mobility', label: '🧘 Растяжка' },
+        { value: 'combat',   label: '🥊 Единоборства' },
+        { value: 'other',    label: '⚡ Другое' },
+      ],
+    },
+    {
+      key: 'duration_min',
+      question: 'Длительность (минуты)',
+      type: 'number',
+      min: 1,
+      max: 480,
+      placeholder: 'Минут...',
+    },
+    {
+      key: 'distance_km',
+      question: 'Дистанция (км)',
+      type: 'number_optional',
+      float: true,
+      min: 0,
+      max: 500,
+      step: 0.1,
+      placeholder: 'Например: 5.5',
+      condition: (data) => data.workout_type === 'run',
+    },
+    {
+      key: 'pace',
+      question: 'Темп (мин/км)',
+      type: 'text_optional',
+      placeholder: 'Например: 5:30',
+      condition: (data) => data.workout_type === 'run',
+    },
+    {
+      key: 'main_lift',
+      question: 'Основное упражнение',
+      type: 'text_optional',
+      placeholder: 'Например: присед, жим, становая...',
+      condition: (data) => data.workout_type === 'gym',
+    },
+    {
+      key: 'main_weight',
+      question: 'Рабочий вес (кг)',
+      type: 'number_optional',
+      float: true,
+      min: 0,
+      max: 600,
+      step: 0.5,
+      placeholder: 'Например: 80',
+      condition: (data) => data.workout_type === 'gym' && !!data.main_lift,
+    },
+    {
       key: 'plan_completed',
       question: 'Выполнил(а) план тренировки?',
       options: [
@@ -126,6 +181,13 @@ const STEPS = {
         { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя' },
         { value: 'custom', label: 'Свой вариант', custom: true },
       ],
+    },
+    {
+      key: 'note',
+      question: 'Что делал на тренировке?',
+      questionF: 'Что делала на тренировке?',
+      type: 'text_optional',
+      placeholder: 'Опиши тренировку свободно (необязательно)...',
     },
   ],
 
@@ -257,7 +319,7 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
     if (!editMode || !currentStep) return
     const cur = data[currentStep.key]
     if (cur == null) return
-    if (currentStep.type === 'number' || currentStep.type === 'time') {
+    if (currentStep.type === 'number' || currentStep.type === 'number_optional' || currentStep.type === 'time') {
       setInputVal(String(cur))
     } else if (currentStep.type === 'text_optional' && typeof cur === 'string') {
       setInputVal(cur)
@@ -296,6 +358,13 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
     const min = currentStep.min ?? 1
     const max = currentStep.max ?? 300
     if (isNaN(num) || num < min || num > max) return
+    advance(num)
+  }
+
+  function handleNumberOptionalSubmit() {
+    const num = currentStep.float ? parseFloat(inputVal) : parseInt(inputVal, 10)
+    const max = currentStep.max ?? 9999
+    if (isNaN(num) || num < 0 || num > max) return
     advance(num)
   }
 
@@ -469,6 +538,43 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             >
               Продолжить →
             </button>
+            {editMode && (
+              <button className="checkin-flow__keep-btn" onClick={skipStep}>
+                Оставить →
+              </button>
+            )}
+          </div>
+        )}
+
+        {currentStep.type === 'number_optional' && (
+          <div className="checkin-flow__number-wrap">
+            {currentStep.hint && (
+              <p className="checkin-flow__hint">{currentStep.hint}</p>
+            )}
+            <input
+              type="number"
+              className="checkin-flow__numfield"
+              placeholder={currentStep.placeholder ?? ''}
+              value={inputVal}
+              min={0}
+              max={currentStep.max}
+              step={currentStep.step ?? 1}
+              onChange={(e) => setInputVal(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleNumberOptionalSubmit()}
+              autoFocus
+            />
+            <div className="checkin-flow__text-actions">
+              <button className="checkin-flow__text-skip" onClick={() => advance(null, true)}>
+                Пропустить
+              </button>
+              <button
+                className="btn btn-accent checkin-flow__text-submit"
+                onClick={handleNumberOptionalSubmit}
+                disabled={!inputVal}
+              >
+                Сохранить →
+              </button>
+            </div>
             {editMode && (
               <button className="checkin-flow__keep-btn" onClick={skipStep}>
                 Оставить →

@@ -1,3 +1,11 @@
+const WORKOUT_TYPE_LABELS = {
+  gym:      'Зал',
+  run:      'Бег',
+  mobility: 'Растяжка',
+  combat:   'Единоборства',
+  other:    'Тренировка',
+}
+
 const CONFIG = {
   morning: {
     title: 'УТРО',
@@ -36,7 +44,11 @@ export default function CheckinCard({ type, checkin, onClick, onEdit }) {
   const done = Boolean(checkin)
 
   const summary = done
-    ? (cfg.summaryMap[checkin.data?.[cfg.summaryKey]] ?? 'Заполнен')
+    ? (
+        type === 'post_workout' && checkin.data?.workout_type
+          ? `${WORKOUT_TYPE_LABELS[checkin.data.workout_type] ?? 'Тренировка'}${checkin.data.duration_min ? ` · ${checkin.data.duration_min} мин` : ''}`
+          : (cfg.summaryMap[checkin.data?.[cfg.summaryKey]] ?? 'Заполнен')
+      )
     : 'Не заполнен'
 
   return (
