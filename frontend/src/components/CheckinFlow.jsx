@@ -148,7 +148,7 @@ const STEPS = {
     {
       key: 'recovery',
       question: 'Как прошло восстановление?',
-      condition: (data, ctx) => !ctx?.hasPostWorkout,
+      hint: '(Пропустить при наличии тренировки)',
       options: [
         { value: 'passive', label: 'Восстанавливался пассивно (без нагрузки)', labelF: 'Восстанавливалась пассивно (без нагрузки)' },
         { value: 'active',  label: 'Восстанавливался активно (кардио)',         labelF: 'Восстанавливалась активно (кардио)' },
@@ -361,10 +361,11 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
         </p>
 
         {currentStep.type === 'rpe' && (
-          <div className="checkin-flow__rpe">
+          <div className="checkin-flow__rpe-wrap">
             {currentStep.scaleHint && (
               <p className="checkin-flow__hint">{currentStep.scaleHint}</p>
             )}
+            <div className="checkin-flow__rpe">
             {[1,2,3,4,5,6,7,8,9,10].map((n) => (
               <button
                 key={n}
@@ -374,6 +375,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
                 {n}
               </button>
             ))}
+            </div>
           </div>
         )}
 
@@ -444,6 +446,10 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
         )}
 
         {!currentStep.type && !customMode && (
+          <div className="checkin-flow__options-wrap">
+            {currentStep.hint && (
+              <p className="checkin-flow__hint checkin-flow__hint--options">{currentStep.hint}</p>
+            )}
           <div className="checkin-flow__options">
             {currentStep.options.map((opt) => (
               <button
@@ -461,6 +467,7 @@ export default function CheckinFlow({ type, onClose, ctx = {} }) {
                 {isFemale && opt.labelF ? opt.labelF : opt.label}
               </button>
             ))}
+          </div>
           </div>
         )}
 
