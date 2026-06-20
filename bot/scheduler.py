@@ -129,6 +129,93 @@ async def _today_tracker_sum(session, user_id: int, tracker_type: TrackerType) -
     return float(result) if result is not None else 0.0
 
 
+async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
+    """Collect 7-day activity stats for the weekly praise push."""
+    week_start = datetime.combine(
+        ref_date - timedelta(days=7), datetime.min.time()
+    ).replace(tzinfo=timezone.utc)
+
+    # Post-workout checkins = completed workouts
+    workouts: int = await session.scalar(
+        select(func.count()).select_from(Checkin).where(
+            and_(
+                Checkin.user_id == user_id,
+                Checkin.type == CheckinType.post_workout,
+                Checkin.created_at >= week_start,
+            )
+        )
+    ) or 0
+
+    # Distinct UTC calendar dates with ANY checkin
+    checkin_dts = (await session.execute(
+        select(Checkin.created_at).where(
+            and_(Checkin.user_id == user_id, Checkin.created_at >= week_start)
+        )
+    )).scalars().all()
+    checkin_days: int = len({dt.date() for dt in checkin_dts if dt is not None})
+
+    # Weight delta: first vs last record this week
+    weight_rows = (await session.execute(
+        select(Tracker.value, Tracker.created_at).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == TrackerType.weight,
+                Tracker.created_at >= week_start,
+            )
+        ).order_by(Tracker.created_at)
+    )).all()
+    weight_delta: float | None = None
+    if len(weight_rows) >= 2:
+        weight_delta = round(float(weight_rows[-1][0]) - float(weight_rows[0][0]), 1)
+
+    # Any tracker record (for minimum activity threshold)
+    any_tracker: int = await session.scalar(
+        select(func.count()).select_from(Tracker).where(
+            and_(Tracker.user_id == user_id, Tracker.created_at >= week_start)
+        )
+    ) or 0
+
+    return {
+        "has_activity": bool(workouts or checkin_days or any_tracker),
+        "workouts":     workouts,
+        "checkin_days": checkin_days,
+        "weight_delta": weight_delta,
+    }
+
+
+def _build_weekly_praise(name: str, tone: str | None, stats: dict, goal: str | None) -> str:
+    """Build personalised weekly praise push text."""
+    wo = stats["workouts"]
+    cd = stats["checkin_days"]
+    wd = stats["weight_delta"]
+
+    parts: list[str] = []
+
+    if wo:
+        suffix = "тренировка" if wo == 1 else "тренировки" if 2 <= wo <= 4 else "тренировок"
+        parts.append(f"{wo} {suffix}")
+    if cd:
+        suffix = "день" if cd == 1 else "дня" if 2 <= cd <= 4 else "дней"
+        parts.append(f"чекины {cd} {suffix}")
+    if wd is not None:
+        sign = "+" if wd > 0 else ""
+        parts.append(f"вес: {sign}{wd} кг")
+    if not parts:
+        parts.append("ты отслеживал данные")  # fallback (tracker-only activity)
+
+    stats_line = ", ".join(parts)
+
+    if tone == "aggressive":
+        return (
+            f"{name}. Итоги недели: {stats_line}. "
+            "Работаешь — вижу. Не сбавляй."
+        )
+    return (
+        f"{name}, ты молодец! 🔥 За эту неделю: {stats_line}. "
+        "Так держать — следующая неделя будет ещё лучше 💪"
+    )
+
+
 
 def _user_local_time(tz_str: str | None) -> datetime:
     """Return current datetime in user's UTC-offset timezone (e.g. 'UTC+3')."""
@@ -313,6 +400,28 @@ async def check_reminders(bot: Bot) -> None:
                                 reply_markup=_webapp_kb(),
                             )
                         _reminder_sent[key_tw] = today
+
+            # ── Weekly praise: Sunday 19:00 local time ───────────────────────────
+            # weekday() == 6 → Sunday; key encodes ISO-week so one send per week
+            # even if bot restarts during the same Sunday.
+            if now_local.weekday() == 6 and hhmm == "19:00":
+                week_tag = today.strftime("%Y-W%W")
+                key_wp = (user.id, f"weekly_praise_{week_tag}")
+                if _reminder_sent.get(key_wp) != today:
+                    async with AsyncSessionLocal() as s:
+                        w_stats = await _weekly_stats(s, user.id, today)
+                    if w_stats["has_activity"]:
+                        tone = (profile.tone if profile and profile.tone else "soft")
+                        goal  = profile.goal.value if profile and profile.goal else None
+                        name  = user.first_name or "друг"
+                        text  = _build_weekly_praise(name, tone, w_stats, goal)
+                        await bot.send_message(
+                            chat_id=user.telegram_id,
+                            text=text,
+                            reply_markup=_webapp_kb(),
+                        )
+                        logger.info("Weekly praise sent to user=%s stats=%s", user.id, w_stats)
+                    _reminder_sent[key_wp] = today
 
         except Exception as exc:
             logger.warning("check_reminders failed for user %s: %s", user.telegram_id, exc)
