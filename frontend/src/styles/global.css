@@ -3037,3 +3037,13 @@ html, body {
   margin-top: 8px;
   letter-spacing: 0.04em;
 }
+
+/* ── Select option contrast (десктоп) ─────────────────── */
+/* На десктопе <option> не наследует цвет родителя —
+   задаём фон и цвет явно с достаточной специфичностью.  */
+
+select option,
+select optgroup {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
