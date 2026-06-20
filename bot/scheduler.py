@@ -169,6 +169,10 @@ async def check_reminders(bot: Bot) -> None:
 
     for user, profile in rows:
         try:
+            # Skip if user turned off notifications
+            if profile and not profile.notifications_enabled:
+                continue
+
             now_local = _user_local_time(profile.timezone if profile else None)
             hhmm = now_local.strftime("%H:%M")
 

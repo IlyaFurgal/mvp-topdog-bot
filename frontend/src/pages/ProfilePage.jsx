@@ -141,6 +141,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   const [morningTime, setMorningTime] = useState(profile?.morning_reminder_time ?? '08:00')
   const [eveningTime, setEveningTime] = useState(profile?.evening_reminder_time ?? '21:00')
 
+  // Notifications toggle
+  const [notifEnabled, setNotifEnabled] = useState(profile?.notifications_enabled ?? true)
+
   // Body metrics
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
@@ -156,6 +159,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     setTz(profile.timezone ?? 'UTC+3')
     setMorningTime(profile.morning_reminder_time ?? profile.push_time ?? '08:00')
     setEveningTime(profile.evening_reminder_time ?? '21:00')
+    setNotifEnabled(profile.notifications_enabled ?? true)
     setWeight(profile.weight != null ? String(profile.weight) : '')
     setHeight(profile.height != null ? String(profile.height) : '')
   }, [profile])
@@ -183,6 +187,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         evening_reminder_time: eveningTime || undefined,
         weight:                (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
         height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
+        notifications_enabled: notifEnabled,
       })
       onSaved()
     } catch (e) {
@@ -331,6 +336,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             color: 'var(--text)',
             fontSize: '0.9rem',
             marginBottom: 16,
+            appearance: 'none',
+            WebkitAppearance: 'none',
           }}
         >
           {!TIMEZONE_OPTIONS.some(([k]) => k === tz) && tz && (
@@ -355,6 +362,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             color: 'var(--text)',
             fontSize: '0.9rem',
             marginBottom: 16,
+            appearance: 'none',
+            WebkitAppearance: 'none',
           }}
         >
           {!MORNING_TIMES.includes(morningTime) && morningTime && (
@@ -379,6 +388,8 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             color: 'var(--text)',
             fontSize: '0.9rem',
             marginBottom: 16,
+            appearance: 'none',
+            WebkitAppearance: 'none',
           }}
         >
           {!EVENING_TIMES.includes(eveningTime) && eveningTime && (
@@ -388,6 +399,47 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+
+        {/* Notifications toggle */}
+        <p className="section-label" style={{ marginBottom: 8 }}>УВЕДОМЛЕНИЯ</p>
+        <div
+          onClick={() => setNotifEnabled(v => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 14px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            marginBottom: 16,
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
+            {notifEnabled ? '🔔 Напоминания включены' : '🔕 Напоминания выключены'}
+          </span>
+          <div style={{
+            width: 44,
+            height: 24,
+            borderRadius: 12,
+            background: notifEnabled ? 'var(--accent)' : '#444',
+            position: 'relative',
+            transition: 'background 0.2s',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 3,
+              left: notifEnabled ? 23 : 3,
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: notifEnabled ? '#000' : '#888',
+              transition: 'left 0.2s',
+            }} />
+          </div>
+        </div>
 
         {/* Weight */}
         <p className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
@@ -572,6 +624,12 @@ export default function ProfilePage() {
         <div className="profile-row">
           <span className="profile-label">ВЕЧЕР</span>
           <span className="profile-value">{profile?.evening_reminder_time ?? '21:00'}</span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-label">ПУШИ</span>
+          <span className="profile-value">
+            {profile?.notifications_enabled === false ? '🔕 выкл' : '🔔 вкл'}
+          </span>
         </div>
         <div className="profile-row">
           <span className="profile-label">ВЕС (старт)</span>

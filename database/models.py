@@ -119,6 +119,7 @@ class Profile(Base):
     push_time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # "08:00" (morning, alias)
     morning_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="08:00")
     evening_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="21:00")
+    notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='true')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
