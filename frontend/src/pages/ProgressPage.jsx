@@ -311,32 +311,20 @@ export default function ProgressPage() {
                 <span className="metric-value" style={{ color: disciplineColor(displayedDiscipline) }}>
                   {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
                 </span>
-                <span className="metric-sub">
-                  {displayedDiscipline !== null
-                    ? (displayedDiscipline >= 80 ? 'отлично' : displayedDiscipline >= 50 ? 'стабильно' : 'есть куда расти')
-                    : ''}
-                </span>
               </div>
               <div className="metric-card">
                 <span className="metric-label">НАГРУЗКА RPE</span>
                 <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
                   {avgRpe ?? 'Нет данных'}
                 </span>
-                <span className="metric-sub" />
               </div>
               <div className="metric-card">
                 <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
                 <span className="metric-value" style={{ color: rec.color }}>
                   {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
                 </span>
-                <span className="metric-sub">{rec.label !== 'Нет данных' ? rec.label : ''}</span>
               </div>
             </div>
-          )}
-
-          {/* Recovery details */}
-          {rec.sub && (
-            <p className="recovery-detail" style={{ color: rec.color }}>{rec.sub}</p>
           )}
 
           {/* ── Weight ──────────────────────────────────── */}
