@@ -1311,6 +1311,7 @@ html, body {
   align-items: center;
   gap: 4px;
   text-align: center;
+  min-width: 0;       /* prevent grid cell from overflowing its column */
 }
 
 .metric-label {
@@ -1319,6 +1320,9 @@ html, body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  width: 100%;
 }
 
 .metric-value {

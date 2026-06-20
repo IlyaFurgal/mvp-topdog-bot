@@ -318,7 +318,7 @@ export default function ProgressPage() {
                 </span>
               </div>
               <div className="metric-card">
-                <span className="metric-label">ТРЕНИРОВОЧНАЯ НАГРУЗКА (RPE)</span>
+                <span className="metric-label">НАГРУЗКА RPE</span>
                 <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
                   {avgRpe ?? 'Нет данных'}
                 </span>

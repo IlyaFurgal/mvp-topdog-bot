@@ -116,7 +116,8 @@ const STEPS = {
     },
     {
       key: 'satisfaction',
-      question: 'Доволен(льна) результативностью?',
+      question: 'Доволен своей результативностью?',
+      questionF: 'Довольна своей результативностью?',
       options: [
         { value: 'yes',    label: 'Да' },
         { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше' },
