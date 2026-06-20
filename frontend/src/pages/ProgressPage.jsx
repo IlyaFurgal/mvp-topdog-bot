@@ -227,7 +227,10 @@ export default function ProgressPage() {
   const recoveryPct = calcRecoveryPct(checkins)
   const rec = recoveryGrade(recoveryPct)
 
-  const hasMetrics = discipline !== null || avgRpe !== null || recoveryPct !== null
+  // Prefer insight's discipline_pct (7-day window) so the % and the insight text always agree
+  const displayedDiscipline = insight?.discipline_pct != null ? insight.discipline_pct : discipline
+
+  const hasMetrics = displayedDiscipline !== null || avgRpe !== null || recoveryPct !== null
 
   return (
     <div className="page">
@@ -304,13 +307,13 @@ export default function ProgressPage() {
           {hasMetrics && (
             <div className="metrics-cards">
               <div className="metric-card">
-                <span className="metric-label">DISCIPLINE</span>
-                <span className="metric-value" style={{ color: disciplineColor(discipline) }}>
-                  {discipline !== null ? `${discipline}%` : '—'}
+                <span className="metric-label">ДИСЦИПЛИНА</span>
+                <span className="metric-value" style={{ color: disciplineColor(displayedDiscipline) }}>
+                  {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
                 </span>
                 <span className="metric-sub">
-                  {discipline !== null
-                    ? (discipline >= 80 ? 'отлично' : discipline >= 50 ? 'стабильно' : 'нужно больше')
+                  {displayedDiscipline !== null
+                    ? (displayedDiscipline >= 80 ? 'отлично' : displayedDiscipline >= 50 ? 'стабильно' : 'есть куда расти')
                     : ''}
                 </span>
               </div>

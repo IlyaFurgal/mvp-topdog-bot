@@ -310,11 +310,11 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
 
 function SleepInput({ hours, minutes, onHours, onMinutes }) {
   const [draftH, setDraftH] = useState(() => String(hours))
-  const [draftM, setDraftM] = useState(() => String(minutes))
+  const [draftM, setDraftM] = useState(() => minutes > 0 ? String(minutes) : '')
 
   // Sync drafts when preset buttons update the parent state
   useEffect(() => { setDraftH(String(hours)) }, [hours])
-  useEffect(() => { setDraftM(String(minutes)) }, [minutes])
+  useEffect(() => { setDraftM(minutes > 0 ? String(minutes) : '') }, [minutes])
 
   function commitH() {
     const n = parseInt(draftH, 10)
@@ -323,9 +323,10 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
   }
 
   function commitM() {
+    if (draftM === '') { onMinutes(0); return }
     const n = parseInt(draftM, 10)
     if (!isNaN(n) && n >= 0 && n <= 59) onMinutes(n)
-    else setDraftM(String(minutes))  // revert on invalid
+    else setDraftM('')  // revert to empty (= 0 minutes)
   }
 
   return (
@@ -345,11 +346,12 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
         <div className="sleep-input-group">
           <input
             type="number"
+            inputMode="numeric"
             className="weight-num-input"
             value={draftH}
             min="0"
             max="23"
-            placeholder="0"
+            placeholder="ч"
             onChange={(e) => setDraftH(e.target.value)}
             onBlur={commitH}
           />
@@ -358,6 +360,7 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
         <div className="sleep-input-group">
           <input
             type="number"
+            inputMode="numeric"
             className="weight-num-input"
             value={draftM}
             min="0"

@@ -42,6 +42,6 @@ async def get_weekly_insight(
     elif discipline >= 50:
         text = "ТЫ СТАЛ СТАБИЛЬНЕЕ, НО НЕ ДЕРЖИШЬ РЕЖИМ ПОЛНОСТЬЮ."
     else:
-        text = "НУЖНО БОЛЬШЕ ДИСЦИПЛИНЫ. РАБОТАЙ."
+        text = "ЕСТЬ КУДА РАСТИ. ДОБАВЬ ДИСЦИПЛИНЫ."
 
     return {"text": text, "discipline_pct": discipline}
