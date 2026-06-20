@@ -45,6 +45,7 @@ async def get_my_profile(
         "weight":                profile.weight if profile else None,
         "height":                profile.height if profile else None,
         "notifications_enabled": profile.notifications_enabled if profile else True,
+        "additional_info":       profile.additional_info if profile else None,
         # Subscription
         "subscription_type":    user.subscription_type,
         "subscription_active":  user.subscription_active,
@@ -68,6 +69,7 @@ class ProfileUpdate(BaseModel):
     weight:                 Optional[float]     = None   # кг (стартовый/референсный)
     height:                 Optional[float]     = None   # см
     notifications_enabled:  Optional[bool]      = None
+    additional_info:        Optional[str]       = None   # max 1000 chars
 
 
 @router.patch("/me")
@@ -135,6 +137,10 @@ async def update_my_profile(
 
     if body.notifications_enabled is not None:
         profile.notifications_enabled = body.notifications_enabled
+
+    if body.additional_info is not None:
+        trimmed = body.additional_info.strip()
+        profile.additional_info = trimmed[:1000] if trimmed else None
 
     await session.commit()
     return {"status": "ok"}

@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger, Boolean, Date, DateTime, Enum, Float,
-    ForeignKey, Integer, Numeric, String, func,
+    ForeignKey, Integer, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -120,6 +120,7 @@ class Profile(Base):
     morning_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="08:00")
     evening_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="21:00")
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='true')
+    additional_info: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

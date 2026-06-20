@@ -3,7 +3,7 @@ AI context builder — produces Suvvy placeholder dict for a user.
 
 Placeholders returned by build_ai_context():
   Profile:
-    name, username, subscription_type, age, sport_type, health_restrictions,
+    name, username, subscription_type, age, sport_type, health_restrictions, additional_info,
     goal, fitness_level, activity_level, tone, gender,
     goal_display, fitness_level_display, activity_level_display,
     tone_display, gender_display
@@ -435,6 +435,7 @@ async def build_ai_context(session: AsyncSession, user: User) -> dict:
         "age":               _calc_age(profile.birth_date if profile else None),
         "sport_type":        profile.sport_type            or "" if profile else "",
         "health_restrictions": profile.health_restrictions or "" if profile else "",
+        "additional_info":     profile.additional_info     or "" if profile else "",
         "goal":              _goal_raw,
         "fitness_level":     _fitness_raw,
         "activity_level":    _activity_raw,

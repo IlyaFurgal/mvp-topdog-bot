@@ -148,6 +148,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
 
+  // Additional info (free-form notes for AI)
+  const [additionalInfo, setAdditionalInfo] = useState(profile?.additional_info ?? '')
+
   // Sync all form fields when profile loads or changes
   useEffect(() => {
     if (!profile) return
@@ -162,6 +165,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     setNotifEnabled(profile.notifications_enabled ?? true)
     setWeight(profile.weight != null ? String(profile.weight) : '')
     setHeight(profile.height != null ? String(profile.height) : '')
+    setAdditionalInfo(profile.additional_info ?? '')
   }, [profile])
 
   function toggleGoal(key) {
@@ -188,6 +192,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         weight:                (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
         height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
         notifications_enabled: notifEnabled,
+        additional_info:       additionalInfo.trim() || null,
       })
       onSaved()
     } catch (e) {
@@ -490,6 +495,36 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             marginBottom: 16,
           }}
         />
+
+        {/* Additional info */}
+        <p className="section-label" style={{ marginBottom: 4 }}>ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</p>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8 }}>
+          Травмы, ограничения, пожелания — ИИ учтёт это в рекомендациях
+        </p>
+        <textarea
+          value={additionalInfo}
+          onChange={(e) => setAdditionalInfo(e.target.value)}
+          maxLength={1000}
+          rows={4}
+          placeholder="Например: болит правое плечо, грыжа L4-L5, избегаю прыжков..."
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--card-bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem',
+            boxSizing: 'border-box',
+            marginBottom: 4,
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            lineHeight: 1.4,
+          }}
+        />
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'right' }}>
+          {additionalInfo.length}/1000
+        </p>
 
         {error && (
           <p style={{ color: '#ff4444', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>
