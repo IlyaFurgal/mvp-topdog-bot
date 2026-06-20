@@ -322,7 +322,7 @@ export default function ProgressPage() {
                 <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
                   {avgRpe ?? 'Нет данных'}
                 </span>
-                <span className="metric-sub">{rpeLabel(avgRpe)}</span>
+                <span className="metric-sub" />
               </div>
               <div className="metric-card">
                 <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
