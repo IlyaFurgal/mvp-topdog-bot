@@ -328,25 +328,24 @@ async def check_reminders(bot: Bot) -> None:
                     cal_limit = calculate_calorie_limit(profile)
                     tone = (profile.tone if profile and profile.tone else "soft")
 
-                    if cal_today > 0:  # пушим только если хоть что-то внесено
-                        if need_topup and cal_today < cal_limit * 0.70:
-                            if tone == "aggressive":
-                                text = (
-                                    "Калорий сегодня недобор. "
-                                    "Без топлива нет роста — добери норму."
-                                )
-                            else:
-                                text = (
-                                    "Сегодня ты ел заметно меньше нормы. "
-                                    "Для твоей цели важно добрать — недоедание тормозит результат 💛"
-                                )
-                            await bot.send_message(
-                                chat_id=user.telegram_id,
-                                text=text,
-                                reply_markup=_webapp_kb(),
+                    if need_topup and cal_today < cal_limit * 0.70:
+                        if tone == "aggressive":
+                            text = (
+                                "Калорий сегодня недобор. "
+                                "Без топлива нет роста — добери норму."
                             )
+                        else:
+                            text = (
+                                "Сегодня ты ел заметно меньше нормы. "
+                                "Для твоей цели важно добрать — недоедание тормозит результат 💛"
+                            )
+                        await bot.send_message(
+                            chat_id=user.telegram_id,
+                            text=text,
+                            reply_markup=_webapp_kb(),
+                        )
 
-                        if need_over and cal_today > cal_limit:
+                    if need_over and cal_today > cal_limit:
                             if tone == "aggressive":
                                 text = (
                                     "Сегодня превысил норму по калориям. "
