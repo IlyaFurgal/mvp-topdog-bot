@@ -169,7 +169,9 @@ function WeightInput({ value, onChange }) {
 
 function WaterInput({ amount, onChange, total }) {
   const [draft, setDraft] = useState('')
-  const pct = Math.min((total / GOAL_WATER) * 100, 100)
+  // Live preview: bar reflects saved + current draft
+  const displayTotal = total + amount
+  const pct = Math.min((displayTotal / GOAL_WATER) * 100, 100)
 
   function addPreset(ml) {
     const current = parseInt(draft, 10) || 0
@@ -187,7 +189,7 @@ function WaterInput({ amount, onChange, total }) {
   return (
     <div className="tracker-input">
       <p className="water-today">
-        Сегодня: <strong>{Math.round(total).toLocaleString('ru')} мл</strong> из {GOAL_WATER} мл
+        Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} мл</strong> из {GOAL_WATER} мл
       </p>
       <div className="progress-bar">
         <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
@@ -219,19 +221,16 @@ function WaterInput({ amount, onChange, total }) {
         />
         <span className="weight-unit">мл</span>
       </div>
-      {amount > 0 && (
-        <p className="progress-label">
-          +{amount} мл → итого {Math.round(total + amount).toLocaleString('ru')} мл
-        </p>
-      )}
     </div>
   )
 }
 
 function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMealType }) {
   const [draft, setDraft] = useState('')
-  const pct = Math.min((total / limit) * 100, 100)
-  const overLimit = total > limit
+  // Live preview: bar reflects saved + current draft
+  const displayTotal = total + amount
+  const pct = Math.min((displayTotal / limit) * 100, 100)
+  const overLimit = displayTotal > limit
 
   function addPreset(kcal) {
     const current = parseInt(draft, 10) || 0
@@ -245,8 +244,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
     if (!isNaN(n) && n >= 0) onChange(n)
     else setDraft(amount > 0 ? String(amount) : '')
   }
-
-  const previewTotal = total + amount
 
   return (
     <div className="tracker-input">
@@ -262,7 +259,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
         ))}
       </div>
       <p className="water-today">
-        Сегодня: <strong>{Math.round(total).toLocaleString('ru')} ккал</strong>
+        Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} ккал</strong>
         {' '}/ норма {limit.toLocaleString('ru')} ккал
       </p>
       <div className="progress-bar">
@@ -271,6 +268,11 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
           style={{ width: `${pct}%`, background: overLimit ? 'var(--danger)' : undefined }}
         />
       </div>
+      {overLimit && (
+        <p className="progress-label" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
+          Норма на сегодня превышена — если хочешь, обсуди с ассистентом.
+        </p>
+      )}
       <div className="water-quick">
         {[100, 300, 500].map((kcal) => (
           <button key={kcal} className="water-btn" onClick={() => addPreset(kcal)}>
@@ -298,12 +300,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
         />
         <span className="weight-unit">ккал</span>
       </div>
-      {amount > 0 && (
-        <p className="progress-label" style={{ color: previewTotal > limit ? 'var(--danger)' : undefined }}>
-          +{amount} ккал → итого {Math.round(previewTotal).toLocaleString('ru')} ккал
-          {previewTotal > limit ? ` (+${Math.round(previewTotal - limit)} сверх нормы)` : ''}
-        </p>
-      )}
     </div>
   )
 }
