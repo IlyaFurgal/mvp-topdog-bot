@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, Form, Request
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.bot_sender import send_message, send_video_note, webapp_kb
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 _MEAL_MARKER_RE = re.compile(r'\[\[MEAL:(\{.*?\})\]\]', re.DOTALL)
 _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
+_WEIGHT_MARKER_RE = re.compile(r'\[\[WEIGHT:(\{.*?\})\]\]', re.DOTALL)
 
 # ── RISK marker protocol ──────────────────────────────────────────────────────
 _RISK_MARKER_RE = re.compile(r'\[\[RISK\]\]', re.IGNORECASE)
@@ -76,6 +77,34 @@ def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
     cleaned = _MEAL_MARKER_RE.sub(_handle_match, text)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, meals
+
+
+def _parse_weight_marker(text: str) -> tuple[str, float | None]:
+    """
+    Extract first valid [[WEIGHT:{"value": N}]] marker from text.
+    Returns (cleaned_text, weight_kg) or (cleaned_text, None) if none/invalid.
+    Valid range: 30–300 kg.  Marker is always removed from visible text.
+    """
+    weight: list[float] = []  # list so inner func can mutate
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            val = payload.get("value")
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"non-numeric value: {val!r}")
+            val_f = float(val)
+            if not (30 <= val_f <= 300):
+                raise ValueError(f"out of range: {val_f}")
+            if not weight:
+                weight.append(round(val_f, 1))
+        except Exception as exc:
+            logger.warning("Suvvy weight marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""  # always strip marker from visible text
+
+    cleaned = _WEIGHT_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, weight[0] if weight else None
 
 
 def _meal_type_by_time(profile) -> str:
@@ -441,13 +470,17 @@ async def suvvy_webhook(
         _RISK_REWRITES.pop(chat_id, None)
         return {"status": "ok"}
 
-    # ── Parse [[MEAL:...]] markers ─────────────────────────────────────────────
+    # ── Parse [[MEAL:...]] and [[WEIGHT:...]] markers ─────────────────────────
     cleaned_texts: list[str] = []
     all_meals: list[dict] = []
+    weight_kg: float | None = None
     for raw_text in texts:
         cleaned, meals = _parse_meal_markers(raw_text)
+        cleaned, w = _parse_weight_marker(cleaned)
         cleaned_texts.append(cleaned)   # may be empty string if text was only a marker
         all_meals.extend(meals)
+        if w is not None and weight_kg is None:
+            weight_kg = w
 
     # ── Detect and handle [[RISK]] marker ─────────────────────────────────────
     risk_texts: list[str] = []
@@ -497,6 +530,30 @@ async def suvvy_webhook(
                     "Photo calories logged: user=%s food=%r kcal=%s meal=%s",
                     chat_id, meal["food"], meal["calories"], meal_type,
                 )
+
+        # Upsert weight tracker from [[WEIGHT:]] marker
+        if weight_kg is not None:
+            today = datetime.now(timezone.utc).date()
+            existing = (await session.execute(
+                select(Tracker).where(
+                    and_(
+                        Tracker.user_id == user.id,
+                        Tracker.type == TrackerType.weight,
+                        func.date(Tracker.created_at) == today,
+                    )
+                ).limit(1)
+            )).scalar_one_or_none()
+            if existing:
+                existing.value = weight_kg
+                logger.info("Weight updated via marker: user=%s weight=%.1f", chat_id, weight_kg)
+            else:
+                session.add(Tracker(
+                    user_id=user.id,
+                    type=TrackerType.weight,
+                    value=weight_kg,
+                    unit="kg",
+                ))
+                logger.info("Weight logged via marker: user=%s weight=%.1f", chat_id, weight_kg)
 
         await session.commit()
         schedule_fold(user.id)
