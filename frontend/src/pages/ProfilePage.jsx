@@ -505,10 +505,11 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           value={additionalInfo}
           onChange={(e) => setAdditionalInfo(e.target.value)}
           maxLength={1000}
-          rows={4}
-          placeholder="Например: болит правое плечо, грыжа L4-L5, избегаю прыжков..."
+          rows={5}
+          placeholder={"Например:\nболит правое плечо\nгрыжа L4-L5\nизбегаю прыжков и тяжёлых приседаний"}
           style={{
             width: '100%',
+            minHeight: 110,
             padding: '10px 12px',
             borderRadius: 8,
             border: '1px solid var(--border)',
@@ -519,7 +520,9 @@ function EditProfileModal({ profile, onClose, onSaved }) {
             marginBottom: 4,
             resize: 'vertical',
             fontFamily: 'inherit',
-            lineHeight: 1.4,
+            lineHeight: 1.5,
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
           }}
         />
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'right' }}>
