@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 from datetime import datetime, timedelta
 from urllib.parse import parse_qsl, unquote
 
@@ -11,8 +12,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
-from database.crud import get_user_by_telegram_id
+from database.crud import create_user, get_user_by_telegram_id
 from database.session import get_session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -95,16 +98,45 @@ async def auth_telegram(
     body: TelegramAuthRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    user_data = _verify_init_data(body.init_data)
-    telegram_id = user_data.get("id")
+    try:
+        user_data = _verify_init_data(body.init_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Auth error during initData validation: %s: %s — initData length: %d",
+            type(e).__name__, str(e), len(body.init_data) if body.init_data else 0,
+        )
+        raise HTTPException(status_code=400, detail=f"Auth failed: {e}")
 
+    telegram_id = user_data.get("id")
     if not telegram_id:
+        logger.warning("Auth: no user id in initData — parsed keys: %s", list(user_data.keys()))
         raise HTTPException(status_code=400, detail="No user id in initData")
 
-    user = await get_user_by_telegram_id(session, telegram_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found — complete bot registration first")
+    try:
+        user = await get_user_by_telegram_id(session, telegram_id)
+    except Exception as e:
+        logger.error("Auth DB error for telegram_id=%s: %s: %s", telegram_id, type(e).__name__, str(e))
+        raise HTTPException(status_code=500, detail="Database error during auth")
 
+    if not user:
+        try:
+            user = await create_user(
+                session,
+                telegram_id=telegram_id,
+                username=user_data.get("username"),
+                first_name=user_data.get("first_name"),
+            )
+            logger.info(
+                "Auth: auto-created user telegram_id=%s user_id=%s username=%r",
+                telegram_id, user.id, user.username,
+            )
+        except Exception as e:
+            logger.error("Auth: failed to auto-create user telegram_id=%s: %s: %s", telegram_id, type(e).__name__, str(e))
+            raise HTTPException(status_code=500, detail="Failed to create user")
+
+    logger.info("Auth OK: telegram_id=%s user_id=%s", telegram_id, user.id)
     return TokenResponse(access_token=_create_token(telegram_id))
 
 
