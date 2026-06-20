@@ -509,12 +509,15 @@ html, body {
 }
 
 .checkin-flow__question {
-  font-size: 2rem;
+  font-size: clamp(1.55rem, 7vw, 2rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   line-height: 1.15;
   margin-bottom: 32px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .checkin-flow__options {
