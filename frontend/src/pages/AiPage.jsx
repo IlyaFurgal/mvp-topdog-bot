@@ -190,11 +190,13 @@ export default function AiPage() {
   }
 
   // ── File/photo handling ───────────────────────────────
-  async function handleFileChange(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function processFile(file) {
     setFileError('')
-    e.target.value = ''
+
+    if (filePreview) {
+      setFileError('Можно одно фото за раз.')
+      return
+    }
 
     if (file.size > MAX_FILE_BYTES) {
       setFileError('Файл слишком большой. Максимум 15 МБ.')
@@ -215,6 +217,28 @@ export default function AiPage() {
       setFilePreview(result)
     } catch (_) {
       setFileError('Не удалось обработать изображение. Попробуй ещё раз.')
+    }
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    processFile(file)
+  }
+
+  function handlePaste(e) {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          e.preventDefault()
+          processFile(file)
+          break
+        }
+      }
     }
   }
 
@@ -430,7 +454,7 @@ export default function AiPage() {
     const msgId = Date.now() + Math.random()
     setMessages((prev) => [
       ...prev,
-      { id: msgId, from: 'user', text: '🎤 Голосовое сообщение', retryText: '' },
+      { id: msgId, from: 'user', text: '🎤 Голосовое сообщение', audioUrl: dataUrl, retryText: '' },
     ])
     scrollToBottom()
 
@@ -471,6 +495,9 @@ export default function AiPage() {
             <div className="ai-msg__bubble">
               {msg.imagePath && (
                 <img src={msg.imagePath} alt="attachment" className="ai-msg__image" />
+              )}
+              {msg.audioUrl && (
+                <audio controls src={msg.audioUrl} className="ai-msg__audio" />
               )}
               {msg.text && (
                 msg.from === 'ai'
@@ -572,6 +599,7 @@ export default function AiPage() {
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKey}
+            onPaste={handlePaste}
           />
           <button className="ai-send" onClick={handleSend} disabled={!canSend}>
             →
