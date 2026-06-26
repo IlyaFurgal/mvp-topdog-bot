@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger, Boolean, Date, DateTime, Enum, Float,
-    ForeignKey, Integer, Numeric, String, Text, func,
+    ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -257,3 +257,33 @@ class WorkoutEntry(Base):
 
     workout: Mapped["Workout"] = relationship(back_populates="entries")
     item: Mapped["WorkoutItem | None"] = relationship()
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    grant_type: Mapped[str] = mapped_column(String(16), nullable=False)        # "pro"
+    grant_days: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    max_activations: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PromoActivation(Base):
+    __tablename__ = "promo_activations"
+    __table_args__ = (
+        UniqueConstraint("promo_code_id", "user_id", name="uq_promo_activation"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    promo_code_id: Mapped[int] = mapped_column(
+        ForeignKey("promo_codes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

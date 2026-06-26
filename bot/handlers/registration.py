@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 import re
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 from aiogram import F, Router
@@ -22,8 +22,12 @@ from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
 from bot.states import RegistrationForm
 from core.config import settings
+from sqlalchemy import select
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
-from database.models import ActivityLevel, FitnessLevel, Gender, Goal, Profile, SubscriptionStatus, Tone, Tracker, TrackerType, User
+from database.models import (
+    ActivityLevel, FitnessLevel, Gender, Goal, Profile,
+    PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
+)
 from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -93,6 +97,83 @@ async def _ask_workout(target: CallbackQuery | Message, state: FSMContext) -> No
 
 # ── /start ────────────────────────────────────────────────────────────────────
 
+_PROMO_CODE_RE = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
+
+
+async def _handle_promo(message: Message, code: str) -> None:
+    """Handle deep-link payload promo_<code>. Validates code, activates Pro atomically."""
+    if not _PROMO_CODE_RE.match(code):
+        await message.answer("Ссылка недействительна.")
+        return
+
+    tg_id = message.from_user.id
+
+    async with AsyncSessionLocal() as session:
+        # SELECT FOR UPDATE — atomic; prevents race-condition double-activation
+        promo = (await session.execute(
+            select(PromoCode).where(PromoCode.code == code).with_for_update()
+        )).scalar_one_or_none()
+
+        if promo is None or not promo.is_active:
+            await message.answer("Ссылка недействительна.")
+            return
+
+        now = datetime.now(timezone.utc)
+        if promo.expires_at.replace(tzinfo=timezone.utc) < now:
+            await message.answer("Срок действия ссылки истёк.")
+            return
+
+        if promo.used_count >= promo.max_activations:
+            await message.answer("Лимит активаций исчерпан.")
+            return
+
+        # Ensure user exists (may not have gone through registration yet)
+        user = await get_user_by_telegram_id(session, tg_id)
+        if not user:
+            user = await create_user(
+                session,
+                telegram_id=tg_id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+            )
+
+        # Guard against repeat activation by the same user
+        existing = (await session.execute(
+            select(PromoActivation).where(
+                PromoActivation.promo_code_id == promo.id,
+                PromoActivation.user_id == user.id,
+            )
+        )).scalar_one_or_none()
+
+        if existing:
+            await message.answer(
+                "Доступ Pro уже активирован по этой ссылке 🔥\n"
+                "Открой приложение 👇",
+                reply_markup=_webapp_kb(),
+            )
+            return
+
+        # Activate Pro
+        expires = now + timedelta(days=promo.grant_days)
+        user.subscription_type = promo.grant_type          # "pro"
+        user.subscription_status = SubscriptionStatus.premium
+        user.subscription_active = "active"
+        user.subscription_expires_at = expires
+        promo.used_count += 1
+        session.add(PromoActivation(promo_code_id=promo.id, user_id=user.id))
+        await session.commit()
+
+    logger.info(
+        "Promo activated: code=%r user=%s grant=%s days=%d expires=%s",
+        code, tg_id, promo.grant_type, promo.grant_days, expires.date(),
+    )
+    await message.answer(
+        f"Доступ Pro активирован на {promo.grant_days} дней 🔥\n"
+        "Открой приложение 👇",
+        reply_markup=_webapp_kb(),
+    )
+
+
 async def _register_in_getcourse(user: User, profile: Profile) -> None:
     """Send user data to GetCourse after registration. Silently skips if GC_API_KEY is empty."""
     if not settings.GC_API_KEY:
@@ -133,6 +214,13 @@ async def _register_in_getcourse(user: User, profile: Profile) -> None:
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
+
+    # Deep-link: /start promo_<code>
+    parts = (message.text or "").split(maxsplit=1)
+    payload = parts[1].strip() if len(parts) > 1 else ""
+    if payload.startswith("promo_"):
+        await _handle_promo(message, payload[6:])
+        return
 
     async with AsyncSessionLocal() as session:
         user = await get_user_by_telegram_id(session, message.from_user.id)
