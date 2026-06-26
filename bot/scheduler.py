@@ -9,6 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import and_, func, select, or_
 
+from api.deps import _is_subscription_active
 from api.routers.trackers import calculate_calorie_limit
 from api.services.getcourse import sync_progress_to_gc
 from core.config import settings
@@ -258,6 +259,10 @@ async def check_reminders(bot: Bot) -> None:
         try:
             # Skip if user turned off notifications
             if profile and not profile.notifications_enabled:
+                continue
+
+            # Контентные пуши — только активным подписчикам
+            if not _is_subscription_active(user):
                 continue
 
             now_local = _user_local_time(profile.timezone if profile else None)
