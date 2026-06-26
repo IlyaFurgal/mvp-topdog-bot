@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
+import { getLocalUtcStr } from './utils/timezone'
 import BottomNav from './components/BottomNav'
 import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
@@ -196,6 +197,7 @@ export default function App() {
       .then(({ data }) => {
         setToken(data.access_token)
         setReady(true)
+        client.patch('/profile/me', { timezone_auto: getLocalUtcStr() }).catch(() => {})
       })
       .catch(() => setError('auth-failed'))
   }, [])

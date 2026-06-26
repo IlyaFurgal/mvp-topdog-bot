@@ -9,14 +9,7 @@ for (let i = -12; i <= 14; i++) {
   UTC_OFFSETS.push({ value, label })
 }
 
-/** Derive UTC+N string from the browser's current local time. */
-function getLocalUtcStr() {
-  const offsetMin = -new Date().getTimezoneOffset() // positive = east of UTC
-  const offsetH   = offsetMin / 60
-  const h         = Math.round(offsetH) // handle half-hour zones gracefully
-  if (h === 0) return 'UTC+0'
-  return h > 0 ? `UTC+${h}` : `UTC${h}`
-}
+import { getLocalUtcStr } from '../utils/timezone'
 
 // ── Detect mode ───────────────────────────────────────────────────────────────
 
