@@ -685,6 +685,15 @@ export default function ProfilePage() {
           <span className="profile-label">ТАРИФ</span>
           <SubInfo type={subscriptionType} period={subscriptionPeriod} />
         </div>
+
+        {profile?.additional_info && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="profile-label" style={{ marginBottom: 6 }}>О СЕБЕ</p>
+            <p className="profile-value" style={{ textAlign: 'left', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+              {profile.additional_info}
+            </p>
+          </div>
+        )}
       </div>
 
       {subscriptionType === 'plus' && (
