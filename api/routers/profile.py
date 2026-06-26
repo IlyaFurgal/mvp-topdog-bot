@@ -70,6 +70,7 @@ class ProfileUpdate(BaseModel):
     height:                 Optional[float]     = None   # см
     notifications_enabled:  Optional[bool]      = None
     additional_info:        Optional[str]       = None   # max 1000 chars
+    timezone_auto:          Optional[str]       = None   # browser-detected, applied only when not set by user
 
 
 @router.patch("/me")
@@ -115,6 +116,12 @@ async def update_my_profile(
 
     if body.timezone is not None:
         profile.timezone = body.timezone
+
+    if body.timezone_auto is not None:
+        import re as _re
+        if _re.match(r'^UTC[+-]\d{1,2}$|^UTC\+0$', body.timezone_auto):
+            if profile.timezone in (None, '', 'UTC+3'):
+                profile.timezone = body.timezone_auto
 
     def _validate_time(val: str, field: str) -> str:
         parts = val.split(":")

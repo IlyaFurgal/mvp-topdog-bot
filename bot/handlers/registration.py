@@ -462,8 +462,7 @@ async def step_tone_selected(callback: CallbackQuery, state: FSMContext) -> None
     await callback.message.edit_text(
         "Выбери время утреннего чекина ☀️\n\n"
         "Когда тебе удобно начинать день и отмечать своё состояние?\n\n"
-        "📍 Часовой пояс по умолчанию — Москва (UTC+3). "
-        "Если ты в другом поясе — измени в профиле.",
+        "📍 Часовой пояс определится автоматически при первом входе в приложение.",
         reply_markup=kb_push_time(),
     )
     await callback.answer()
