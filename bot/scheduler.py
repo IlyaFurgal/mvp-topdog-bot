@@ -293,78 +293,42 @@ async def check_reminders(bot: Bot) -> None:
                     )
                     _reminder_sent[key] = today
 
-            # ── Water top-up at 16:00 ─────────────────────────────────
+            # ── Единый дневной пуш в 16:00: сон / еда / вода ──────────
             if hhmm == "16:00":
-                key = (user.id, "water_topup")
+                key = (user.id, "daily_16")
                 if _reminder_sent.get(key) != today:
                     async with AsyncSessionLocal() as s:
+                        sleep_today = await _today_tracker_sum(s, user.id, TrackerType.sleep)
                         water_today = await _today_tracker_sum(s, user.id, TrackerType.water)
+                        cal_today   = await _today_tracker_sum(s, user.id, TrackerType.calories)
+                    cal_limit = calculate_calorie_limit(profile)
+
+                    reasons: list[str] = []
+                    reasons_aggr: list[str] = []
+                    if sleep_today <= 0:
+                        reasons.append("укажи, сколько спал сегодня")
+                        reasons_aggr.append("отметь сон")
+                    if cal_limit > 0 and cal_today < cal_limit * 0.5:
+                        reasons.append("за день съедено меньше половины нормы — добери")
+                        reasons_aggr.append("еды меньше половины нормы — добери")
                     if water_today < 1000:  # < 50 % от цели 2000 мл
+                        reasons.append("воды выпито меньше половины нормы 💧")
+                        reasons_aggr.append("воды мало — добери норму")
+
+                    if reasons:
                         tone = (profile.tone if profile and profile.tone else "soft")
                         if tone == "aggressive":
-                            text = "Воды сегодня мало. Добери норму — это базовая дисциплина."
+                            body = "; ".join(reasons_aggr)
+                            text = f"Чек по дню: {body}. Подтяни — это базовая дисциплина."
                         else:
-                            text = (
-                                "Не забывай про воду 💧 За день выпито меньше половины нормы — "
-                                "сделай пару глотков, организму это важно."
-                            )
+                            body = "; ".join(reasons)
+                            text = f"Загляни в трекеры 🙌 {body}."
                         await bot.send_message(
                             chat_id=user.telegram_id,
                             text=text,
                             reply_markup=_webapp_kb(),
                         )
                     _reminder_sent[key] = today
-
-            # ── Calorie checks at 20:00 (under-eating + over-limit) ────────────
-            if hhmm == "20:00":
-                key_topup = (user.id, "calories_topup")
-                key_over  = (user.id, "calories_over")
-                need_topup = _reminder_sent.get(key_topup) != today
-                need_over  = _reminder_sent.get(key_over)  != today
-
-                if need_topup or need_over:
-                    async with AsyncSessionLocal() as s:
-                        cal_today = await _today_tracker_sum(s, user.id, TrackerType.calories)
-                    cal_limit = calculate_calorie_limit(profile)
-                    tone = (profile.tone if profile and profile.tone else "soft")
-
-                    if need_topup and cal_today < cal_limit * 0.70:
-                        if tone == "aggressive":
-                            text = (
-                                "Калорий сегодня недобор. "
-                                "Без топлива нет роста — добери норму."
-                            )
-                        else:
-                            text = (
-                                "Сегодня ты ел заметно меньше нормы. "
-                                "Для твоей цели важно добрать — недоедание тормозит результат 💛"
-                            )
-                        await bot.send_message(
-                            chat_id=user.telegram_id,
-                            text=text,
-                            reply_markup=_webapp_kb(),
-                        )
-
-                    if need_over and cal_today > cal_limit:
-                            if tone == "aggressive":
-                                text = (
-                                    "Сегодня превысил норму по калориям. "
-                                    "Бывает — глянь с ассистентом, что подкрутить."
-                                )
-                            else:
-                                text = (
-                                    "Сегодня калорий вышло больше дневной нормы. "
-                                    "Это нормально время от времени — если хочешь, "
-                                    "обсуди с ассистентом, как скорректировать 💛"
-                                )
-                            await bot.send_message(
-                                chat_id=user.telegram_id,
-                                text=text,
-                                reply_markup=_webapp_kb(),
-                            )
-
-                    _reminder_sent[key_topup] = today
-                    _reminder_sent[key_over]  = today
 
             # ── Post-workout reminder (training_time + 3h) ───────────────────────
             # Rescanner approach: no persistent jobs needed, survives restarts.

@@ -3,9 +3,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.bot_sender import send_message, webapp_kb
 from api.deps import get_current_user
 from database.models import Profile, Tracker, TrackerType, User
 from database.session import get_session
@@ -104,6 +105,37 @@ def _since(days: int) -> datetime:
     )
 
 
+async def _calories_today_sum(session, user_id: int) -> float:
+    today = _today_start()
+    val = await session.scalar(
+        select(func.sum(Tracker.value)).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == TrackerType.calories,
+                Tracker.created_at >= today,
+            )
+        )
+    )
+    return float(val) if val is not None else 0.0
+
+
+async def _maybe_push_calorie_over(session, user, profile, prev_sum: float, new_sum: float) -> None:
+    """Шлёт пуш только если ИМЕННО эта запись пересекла дневной лимит."""
+    limit = calculate_calorie_limit(profile)
+    if limit <= 0:
+        return
+    if prev_sum <= limit < new_sum:
+        tone = getattr(profile, "tone", None) if profile else None
+        if tone == "aggressive":
+            text = "Сегодня вышел за дневную норму по калориям. Бывает — глянь с ассистентом, что подкрутить."
+        else:
+            text = (
+                "Сегодня калорий вышло больше дневной нормы. Это нормально время от времени — "
+                "если хочешь, обсуди с ассистентом, как скорректировать 💛"
+            )
+        await send_message(chat_id=user.telegram_id, text=text, reply_markup=webapp_kb())
+
+
 @router.post("")
 async def create_tracker(
     body: TrackerCreate,
@@ -122,6 +154,13 @@ async def create_tracker(
     session.add(tracker)
     await session.commit()
     await session.refresh(tracker)
+
+    if TrackerType(body.type) == TrackerType.calories:
+        new_sum = await _calories_today_sum(session, user.id)
+        prev_sum = new_sum - float(body.value)
+        prof = await session.scalar(select(Profile).where(Profile.user_id == user.id))
+        await _maybe_push_calorie_over(session, user, prof, prev_sum, new_sum)
+
     return {"id": tracker.id, "created_at": tracker.created_at}
 
 
@@ -227,6 +266,11 @@ async def set_calories_today(
         await session.flush()
         new_id = new_tracker.id
     await session.commit()
+
+    prof = await session.scalar(select(Profile).where(Profile.user_id == user.id))
+    new_sum = await _calories_today_sum(session, user.id)
+    await _maybe_push_calorie_over(session, user, prof, 0.0, new_sum)
+
     return {"value": body.value if body.value > 0 else 0, "unit": "kcal", "id": new_id}
 
 
