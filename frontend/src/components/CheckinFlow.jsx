@@ -80,12 +80,25 @@ const STEPS = {
     {
       key: 'not_completed_reason',
       question: 'Почему не выполнил(а) план?',
-      condition: (data) => data.plan_completed !== 'full',
+      condition: (data) => data.plan_completed === 'partial' || data.plan_completed === 'custom',
       options: [
-        { value: 'no_time',    label: 'Не хватило времени' },
+        { value: 'no_time',    label: 'Не хватило времени на все упражнения' },
         { value: 'tired',      label: 'Устал(а)' },
         { value: 'discomfort', label: 'Дискомфорт в теле' },
         { value: 'other',      label: 'Другое', custom: true },
+      ],
+    },
+    {
+      key: 'not_trained_reason',
+      question: 'Почему не тренировался?',
+      questionF: 'Почему не тренировалась?',
+      condition: (data) => data.plan_completed === 'skipped',
+      options: [
+        { value: 'no_time',     label: 'Не хватило времени' },
+        { value: 'no_motiv',    label: 'Не было мотивации' },
+        { value: 'feeling_bad', label: 'Плохое самочувствие' },
+        { value: 'injury',      label: 'Получил травму',          labelF: 'Получила травму' },
+        { value: 'recovery',    label: 'Сегодня восстанавливаюсь' },
       ],
     },
     {
@@ -93,10 +106,12 @@ const STEPS = {
       question: 'Оцени нагрузку (RPE)',
       type: 'rpe',
       scaleHint: '1 — очень легко, 10 — максимально тяжело',
+      condition: (data) => data.plan_completed !== 'skipped',
     },
     {
       key: 'prev_comparison',
       question: 'Сравнение с прошлой тренировкой',
+      condition: (data) => data.plan_completed !== 'skipped',
       options: [
         { value: 'easier', label: 'Легче' },
         { value: 'same',   label: 'Так же' },
@@ -106,6 +121,7 @@ const STEPS = {
     {
       key: 'pain',
       question: 'Болело что-то во время тренировки?',
+      condition: (data) => data.plan_completed !== 'skipped',
       options: [
         { value: 'muscle', label: 'Мышечная боль' },
         { value: 'joint',  label: 'Суставная боль' },
@@ -118,6 +134,7 @@ const STEPS = {
       key: 'satisfaction',
       question: 'Доволен своей результативностью?',
       questionF: 'Довольна своей результативностью?',
+      condition: (data) => data.plan_completed !== 'skipped',
       options: [
         { value: 'yes',    label: 'Да' },
         { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше' },
@@ -214,6 +231,7 @@ function getCheckinMood(type, data) {
   }
 
   if (type === 'post_workout') {
+    if (data.plan_completed === 'skipped') return 'neutral'
     if (data.pain === 'bad' || data.pain === 'joint') return 'care'
     if (data.plan_completed === 'full' && data.satisfaction === 'yes' && data.pain === 'none') return 'praise'
     return 'neutral'
