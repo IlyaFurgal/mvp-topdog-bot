@@ -194,6 +194,7 @@ const MESSAGES = {
       praise:  'Отличный настрой с утра! Используй эту энергию по полной 💪',
     },
     post_workout: {
+      skipped: 'Понял, сегодня без тренировки. Отметил — учту в рекомендациях.',
       care:    'Ты прислушался к телу — это правильно. Если что-то беспокоит, не игнорируй и дай себе восстановиться.',
       neutral: 'Тренировка засчитана. Каждый шаг важен, даже если сегодня было тяжело.',
       praise:  'Сильная работа! Ты выложился и довёл до конца — так и растёт результат 🔥',
@@ -211,6 +212,7 @@ const MESSAGES = {
       praise:  'Готов к бою. Используй этот настрой.',
     },
     post_workout: {
+      skipped: 'Принято. Сегодня без тренировки — зафиксировал.',
       care:    'Боль — сигнал, не игнорируй. Восстановись прежде чем грузить дальше.',
       neutral: 'Чекин закрыт. Результат внесён.',
       praise:  'План выполнен. Так держать — без поблажек.',
@@ -231,7 +233,7 @@ function getCheckinMood(type, data) {
   }
 
   if (type === 'post_workout') {
-    if (data.plan_completed === 'skipped') return 'neutral'
+    if (data.plan_completed === 'skipped') return 'skipped'
     if (data.pain === 'bad' || data.pain === 'joint') return 'care'
     if (data.plan_completed === 'full' && data.satisfaction === 'yes' && data.pain === 'none') return 'praise'
     return 'neutral'
