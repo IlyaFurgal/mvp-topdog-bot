@@ -1923,6 +1923,24 @@ html, body {
   flex-shrink: 0;
 }
 
+/* Copy button on AI messages */
+.ai-msg__copy {
+  display: block;
+  margin-top: 6px;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+
+.ai-msg__copy:active { opacity: 1; }
+
 /* Image in chat bubble */
 .ai-msg__image {
   display: block;

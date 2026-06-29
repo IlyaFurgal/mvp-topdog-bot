@@ -258,7 +258,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await message.answer(
         "Привет! 👊\n\n"
         "Я твой персональный ассистент MVP by TopDog.\n"
-        "Давай настроим твой профиль — это займёт 2 минуты.",
+        "Давай настроим твой профиль — это займёт 2 минуты.\n\n"
+        "Чем точнее заполнишь анкету, тем точнее я подберу программу — отвечай честно, потом всё можно поменять в профиле.",
         reply_markup=kb_start(),
     )
 
@@ -402,7 +403,11 @@ async def step_fitness_from_height(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(height=height)
     await state.set_state(RegistrationForm.fitness_level)
-    await message.answer("Какой у тебя уровень подготовки?", reply_markup=kb_fitness())
+    await message.answer(
+        "Какой у тебя уровень подготовки?\n\n"
+        "Оцени объективно — от этого зависит, не окажется ли план слишком лёгким или слишком тяжёлым:",
+        reply_markup=kb_fitness(),
+    )
 
 
 # ── Уровень подготовки → цели (multi-select) ──────────────────────────────────
@@ -529,7 +534,10 @@ async def step_tone_no_health(callback: CallbackQuery, state: FSMContext) -> Non
 @router.callback_query(RegistrationForm.health_restrictions, F.data == "reg_health_has")
 async def step_health_text_prompt(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(RegistrationForm.health_text)
-    await callback.message.edit_text("Напиши свои ограничения по здоровью:")
+    await callback.message.edit_text(
+        "Напиши свои ограничения по здоровью:\n\n"
+        "Опиши подробно — травмы, хронические состояния, противопоказания, даже если кажутся незначительными. Чем подробнее, тем безопаснее будут рекомендации."
+    )
     await callback.answer()
 
 

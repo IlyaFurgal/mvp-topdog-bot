@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     SUVVY_RISK_TIMEOUT: int = 50
 
     JWT_SECRET: str = "change-me-in-production"
-    MINI_APP_URL: str = "https://topdogmvp.ru"
+    MINI_APP_URL: str = "https://topdog-mvp.com"
     MINI_APP_VERSION: int = 2
 
     @property

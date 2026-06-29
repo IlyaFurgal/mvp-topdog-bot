@@ -438,11 +438,10 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
               </button>
             ))}
             </div>
-            {editMode && (
-              <button className="checkin-flow__keep-btn" onClick={skipStep}>
-                Оставить →
-              </button>
-            )}
+            {editMode
+              ? <button className="checkin-flow__keep-btn" onClick={skipStep}>Оставить →</button>
+              : <button className="checkin-flow__text-skip" style={{ marginTop: 8 }} onClick={() => advance(null)}>Пропустить</button>
+            }
           </div>
         )}
 
@@ -470,11 +469,10 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             >
               Продолжить →
             </button>
-            {editMode && (
-              <button className="checkin-flow__keep-btn" onClick={skipStep}>
-                Оставить →
-              </button>
-            )}
+            {editMode
+              ? <button className="checkin-flow__keep-btn" onClick={skipStep}>Оставить →</button>
+              : <button className="checkin-flow__text-skip" onClick={() => advance(null)}>Пропустить</button>
+            }
           </div>
         )}
 
@@ -494,11 +492,10 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             >
               Продолжить →
             </button>
-            {editMode && (
-              <button className="checkin-flow__keep-btn" onClick={skipStep}>
-                Оставить →
-              </button>
-            )}
+            {editMode
+              ? <button className="checkin-flow__keep-btn" onClick={skipStep}>Оставить →</button>
+              : <button className="checkin-flow__text-skip" onClick={() => advance(null)}>Пропустить</button>
+            }
           </div>
         )}
 
@@ -582,11 +579,10 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
               </button>
             ))}
           </div>
-          {editMode && (
-            <button className="checkin-flow__keep-btn" onClick={skipStep}>
-              Оставить →
-            </button>
-          )}
+          {editMode
+            ? <button className="checkin-flow__keep-btn" onClick={skipStep}>Оставить →</button>
+            : <button className="checkin-flow__text-skip" style={{ marginTop: 8 }} onClick={() => advance(null)}>Пропустить</button>
+          }
           </div>
         )}
 

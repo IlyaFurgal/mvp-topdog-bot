@@ -98,6 +98,7 @@ export default function AiPage() {
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
+  const [copiedId, setCopiedId] = useState(null)
 
   // ── Voice recording state ────────────────────────────
   const [recording, setRecording] = useState(false)
@@ -154,6 +155,12 @@ export default function AiPage() {
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Helpers ──────────────────────────────────────────
+  function handleCopy(id, text) {
+    navigator.clipboard?.writeText(text).catch(() => {})
+    setCopiedId(id)
+    setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1500)
+  }
+
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
@@ -503,6 +510,15 @@ export default function AiPage() {
                 msg.from === 'ai'
                   ? <ReactMarkdown>{msg.text}</ReactMarkdown>
                   : <span>{msg.text}</span>
+              )}
+              {msg.from === 'ai' && msg.text && (
+                <button
+                  className="ai-msg__copy"
+                  onClick={() => handleCopy(msg.id, msg.text)}
+                  title="Копировать"
+                >
+                  {copiedId === msg.id ? '✓' : '⎘'}
+                </button>
               )}
             </div>
             {msg.status === 'failed' && (
