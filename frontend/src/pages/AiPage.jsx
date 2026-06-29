@@ -99,6 +99,7 @@ export default function AiPage() {
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
   const [copiedId, setCopiedId] = useState(null)
+  const [attachOpen, setAttachOpen] = useState(false)
 
   // ── Voice recording state ────────────────────────────
   const [recording, setRecording] = useState(false)
@@ -108,7 +109,9 @@ export default function AiPage() {
   // ── Refs ─────────────────────────────────────────────
   const bottomRef         = useRef(null)
   const pollRef           = useRef(null)
-  const fileInputRef      = useRef(null)
+  const fileInputRef      = useRef(null)   // ФАЙЛЫ (image + pdf)
+  const cameraInputRef    = useRef(null)   // КАМЕРА (capture)
+  const photoInputRef     = useRef(null)   // ФОТО (gallery)
   const textareaRef       = useRef(null)
   const mediaRecorderRef  = useRef(null)
   const audioChunksRef    = useRef([])
@@ -153,6 +156,15 @@ export default function AiPage() {
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
     }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close attach menu on outside click (listener attached only while open,
+  // so the opening click itself never triggers it)
+  useEffect(() => {
+    if (!attachOpen) return
+    const close = () => setAttachOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [attachOpen])
 
   // ── Helpers ──────────────────────────────────────────
   function handleCopy(id, text) {
@@ -493,7 +505,10 @@ export default function AiPage() {
   return (
     <div className="ai-page">
       <div className="ai-header">
-        <h1 className="page-title" style={{ margin: 0 }}>ИИ-АССИСТЕНТ</h1>
+        <h1 className="screen-title" style={{ margin: 0 }}>ЧАТ</h1>
+      </div>
+      <div className="mvp-ribbon">
+        {Array.from({ length: 8 }, (_, i) => <span key={i}>MVP BY TOP DOG</span>)}
       </div>
 
       <div className="ai-messages">
@@ -578,6 +593,22 @@ export default function AiPage() {
         </div>
       ) : (
         <div className="ai-input-bar">
+          {/* three hidden file inputs — all reuse the existing handleFileChange */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -585,14 +616,51 @@ export default function AiPage() {
             style={{ display: 'none' }}
             onChange={handleFileChange}
           />
+
+          {attachOpen && (
+            <div className="ai-attach-menu">
+              <button
+                className="ai-attach-menu__item"
+                onClick={() => { setAttachOpen(false); cameraInputRef.current?.click() }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span>КАМЕРА</span>
+              </button>
+              <button
+                className="ai-attach-menu__item"
+                onClick={() => { setAttachOpen(false); photoInputRef.current?.click() }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+                <span>ФОТО</span>
+              </button>
+              <button
+                className="ai-attach-menu__item"
+                onClick={() => { setAttachOpen(false); fileInputRef.current?.click() }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                <span>ФАЙЛЫ</span>
+              </button>
+            </div>
+          )}
+
           <button
             className="ai-attach"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setAttachOpen((v) => !v)}
             disabled={typing}
-            title="Прикрепить файл"
+            title="Прикрепить"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
           <button
@@ -611,14 +679,17 @@ export default function AiPage() {
           <textarea
             ref={textareaRef}
             className="ai-input"
-            placeholder="Напиши вопрос..."
+            placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKey}
             onPaste={handlePaste}
           />
           <button className="ai-send" onClick={handleSend} disabled={!canSend}>
-            →
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5" />
+              <polyline points="5 12 12 5 19 12" />
+            </svg>
           </button>
         </div>
       )}
