@@ -1666,8 +1666,8 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    radial-gradient(120% 80% at 70% 20%, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 45%),
-    linear-gradient(135deg, #1a1a1a 0%, #111111 40%, #0d0d0d 100%);
+    radial-gradient(130% 90% at 75% 15%, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 50%),
+    linear-gradient(135deg, #222 0%, #141414 45%, #0c0c0c 100%);
 }
 
 .ai-header {
@@ -1719,12 +1719,12 @@ html, body {
 }
 
 .ai-msg__bubble {
-  max-width: 78%;
+  max-width: 82%;
   padding: 12px 14px;
   border-radius: 12px;
-  font-size: 0.95rem;
-  line-height: 1.45;
-  letter-spacing: 0.02em;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
 }
 
 .ai-msg--ai .ai-msg__bubble {
@@ -2102,7 +2102,7 @@ html, body {
   line-height: 1.5;
   padding: 12px 14px;
   resize: none;
-  min-height: 96px;
+  min-height: 48px;
   max-height: 120px;
   overflow-y: auto;
   transition: min-height 0.15s ease;
@@ -2111,7 +2111,7 @@ html, body {
 .ai-input:focus {
   outline: none;
   border-color: var(--accent);
-  min-height: 120px;
+  min-height: 60px;
 }
 
 .ai-send {
@@ -3183,18 +3183,37 @@ select optgroup {
 
 .mvp-ribbon {
   background: var(--accent);
-  color: var(--accent-text);
   overflow: hidden;
   white-space: nowrap;
-  padding: 4px 0;
-  transform: rotate(-0.6deg);
+  padding: 6px 0;
+  transform: rotate(-0.4deg);
+  display: flex;
+  align-items: center;
 }
 
-.mvp-ribbon span {
-  display: inline-block;
+.mvp-ribbon__unit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-right: 22px;
+  flex-shrink: 0;
+}
+
+.mvp-ribbon__unit b {
   font-style: italic;
   font-weight: 900;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  padding: 0 12px;
+  font-size: 1.15rem;
+  color: var(--accent-text);
+  letter-spacing: -0.02em;
+}
+
+.mvp-ribbon__unit i {
+  font-style: italic;
+  font-weight: 800;
+  font-size: 0.6rem;
+  color: var(--accent-text);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 2px double var(--accent-text);
+  padding-bottom: 1px;
 }

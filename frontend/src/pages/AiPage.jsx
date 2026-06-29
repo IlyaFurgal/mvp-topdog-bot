@@ -157,13 +157,17 @@ export default function AiPage() {
     }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close attach menu on outside click (listener attached only while open,
-  // so the opening click itself never triggers it)
+  // Close attach menu on outside click
   useEffect(() => {
     if (!attachOpen) return
-    const close = () => setAttachOpen(false)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    const close = (e) => {
+      // не закрывать, если клик по кнопке-триггеру или внутри меню
+      if (e.target.closest?.('.ai-attach') || e.target.closest?.('.ai-attach-menu')) return
+      setAttachOpen(false)
+    }
+    // вешаем на следующий тик, чтобы текущий клик-открытие не долетел до listener'а
+    const id = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(id); document.removeEventListener('click', close) }
   }, [attachOpen])
 
   // ── Helpers ──────────────────────────────────────────
@@ -508,7 +512,11 @@ export default function AiPage() {
         <h1 className="screen-title" style={{ margin: 0 }}>ЧАТ</h1>
       </div>
       <div className="mvp-ribbon">
-        {Array.from({ length: 8 }, (_, i) => <span key={i}>MVP BY TOP DOG</span>)}
+        {Array.from({ length: 7 }, (_, i) => (
+          <span key={i} className="mvp-ribbon__unit">
+            <b>MVP</b><i>BY TOP DOG</i>
+          </span>
+        ))}
       </div>
 
       <div className="ai-messages">
@@ -663,6 +671,15 @@ export default function AiPage() {
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
+          <textarea
+            ref={textareaRef}
+            className="ai-input"
+            placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
+            value={input}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKey}
+            onPaste={handlePaste}
+          />
           <button
             className="ai-mic"
             onClick={startRecording}
@@ -676,15 +693,6 @@ export default function AiPage() {
               <line x1="8"  y1="22" x2="16" y2="22" />
             </svg>
           </button>
-          <textarea
-            ref={textareaRef}
-            className="ai-input"
-            placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
-            value={input}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKey}
-            onPaste={handlePaste}
-          />
           <button className="ai-send" onClick={handleSend} disabled={!canSend}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="19" x2="12" y2="5" />

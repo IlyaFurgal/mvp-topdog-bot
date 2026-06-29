@@ -629,7 +629,11 @@ export default function ProfilePage() {
       </div>
 
       <div className="mvp-ribbon" style={{ margin: '12px -16px 20px' }}>
-        {Array.from({ length: 8 }, (_, i) => <span key={i}>MVP BY TOP DOG</span>)}
+        {Array.from({ length: 7 }, (_, i) => (
+          <span key={i} className="mvp-ribbon__unit">
+            <b>MVP</b><i>BY TOP DOG</i>
+          </span>
+        ))}
       </div>
 
       <div className="data-row" style={{ alignItems: 'flex-start' }}>
