@@ -15,7 +15,7 @@ from api.services.getcourse import sync_user_to_gc
 from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
-from database.models import AiMessage, Profile, Tracker, TrackerType, User
+from database.models import AiMessage, HealthMetrics, Profile, Tracker, TrackerType, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,13 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 _MEAL_MARKER_RE = re.compile(r'\[\[MEAL:(\{.*?\})\]\]', re.DOTALL)
 _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
 _WEIGHT_MARKER_RE = re.compile(r'\[\[WEIGHT:(\{.*?\})\]\]', re.DOTALL)
+_WATER_MARKER_RE = re.compile(r'\[\[WATER:(\{.*?\})\]\]', re.DOTALL)
+_SLEEP_MARKER_RE = re.compile(r'\[\[SLEEP:(\{.*?\})\]\]', re.DOTALL)
+_HEALTH_METRICS_MARKER_RE = re.compile(r'\[\[HEALTH_METRICS:(\{.*?\})\]\]', re.DOTALL)
+_HEALTH_METRICS_FIELDS = frozenset({
+    "bmr", "bmi", "muscle_mass_kg", "fat_mass_kg",
+    "visceral_fat", "metabolic_age", "body_fat_pct",
+})
 
 # ── RISK marker protocol ──────────────────────────────────────────────────────
 _RISK_MARKER_RE = re.compile(r'\[\[RISK\]\]', re.IGNORECASE)
@@ -105,6 +112,90 @@ def _parse_weight_marker(text: str) -> tuple[str, float | None]:
     cleaned = _WEIGHT_MARKER_RE.sub(_handle_match, text)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, weight[0] if weight else None
+
+
+def _parse_water_marker(text: str) -> tuple[str, float | None]:
+    """
+    Extract first valid [[WATER:{"value_ml": N}]] marker from text.
+    Valid range: 50–5000 ml. Marker is always removed from visible text.
+    """
+    water: list[float] = []
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            val = payload.get("value_ml")
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"non-numeric value_ml: {val!r}")
+            val_f = float(val)
+            if not (50 <= val_f <= 5000):
+                raise ValueError(f"out of range: {val_f}")
+            if not water:
+                water.append(round(val_f, 0))
+        except Exception as exc:
+            logger.warning("Suvvy water marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""
+
+    cleaned = _WATER_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, water[0] if water else None
+
+
+def _parse_sleep_marker(text: str) -> tuple[str, float | None]:
+    """
+    Extract first valid [[SLEEP:{"hours": N}]] marker from text.
+    Valid range: 0–24 h. Marker is always removed from visible text.
+    """
+    sleep: list[float] = []
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            val = payload.get("hours")
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"non-numeric hours: {val!r}")
+            val_f = float(val)
+            if not (0 <= val_f <= 24):
+                raise ValueError(f"out of range: {val_f}")
+            if not sleep:
+                sleep.append(round(val_f, 1))
+        except Exception as exc:
+            logger.warning("Suvvy sleep marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""
+
+    cleaned = _SLEEP_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, sleep[0] if sleep else None
+
+
+def _parse_health_metrics_marker(text: str) -> tuple[str, dict | None]:
+    """
+    Extract first [[HEALTH_METRICS:{...}]] marker from text.
+    Accepted fields: bmr, bmi, muscle_mass_kg, fat_mass_kg, visceral_fat,
+    metabolic_age, body_fat_pct — all optional, all must be numeric.
+    Invalid JSON → warning; marker is always stripped.
+    """
+    hm: list[dict] = []
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            result: dict[str, float] = {}
+            for field in _HEALTH_METRICS_FIELDS:
+                val = payload.get(field)
+                if val is not None:
+                    if not isinstance(val, (int, float)):
+                        raise ValueError(f"non-numeric {field}: {val!r}")
+                    result[field] = float(val)
+            if result and not hm:
+                hm.append(result)
+        except Exception as exc:
+            logger.warning("Suvvy health_metrics marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""
+
+    cleaned = _HEALTH_METRICS_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, hm[0] if hm else None
 
 
 def _meal_type_by_time(profile) -> str:
@@ -277,76 +368,37 @@ def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
 # ── GetCourse webhook ─────────────────────────────────────────────────────────
 
 @router.post("/getcourse")
-async def getcourse_webhook(
-    email: str = Form(...),
-    offer_code: str = Form(...),
-    finish_at: str = Form(default=None),
-    event: str = Form(...),
-    session: AsyncSession = Depends(get_session),
-):
-    """
-    Webhook from GetCourse. Called on payment or refund.
-    Finds user by email and updates their subscription.
-    """
-    result = await session.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+async def getcourse_webhook(request: Request):  # noqa: no session — diagnostic only
+    # TODO: убрать после диагностики формата GC
+    raw_body = await request.body()
+    logger.warning(
+        "GC_WEBHOOK_RAW headers=%s body=%s",
+        dict(request.headers),
+        raw_body.decode("utf-8", errors="replace"),
+    )
+    content_type = request.headers.get("content-type", "")
+    if "form" in content_type:
+        form = await request.form()
+        logger.warning("GC_WEBHOOK_FORM %s", dict(form))
+    elif "json" in content_type:
+        try:
+            logger.warning("GC_WEBHOOK_JSON %s", await request.json())
+        except Exception:
+            pass
 
-    if not user:
-        logger.warning("GC webhook: user not found for email=%s", email)
-        return {"status": "ok", "message": "user not found"}
-
-    if event == "payment":
-        sub_type, period_days = _resolve_offer(offer_code)
-
-        if sub_type is None:
-            logger.warning(
-                "GC webhook: unknown offer_code=%s for email=%s, defaulting to plus/30d",
-                offer_code, email,
-            )
-            sub_type, period_days = "plus", 30
-
-        # Determine period label for DB
-        period_label = "biannual" if period_days >= 180 else "monthly"
-
-        # Parse finish_at from GC if provided; otherwise compute from period_days
-        expires: datetime | None = None
-        if finish_at:
-            try:
-                expires = datetime.fromisoformat(finish_at).replace(tzinfo=timezone.utc)
-            except ValueError:
-                logger.warning("GC webhook: cannot parse finish_at=%s", finish_at)
-
-        from datetime import timedelta
-        if expires is None:
-            expires = datetime.now(timezone.utc) + timedelta(days=period_days)
-
-        user.subscription_type = sub_type
-        user.subscription_active = "active"
-        user.subscription_period = period_label
-        user.subscription_expires_at = expires
-        logger.info(
-            "GC webhook: activated %s (%s) for user %s (email=%s)",
-            sub_type, period_label, user.telegram_id, email,
-        )
-        await session.commit()
-
-        # Send welcome message via bot
-        await _send_payment_welcome(user.telegram_id, sub_type)
-
-        # Sync to GetCourse (fire-and-forget — errors go to log only)
-        await _sync_new_subscriber(user, sub_type, session)
-
-    elif event == "refund":
-        user.subscription_active = "inactive"
-        user.subscription_type = None
-        user.subscription_expires_at = None
-        logger.info("GC webhook: refund — deactivated subscription for user %s", user.telegram_id)
-        await session.commit()
-
-        await _send_refund_notice(user.telegram_id)
-
-    else:
-        logger.warning("GC webhook: unknown event=%s", event)
+    # --- старая бизнес-логика (матчинг по email) закомментирована до
+    #     выяснения реального формата полей, которые шлёт GetCourse ---
+    #
+    # result = await session.execute(select(User).where(User.email == email))
+    # user = result.scalar_one_or_none()
+    # if not user:
+    #     logger.warning("GC webhook: user not found for email=%s", email)
+    #     return {"status": "ok", "message": "user not found"}
+    # if event == "payment":
+    #     sub_type, period_days = _resolve_offer(offer_code)
+    #     ...  (активация подписки, welcome-push, sync_to_gc)
+    # elif event == "refund":
+    #     ...  (деактивация, refund-push)
 
     return {"status": "ok"}
 
@@ -470,17 +522,29 @@ async def suvvy_webhook(
         _RISK_REWRITES.pop(chat_id, None)
         return {"status": "ok"}
 
-    # ── Parse [[MEAL:...]] and [[WEIGHT:...]] markers ─────────────────────────
+    # ── Parse all AI markers ──────────────────────────────────────────────────
     cleaned_texts: list[str] = []
     all_meals: list[dict] = []
     weight_kg: float | None = None
+    water_ml: float | None = None
+    sleep_h: float | None = None
+    health_metrics_data: dict | None = None
     for raw_text in texts:
         cleaned, meals = _parse_meal_markers(raw_text)
         cleaned, w = _parse_weight_marker(cleaned)
+        cleaned, wm = _parse_water_marker(cleaned)
+        cleaned, sl = _parse_sleep_marker(cleaned)
+        cleaned, hm = _parse_health_metrics_marker(cleaned)
         cleaned_texts.append(cleaned)   # may be empty string if text was only a marker
         all_meals.extend(meals)
         if w is not None and weight_kg is None:
             weight_kg = w
+        if wm is not None and water_ml is None:
+            water_ml = wm
+        if sl is not None and sleep_h is None:
+            sleep_h = sl
+        if hm is not None and health_metrics_data is None:
+            health_metrics_data = hm
 
     # ── Detect and handle [[RISK]] marker ─────────────────────────────────────
     risk_texts: list[str] = []
@@ -554,6 +618,48 @@ async def suvvy_webhook(
                     unit="kg",
                 ))
                 logger.info("Weight logged via marker: user=%s weight=%.1f", chat_id, weight_kg)
+
+        # Water tracker from [[WATER:]] marker (additive — sum over the day)
+        if water_ml is not None:
+            session.add(Tracker(
+                user_id=user.id,
+                type=TrackerType.water,
+                value=water_ml,
+                unit="ml",
+            ))
+            logger.info("Water logged via marker: user=%s ml=%.0f", chat_id, water_ml)
+
+        # Sleep tracker from [[SLEEP:]] marker (upsert today's entry)
+        if sleep_h is not None:
+            today = datetime.now(timezone.utc).date()
+            existing_sleep = (await session.execute(
+                select(Tracker).where(
+                    and_(
+                        Tracker.user_id == user.id,
+                        Tracker.type == TrackerType.sleep,
+                        func.date(Tracker.created_at) == today,
+                    )
+                ).limit(1)
+            )).scalar_one_or_none()
+            if existing_sleep:
+                existing_sleep.value = sleep_h
+                logger.info("Sleep updated via marker: user=%s hours=%.1f", chat_id, sleep_h)
+            else:
+                session.add(Tracker(
+                    user_id=user.id,
+                    type=TrackerType.sleep,
+                    value=sleep_h,
+                    unit="h",
+                ))
+                logger.info("Sleep logged via marker: user=%s hours=%.1f", chat_id, sleep_h)
+
+        # HealthMetrics snapshot from [[HEALTH_METRICS:]] marker
+        if health_metrics_data is not None:
+            session.add(HealthMetrics(user_id=user.id, **health_metrics_data))
+            logger.info(
+                "HealthMetrics logged via marker: user=%s fields=%s",
+                chat_id, sorted(health_metrics_data.keys()),
+            )
 
         await session.commit()
         schedule_fold(user.id)

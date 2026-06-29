@@ -26,10 +26,13 @@ Placeholders returned by build_ai_context():
     cardio_trends    — "бег: 42.0 км за месяц, темп 5:30→5:10 /км"        | ""
     weight_trend     — "вес 84.0→82.5 кг (−1.5 за месяц)"                 | ""
 
+  Body composition (latest [[HEALTH_METRICS:]] snapshot):
+    health_metrics   — "БОМ: 1650 ккал, ИМТ: 23.4, мышечная масса: 58.2 кг, ..." | ""
+
 Methodologist: add {{tracker_weight}}, {{tracker_sleep}},
 {{tracker_water_today}}, {{tracker_calories_today}}, {{progress_week}},
 {{dialog_summary}}, {{workouts_month}}, {{strength_trends}},
-{{cardio_trends}}, {{weight_trend}} to Suvvy specialist system prompts.
+{{cardio_trends}}, {{weight_trend}}, {{health_metrics}} to Suvvy specialist system prompts.
 """
 import logging
 from collections import defaultdict
@@ -40,7 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import (
     Checkin, CheckinType, ConversationSummary,
-    Profile, Tracker, TrackerType, User,
+    HealthMetrics, Profile, Tracker, TrackerType, User,
     Workout, WorkoutCategory, WorkoutEntry, WorkoutItem, WorkoutMetricType,
 )
 
@@ -396,6 +399,35 @@ async def _weight_trend_str(session: AsyncSession, user_id: int) -> str:
     return f"вес {first_rec.value:g}→{last_rec.value:g} кг ({sign}{abs(delta):.1f} за месяц)"
 
 
+async def _health_metrics_str(session: AsyncSession, user_id: int) -> str:
+    """Format the latest HealthMetrics snapshot as a human-readable prompt string."""
+    result = await session.execute(
+        select(HealthMetrics)
+        .where(HealthMetrics.user_id == user_id)
+        .order_by(HealthMetrics.recorded_at.desc())
+        .limit(1)
+    )
+    hm = result.scalar_one_or_none()
+    if not hm:
+        return ""
+    parts: list[str] = []
+    if hm.bmr is not None:
+        parts.append(f"БОМ: {hm.bmr:g} ккал")
+    if hm.bmi is not None:
+        parts.append(f"ИМТ: {hm.bmi:g}")
+    if hm.muscle_mass_kg is not None:
+        parts.append(f"мышечная масса: {hm.muscle_mass_kg:g} кг")
+    if hm.fat_mass_kg is not None:
+        parts.append(f"жировая масса: {hm.fat_mass_kg:g} кг")
+    if hm.visceral_fat is not None:
+        parts.append(f"висцеральный жир: {hm.visceral_fat:g}")
+    if hm.metabolic_age is not None:
+        parts.append(f"метаболический возраст: {hm.metabolic_age:g} лет")
+    if hm.body_fat_pct is not None:
+        parts.append(f"% жира: {hm.body_fat_pct:g}%")
+    return ", ".join(parts)
+
+
 async def _dialog_summary_str(session: AsyncSession, user_id: int) -> str:
     result = await session.execute(
         select(ConversationSummary)
@@ -455,5 +487,6 @@ async def build_ai_context(session: AsyncSession, user: User) -> dict:
     placeholders["strength_trends"] = await _strength_trends_str(session, user.id)
     placeholders["cardio_trends"]   = await _cardio_trends_str(session, user.id)
     placeholders["weight_trend"]    = await _weight_trend_str(session, user.id)
+    placeholders["health_metrics"]  = await _health_metrics_str(session, user.id)
 
     return placeholders

@@ -287,3 +287,21 @@ class PromoActivation(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     activated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class HealthMetrics(Base):
+    """Body composition snapshot written by the AI via [[HEALTH_METRICS:...]] marker."""
+    __tablename__ = "health_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    bmr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    muscle_mass_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fat_mass_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    visceral_fat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    metabolic_age: Mapped[float | None] = mapped_column(Float, nullable=True)
+    body_fat_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
