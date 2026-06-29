@@ -580,7 +580,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page" style={{ position: 'relative' }}>
-      <h1 className="page-title">ПРОФИЛЬ</h1>
+      <h1 className="screen-title">ПРОФИЛЬ</h1>
       <button
         onClick={() => setEditOpen(true)}
         style={{
@@ -628,80 +628,84 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="profile-row" style={{ alignItems: 'flex-start' }}>
-          <span className="profile-label" style={{ paddingTop: 2 }}>ЦЕЛЬ</span>
-          <span className="profile-value" style={{ textAlign: 'right' }}>
-            {goalsDisplay === '—' ? '—' : goalsDisplay.split(', ').map((g) => (
-              <span key={g} style={{ display: 'block' }}>{g}</span>
-            ))}
-          </span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">УРОВЕНЬ</span>
-          <span className="profile-value">{FITNESS_LABELS[profile?.fitness_level] ?? '—'}</span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ВИД СПОРТА</span>
-          <span className="profile-value">{profile?.sport_type ?? '—'}</span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ТОН ОБЩЕНИЯ</span>
-          <span className="profile-value">
-            {profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}
-          </span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ЧАСОВОЙ ПОЯС</span>
-          <span className="profile-value" style={{ fontSize: '0.85rem' }}>{profile?.timezone ?? '—'}</span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">УТРО</span>
-          <span className="profile-value">{profile?.morning_reminder_time ?? '08:00'}</span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ВЕЧЕР</span>
-          <span className="profile-value">{profile?.evening_reminder_time ?? '21:00'}</span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ПУШИ</span>
-          <span className="profile-value">
-            {profile?.notifications_enabled === false ? '🔕 выкл' : '🔔 вкл'}
-          </span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ВЕС (старт)</span>
-          <span className="profile-value">
-            {profile?.weight != null ? `${profile.weight} кг` : '—'}
-          </span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">РОСТ</span>
-          <span className="profile-value">
-            {profile?.height != null ? `${profile.height} см` : '—'}
-          </span>
-        </div>
-        <div className="profile-row">
-          <span className="profile-label">ТАРИФ</span>
-          <SubInfo type={subscriptionType} period={subscriptionPeriod} />
-        </div>
-
-        {profile?.additional_info && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <p className="profile-label" style={{ marginBottom: 6 }}>О СЕБЕ</p>
-            <p className="profile-value" style={{ textAlign: 'left', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-              {profile.additional_info}
-            </p>
-          </div>
-        )}
+      <div className="mvp-ribbon" style={{ margin: '12px -16px 20px' }}>
+        {Array.from({ length: 8 }, (_, i) => <span key={i}>MVP BY TOP DOG</span>)}
       </div>
+
+      <div className="data-row" style={{ alignItems: 'flex-start' }}>
+        <span className="data-row__label">ЦЕЛЬ</span>
+        <span className="data-row__value">
+          {goalsDisplay === '—' ? '—' : goalsDisplay.split(', ').map((g) => (
+            <span key={g} style={{ display: 'block' }}>{g}</span>
+          ))}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">УРОВЕНЬ</span>
+        <span className="data-row__value">{FITNESS_LABELS[profile?.fitness_level] ?? '—'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ВИД СПОРТА</span>
+        <span className="data-row__value">{profile?.sport_type ?? '—'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
+        <span className="data-row__value">
+          {profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
+        <span className="data-row__value" style={{ fontSize: '0.85rem' }}>{profile?.timezone ?? '—'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">УТРО</span>
+        <span className="data-row__value">{profile?.morning_reminder_time ?? '08:00'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ВЕЧЕР</span>
+        <span className="data-row__value">{profile?.evening_reminder_time ?? '21:00'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ПУШИ</span>
+        <span className="data-row__value">
+          {profile?.notifications_enabled === false ? '🔕 выкл' : '🔔 вкл'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ВЕС (старт)</span>
+        <span className="data-row__value">
+          {profile?.weight != null ? `${profile.weight} кг` : '—'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">РОСТ</span>
+        <span className="data-row__value">
+          {profile?.height != null ? `${profile.height} см` : '—'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ТАРИФ</span>
+        <span className="data-row__value">
+          <SubInfo type={subscriptionType} period={subscriptionPeriod} />
+        </span>
+      </div>
+
+      {profile?.additional_info && (
+        <div className="data-row" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
+          <span className="data-row__label">О СЕБЕ</span>
+          <span className="data-row__value" style={{ textAlign: 'left', whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.9rem', fontStyle: 'normal', fontWeight: 600 }}>
+            {profile.additional_info}
+          </span>
+        </div>
+      )}
 
       {subscriptionType === 'plus' && (
         <a
           href={PRO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-accent"
+          className="btn btn-accent clip-skew"
           style={{ textDecoration: 'none', textAlign: 'center' }}
           onClick={() => trackUpgradeIntent()}
         >
@@ -713,7 +717,7 @@ export default function ProfilePage() {
         href={SUPPORT_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-support"
+        className="btn btn-support clip-skew"
       >
         ПОДДЕРЖКА
       </a>
