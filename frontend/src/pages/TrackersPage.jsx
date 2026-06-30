@@ -6,6 +6,7 @@ import CheckinFlow from '../components/CheckinFlow'
 import TrackerModal from '../components/TrackerModal'
 import TrackerRow from '../components/TrackerRow'
 import WorkoutBlock from '../components/WorkoutBlock'
+import SavedProgramsBlock from '../components/SavedProgramsBlock'
 import { useProfile } from '../context/ProfileContext'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
@@ -160,6 +161,9 @@ export default function TrackersPage() {
           {/* Тренировки */}
           <p className="section-label">ТРЕНИРОВКИ</p>
           <WorkoutBlock />
+
+          <p className="section-label">СОХРАНЁННЫЕ ПРОГРАММЫ</p>
+          <SavedProgramsBlock />
         </>
       )}
 

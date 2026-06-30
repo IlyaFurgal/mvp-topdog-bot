@@ -2547,6 +2547,14 @@ html, body {
   color: var(--accent);
 }
 
+.wo-item__full-text {
+  padding: 8px 16px 12px;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 /* ── WorkoutModal ─────────────────────────────────────────── */
 
 .workout-modal {
