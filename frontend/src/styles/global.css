@@ -1666,8 +1666,8 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    linear-gradient(125deg, transparent 20%, rgba(255,255,255,0.13) 38%, rgba(255,255,255,0.06) 45%, transparent 58%),
-    linear-gradient(125deg, transparent 48%, rgba(255,255,255,0.08) 60%, rgba(255,255,255,0.04) 65%, transparent 75%),
+    linear-gradient(140deg, transparent 15%, rgba(255,255,255,0.11) 32%, rgba(255,255,255,0.05) 42%, transparent 56%),
+    linear-gradient(220deg, transparent 15%, rgba(255,255,255,0.09) 32%, rgba(255,255,255,0.04) 42%, transparent 56%),
     #090909;
 }
 
@@ -2055,7 +2055,7 @@ html, body {
   gap: 0;
   background: transparent;
   padding: 4px 0 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: none;
 }
 
 .ai-attach-menu__item {
