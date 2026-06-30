@@ -2220,6 +2220,79 @@ html, body {
   color: var(--text-muted);
 }
 
+/* ── Club page ────────────────────────────────────────── */
+
+.club-page {
+  min-height: calc(100vh - var(--nav-height));
+  background:
+    radial-gradient(ellipse 75% 38% at 82% 18%, rgba(255,255,255,0.14) 0%, transparent 70%),
+    linear-gradient(162deg, transparent 44%, rgba(255,255,255,0.10) 57%, rgba(255,255,255,0.05) 63%, transparent 74%),
+    linear-gradient(198deg, transparent 44%, rgba(255,255,255,0.08) 57%, rgba(255,255,255,0.04) 63%, transparent 74%),
+    #090909;
+}
+
+.club-back {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.club-back:active { color: var(--text); }
+
+.club-card {
+  display: block;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 18px 0;
+  margin-bottom: 16px;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.club-card:active { opacity: 0.85; }
+
+.club-card__title {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+
+.club-card__sub {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 2px 0 14px;
+}
+
+.club-card__art {
+  display: block;
+  height: 110px;
+  margin: 0 -1px -1px;
+  clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+  background:
+    linear-gradient(135deg, transparent 35%, rgba(255,255,255,0.10) 50%, transparent 65%),
+    linear-gradient(160deg, #2c2c2c 0%, #141414 100%);
+}
+
 /* ── Locked pages ─────────────────────────────────────── */
 
 .locked-page {

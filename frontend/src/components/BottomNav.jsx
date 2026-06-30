@@ -4,9 +4,8 @@ const tabs = [
   { path: '/ai',        label: 'ЧАТ'     },
   { path: '/trackers',  label: 'ТРЕКЕР'  },
   { path: '/progress',  label: 'ПРОГРЕСС' },
-  { path: '/knowledge', label: 'БАЗА'     },
-  { path: '/residents', label: 'КОМЬЮНИТИ' },
   { path: '/profile',   label: 'ПРОФИЛЬ'  },
+  { path: '/club',      label: 'КЛУБ'     },
 ]
 
 export default function BottomNav() {

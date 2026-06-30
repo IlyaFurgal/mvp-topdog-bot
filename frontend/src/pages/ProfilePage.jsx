@@ -108,7 +108,6 @@ function SubInfo({ type, period }) {
   )
 }
 
-const SUPPORT_URL = import.meta.env.VITE_SUPPORT_TG_URL || 'https://t.me/topdog_support'
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
@@ -716,15 +715,6 @@ export default function ProfilePage() {
           УЛУЧШИТЬ ДО PRO
         </a>
       )}
-
-      <a
-        href={SUPPORT_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn btn-support clip-skew"
-      >
-        ПОДДЕРЖКА
-      </a>
 
       {editOpen && (
         <EditProfileModal

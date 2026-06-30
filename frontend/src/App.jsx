@@ -12,9 +12,8 @@ import { useTelegram } from './hooks/useTelegram'
 import ProfilePage from './pages/ProfilePage'   // стартовая страница — статический импорт
 
 const AiPage            = lazyWithRetry(() => import('./pages/AiPage'))
-const KnowledgePage     = lazyWithRetry(() => import('./pages/KnowledgePage'))
+const ClubPage          = lazyWithRetry(() => import('./pages/ClubPage'))
 const ProgressPage      = lazyWithRetry(() => import('./pages/ProgressPage'))
-const ResidentsChatPage = lazyWithRetry(() => import('./pages/ResidentsChatPage'))
 const TrackersPage      = lazyWithRetry(() => import('./pages/TrackersPage'))
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
@@ -155,9 +154,8 @@ function AppContent() {
               <Route path="/ai"        element={<AiPage />} />
               <Route path="/trackers"  element={<TrackersPage />} />
               <Route path="/progress"  element={<ProgressPage />} />
-              <Route path="/knowledge" element={<KnowledgePage />} />
-              <Route path="/residents" element={<ResidentsChatPage />} />
               <Route path="/profile"   element={<ProfilePage />} />
+              <Route path="/club"      element={<ClubPage />} />
             </Routes>
           </Suspense>
         </SwipeNavigator>
