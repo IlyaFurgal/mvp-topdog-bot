@@ -516,11 +516,8 @@ export default function AiPage() {
   // ── Render ────────────────────────────────────────────
   return (
     <div className="ai-page">
-      <div className="ai-header">
-        <h1 className="screen-title screen-title--lime" style={{ margin: 0 }}>ЧАТ</h1>
-      </div>
       <div className="mvp-ribbon">
-        {Array.from({ length: 14 }, (_, i) => (
+        {Array.from({ length: 6 }, (_, i) => (
           <span key={i} className="mvp-ribbon__unit">
             <b>MVP</b><i>BY TOP DOG</i>
           </span>
@@ -669,74 +666,82 @@ export default function AiPage() {
                 className="ai-attach-menu__item"
                 onClick={() => { setAttachOpen(false); cameraInputRef.current?.click() }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
+                <span className="ai-attach-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </span>
                 <span>КАМЕРА</span>
               </button>
               <button
                 className="ai-attach-menu__item"
                 onClick={() => { setAttachOpen(false); photoInputRef.current?.click() }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <path d="M21 15l-5-5L5 21" />
-                </svg>
+                <span className="ai-attach-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                </span>
                 <span>ФОТО</span>
               </button>
               <button
                 className="ai-attach-menu__item"
                 onClick={() => { setAttachOpen(false); fileInputRef.current?.click() }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
+                <span className="ai-attach-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </span>
                 <span>ФАЙЛЫ</span>
               </button>
             </div>
           )}
 
-          <button
-            className="ai-attach"
-            onClick={() => setAttachOpen((v) => !v)}
-            disabled={typing}
-            title="Прикрепить"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-          <textarea
-            ref={textareaRef}
-            className="ai-input"
-            placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
-            value={input}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKey}
-            onPaste={handlePaste}
-          />
-          <button
-            className="ai-mic"
-            onClick={startRecording}
-            disabled={typing}
-            title="Записать голосовое"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="2" width="6" height="12" rx="3" />
-              <path d="M19 10a7 7 0 0 1-14 0" />
-              <line x1="12" y1="19" x2="12" y2="22" />
-              <line x1="8"  y1="22" x2="16" y2="22" />
-            </svg>
-          </button>
-          <button className="ai-send" onClick={handleSend} disabled={!canSend}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="19" x2="12" y2="5" />
-              <polyline points="5 12 12 5 19 12" />
-            </svg>
-          </button>
+          <div className="ai-input-bar__inner">
+            <button
+              className="ai-attach"
+              onClick={() => setAttachOpen((v) => !v)}
+              disabled={typing}
+              title="Прикрепить"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <textarea
+              ref={textareaRef}
+              className="ai-input"
+              placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
+              value={input}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKey}
+              onPaste={handlePaste}
+            />
+            <button
+              className="ai-mic"
+              onClick={startRecording}
+              disabled={typing}
+              title="Записать голосовое"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M19 10a7 7 0 0 1-14 0" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="8"  y1="22" x2="16" y2="22" />
+              </svg>
+            </button>
+            <button className="ai-send" onClick={handleSend} disabled={!canSend}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>

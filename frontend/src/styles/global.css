@@ -1666,10 +1666,9 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 50% at 20% 15%, rgba(255,255,255,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 80% 75%, rgba(255,255,255,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse 90% 60% at 50% 45%, rgba(255,255,255,0.04) 0%, transparent 65%),
-    linear-gradient(145deg, #1c1c1c 0%, #0d0d0d 40%, #080808 100%);
+    radial-gradient(ellipse 70% 45% at 25% 20%, rgba(255,255,255,0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 75% 70%, rgba(255,255,255,0.06) 0%, transparent 50%),
+    linear-gradient(145deg, #282828 0%, #181818 45%, #111 100%);
 }
 
 .ai-header {
@@ -1813,28 +1812,26 @@ html, body {
 /* ── Mic button ───────────────────────────────────────── */
 
 .ai-mic {
-  width: 44px;
-  height: 44px;
-  border-radius: 4px;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .ai-mic:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: default;
 }
 
-.ai-mic:active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.ai-mic:active { opacity: 1; }
 
 /* ── Voice recording bar ──────────────────────────────── */
 
@@ -2031,96 +2028,117 @@ html, body {
 .ai-input-bar {
   position: relative;
   display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  padding: 10px 16px 16px;
-  border-top: 1px solid var(--border);
+  gap: 0;
+  align-items: center;
+  padding: 10px 12px 14px;
   flex-shrink: 0;
+}
+
+.ai-input-bar__inner {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0;
+  background: #1e1e1e;
+  border-radius: 26px;
+  padding: 6px 6px 6px 14px;
+  min-height: 52px;
 }
 
 /* Attachment popup menu */
 .ai-attach-menu {
   position: absolute;
-  bottom: 72px;
-  left: 16px;
+  bottom: 74px;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px;
+  gap: 0;
+  background: transparent;
+  padding: 4px 0;
   z-index: 20;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ai-attach-menu__item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px 10px 12px;
+  gap: 16px;
+  padding: 13px 20px;
   background: transparent;
   border: none;
-  color: var(--text);
+  color: #fff;
   font-family: 'Barlow Condensed', sans-serif;
   font-style: italic;
   font-weight: 800;
-  font-size: 0.95rem;
-  letter-spacing: 0.04em;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 6px;
 }
 
-.ai-attach-menu__item:active { background: var(--surface); }
-.ai-attach-menu__item svg { color: var(--accent); flex-shrink: 0; }
+.ai-attach-menu__item:active { opacity: 0.7; }
 
-/* Attach button */
-.ai-attach {
+.ai-attach-icon {
   width: 44px;
   height: 44px;
-  border-radius: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border-radius: 50%;
+  background: #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+/* Attach button — plain + sign, no separate box */
+.ai-attach {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .ai-attach:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 
-.ai-attach:active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.ai-attach:active { opacity: 1; }
 
 .ai-input {
   flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  background: transparent;
+  border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1rem;
-  line-height: 1.5;
-  padding: 12px 14px;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  padding: 4px 8px;
   resize: none;
-  min-height: 48px;
+  min-height: 28px;
   max-height: 120px;
   overflow-y: auto;
-  transition: min-height 0.15s ease;
 }
 
-.ai-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  min-height: 60px;
+.ai-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
+
+.ai-input:focus { outline: none; }
 
 .ai-send {
   width: 44px;
@@ -2128,7 +2146,7 @@ html, body {
   border-radius: 50%;
   background: var(--accent);
   border: none;
-  color: #000;
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2138,7 +2156,7 @@ html, body {
 
 .ai-send:disabled {
   background: var(--accent);
-  color: #000;
+  color: #fff;
   opacity: 0.35;
   cursor: default;
 }
@@ -3209,38 +3227,40 @@ select optgroup {
   background: var(--accent);
   overflow: hidden;
   white-space: nowrap;
-  padding: 4px 0;
-  transform: rotate(-0.4deg);
+  padding: 5px 0;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .mvp-ribbon__unit {
   display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  margin-right: 10px;
+  align-items: center;
+  gap: 5px;
+  margin-right: 16px;
   flex-shrink: 0;
 }
 
 .mvp-ribbon__unit b {
   font-style: italic;
   font-weight: 900;
-  font-size: 0.8rem;
+  font-size: 1.05rem;
   color: var(--accent-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
 }
 
 .mvp-ribbon__unit i {
   font-style: italic;
   font-weight: 800;
-  font-size: 0.48rem;
+  font-size: 0.58rem;
   color: var(--accent-text);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   border-top: 1px solid var(--accent-text);
   border-bottom: 1px solid var(--accent-text);
   padding: 1px 0;
+  line-height: 1.2;
 }
 
 /* ── AI chat chips ────────────────────────────────────── */
