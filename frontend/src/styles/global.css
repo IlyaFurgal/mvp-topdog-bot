@@ -1666,8 +1666,9 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    linear-gradient(140deg, transparent 15%, rgba(255,255,255,0.11) 32%, rgba(255,255,255,0.05) 42%, transparent 56%),
-    linear-gradient(220deg, transparent 15%, rgba(255,255,255,0.09) 32%, rgba(255,255,255,0.04) 42%, transparent 56%),
+    radial-gradient(ellipse 75% 38% at 82% 18%, rgba(255,255,255,0.14) 0%, transparent 70%),
+    linear-gradient(162deg, transparent 44%, rgba(255,255,255,0.10) 57%, rgba(255,255,255,0.05) 63%, transparent 74%),
+    linear-gradient(198deg, transparent 44%, rgba(255,255,255,0.08) 57%, rgba(255,255,255,0.04) 63%, transparent 74%),
     #090909;
 }
 

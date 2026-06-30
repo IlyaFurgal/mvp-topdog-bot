@@ -159,6 +159,11 @@ export default function AiPage() {
     }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Scroll to bottom when attach menu opens so messages aren't hidden behind it
+  useEffect(() => {
+    if (attachOpen) scrollToBottom()
+  }, [attachOpen])
+
   // Close attach menu on outside click
   useEffect(() => {
     if (!attachOpen) return
