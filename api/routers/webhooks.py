@@ -478,6 +478,7 @@ async def _sync_new_subscriber(user: User, sub_type: str, session: AsyncSession)
 # ── Suvvy AI webhook ──────────────────────────────────────────────────────────
 
 @router.post("/suvvy")
+@router.post("/suvvy/")
 async def suvvy_webhook(
     request: Request,
     session: AsyncSession = Depends(get_session),
