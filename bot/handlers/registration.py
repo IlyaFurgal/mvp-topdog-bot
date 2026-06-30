@@ -18,14 +18,15 @@ from bot.keyboards.inline import (
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
     kb_tone, kb_workout_days, kb_workout_hours,
 )
-from bot.handlers.menu import _user_has_subscription, _webapp_kb
-from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
+from bot.handlers.menu import _plans_kb, _user_has_subscription, _webapp_kb
+from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
+from core.utils.phone import normalize_phone
 from bot.states import RegistrationForm
 from core.config import settings
 from sqlalchemy import select
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
 from database.models import (
-    ActivityLevel, FitnessLevel, Gender, Goal, Profile,
+    ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, Profile,
     PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
 )
 from database.session import AsyncSessionLocal
@@ -254,14 +255,101 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             first_name=message.from_user.first_name,
         )
 
-    await state.set_state(RegistrationForm.greeting)
+    await state.set_state(RegistrationForm.phone_check)
     await message.answer(
         "Привет! 👊\n\n"
-        "Я твой персональный ассистент MVP by TopDog.\n"
-        "Давай настроим твой профиль — это займёт 2 минуты.\n\n"
-        "Чем точнее заполнишь анкету, тем точнее я подберу программу — отвечай честно, потом всё можно поменять в профиле.",
-        reply_markup=kb_start(),
+        "Я твой ИИ-ассистент MVP by TopDog.\n\n"
+        "Чтобы продолжить, подтверди номер телефона, который указывал при оплате — "
+        "это займёт секунду 👇",
+        reply_markup=request_contact_kb(),
     )
+
+
+# ── Проверка телефона по gc_subscriptions ─────────────────────────────────────
+
+@router.message(RegistrationForm.phone_check, F.contact)
+async def contact_handler(message: Message, state: FSMContext) -> None:
+    if message.contact.user_id != message.from_user.id:
+        await message.answer(
+            "Пожалуйста, воспользуйся кнопкой ниже, чтобы поделиться своим номером.",
+            reply_markup=request_contact_kb(),
+        )
+        return
+
+    phone = normalize_phone(message.contact.phone_number)
+    if not phone:
+        await message.answer(
+            "Не удалось распознать номер. Попробуй ещё раз 👇",
+            reply_markup=request_contact_kb(),
+        )
+        return
+
+    support_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💬 Поддержка", url=settings.SUPPORT_TG_URL)
+    ]])
+
+    async with AsyncSessionLocal() as session:
+        sub_result = await session.execute(
+            select(GcSubscription).where(GcSubscription.phone_normalized == phone)
+        )
+        sub = sub_result.scalar_one_or_none()
+
+        if sub is None:
+            await state.clear()
+            await message.answer(
+                "Оплата с этим номером не найдена.\n\n"
+                "Если ты уже оплатил — напиши в поддержку, разберёмся:",
+                reply_markup=support_kb,
+            )
+            await message.answer(
+                "Ещё не оплатил? Выбери тариф 👇",
+                reply_markup=_plans_kb(message.from_user.id),
+            )
+            await message.answer("Главное меню:", reply_markup=freemium_menu_kb())
+            return
+
+        if sub.telegram_id is not None and sub.telegram_id != message.from_user.id:
+            await state.clear()
+            await message.answer(
+                "Эта подписка уже привязана к другому аккаунту.\n"
+                "Если это ошибка — напиши нам:",
+                reply_markup=support_kb,
+            )
+            return
+
+        # Привязать и активировать
+        sub.telegram_id = message.from_user.id
+        user = await get_user_by_telegram_id(session, message.from_user.id)
+        user.subscription_type = sub.tier.value
+        user.subscription_active = "active"
+        user.subscription_expires_at = sub.expires_at
+        user.subscription_status = SubscriptionStatus.premium
+        await session.commit()
+
+        profile_res = await session.execute(
+            select(Profile).where(Profile.user_id == user.id)
+        )
+        has_profile = profile_res.scalar_one_or_none() is not None
+
+    await state.clear()
+
+    if has_profile:
+        # Существующий free-пользователь — показываем приложение
+        await message.answer(
+            "Доступ открыт! 🏆\n\n"
+            "Ты теперь резидент MVP by TopDog. Открывай приложение:",
+            reply_markup=_webapp_kb(),
+        )
+    else:
+        # Новый пользователь — переходим к анкете
+        await state.set_state(RegistrationForm.greeting)
+        await message.answer(
+            "Доступ подтверждён! 🏆\n\n"
+            "Давай настроим профиль — это займёт 2 минуты.\n"
+            "Чем точнее заполнишь, тем точнее подберу программу — отвечай честно, "
+            "потом всё можно поменять в профиле:",
+            reply_markup=kb_start(),
+        )
 
 
 # ── Шаг 0: приветствие → имя ──────────────────────────────────────────────────

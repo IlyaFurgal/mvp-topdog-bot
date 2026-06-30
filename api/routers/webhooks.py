@@ -16,7 +16,7 @@ from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
 from core.utils.phone import normalize_phone
-from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, Tracker, TrackerType, User
+from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -393,6 +393,15 @@ async def getcourse_webhook(
     offer_code = (data.get("offer_id") or data.get("offer_code") or "").strip()
     raw_payed_at = (data.get("payed_at") or "").strip()
 
+    # tg_id — optional, passed via payment URL parameter (Part В)
+    tg_id: int | None = None
+    raw_tg_id = (data.get("tg_id") or "").strip()
+    if raw_tg_id:
+        try:
+            tg_id = int(raw_tg_id)
+        except ValueError:
+            logger.warning("GC webhook: invalid tg_id=%r", raw_tg_id)
+
     phone = normalize_phone(raw_phone)
     if not phone:
         logger.warning("GC webhook: unrecognised phone=%r body=%s", raw_phone, raw_str)
@@ -421,11 +430,18 @@ async def getcourse_webhook(
     if payed_at is None:
         payed_at = datetime.now(timezone.utc)
 
-    # Find or create GcSubscription record
-    result = await session.execute(
-        select(GcSubscription).where(GcSubscription.phone_normalized == phone)
-    )
-    sub = result.scalar_one_or_none()
+    # Find GcSubscription: prefer tg_id lookup when available (proactive push path)
+    sub: GcSubscription | None = None
+    if tg_id:
+        result = await session.execute(
+            select(GcSubscription).where(GcSubscription.telegram_id == tg_id)
+        )
+        sub = result.scalar_one_or_none()
+    if sub is None:
+        result = await session.execute(
+            select(GcSubscription).where(GcSubscription.phone_normalized == phone)
+        )
+        sub = result.scalar_one_or_none()
 
     if event == "payment":
         expires_at = payed_at + timedelta(days=period_days)
@@ -436,6 +452,8 @@ async def getcourse_webhook(
             sub.expires_at = expires_at
             if email:
                 sub.email = email
+            if tg_id and sub.telegram_id is None:
+                sub.telegram_id = tg_id
         else:
             sub = GcSubscription(
                 phone_normalized=phone,
@@ -444,13 +462,28 @@ async def getcourse_webhook(
                 status=GcStatus.active,
                 payed_at=payed_at,
                 expires_at=expires_at,
+                telegram_id=tg_id,
             )
             session.add(sub)
         await session.commit()
-        logger.info("GC payment recorded phone=%s tier=%s expires=%s", phone, tier, expires_at)
+        await session.refresh(sub)
+        logger.info("GC payment recorded phone=%s tier=%s expires=%s tg_id=%s", phone, tier, expires_at, sub.telegram_id)
 
-        if sub.telegram_id:
-            await _send_payment_welcome(sub.telegram_id, tier.value)
+        # Update User subscription fields and send push if telegram_id is known
+        effective_tg_id = sub.telegram_id
+        if effective_tg_id:
+            user_res = await session.execute(
+                select(User).where(User.telegram_id == effective_tg_id)
+            )
+            user = user_res.scalar_one_or_none()
+            if user:
+                user.subscription_type = tier.value
+                user.subscription_active = "active"
+                user.subscription_expires_at = expires_at
+                user.subscription_status = SubscriptionStatus.premium
+                await session.commit()
+                logger.info("GC payment: updated User sub fields for tg_id=%s", effective_tg_id)
+            await _send_payment_welcome(effective_tg_id, tier.value)
 
     elif event == "refund":
         if sub:

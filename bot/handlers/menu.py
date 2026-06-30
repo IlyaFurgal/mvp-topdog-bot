@@ -1,9 +1,11 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
-from bot.keyboards.reply import freemium_menu_kb, main_menu_kb
+from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
+from bot.states import RegistrationForm
 from core.config import settings
 from database.crud import get_user_by_telegram_id
 from database.models import SubscriptionStatus
@@ -22,13 +24,24 @@ def _webapp_kb() -> InlineKeyboardMarkup:
     ]])
 
 
-def _plans_kb() -> InlineKeyboardMarkup:
-    """Inline keyboard with payment links for the two plans."""
+def _plans_kb(tg_id: int | None = None) -> InlineKeyboardMarkup:
+    """Inline keyboard with payment links for the two plans.
+
+    If tg_id is provided, appends ?tg_id=<id> to payment URLs so GetCourse
+    can pass it back in the webhook and we can link the user immediately.
+    Requires GC to be configured to relay the tg_id field — see ТЗ Часть В.
+    """
+    def _url(base: str) -> str:
+        if not tg_id or not base:
+            return base
+        sep = "&" if "?" in base else "?"
+        return f"{base}{sep}tg_id={tg_id}"
+
     buttons = []
     if settings.GC_PAYMENT_URL_PLUS:
-        buttons.append([InlineKeyboardButton(text="💡 Тариф Plus — до 1 000 ₽/мес", url=settings.GC_PAYMENT_URL_PLUS)])
+        buttons.append([InlineKeyboardButton(text="💡 Тариф Plus — до 1 000 ₽/мес", url=_url(settings.GC_PAYMENT_URL_PLUS))])
     if settings.GC_PAYMENT_URL_PRO:
-        buttons.append([InlineKeyboardButton(text="🏆 Тариф Pro — 2 990 ₽/мес", url=settings.GC_PAYMENT_URL_PRO)])
+        buttons.append([InlineKeyboardButton(text="🏆 Тариф Pro — 2 990 ₽/мес", url=_url(settings.GC_PAYMENT_URL_PRO))])
     if not buttons:
         buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -82,7 +95,7 @@ async def menu_about(message: Message) -> None:
         "• База знаний и закрытые эфиры\n\n"
         "Выбери тариф и начни 👇",
         parse_mode="Markdown",
-        reply_markup=_plans_kb(),
+        reply_markup=_plans_kb(message.from_user.id),
     )
 
 
@@ -99,7 +112,17 @@ async def menu_plans(message: Message) -> None:
         "  • База знаний и эфиры на GetCourse\n"
         "  • Офлайн-активности и мероприятия\n"
     )
-    await message.answer(text, parse_mode="Markdown", reply_markup=_plans_kb())
+    await message.answer(text, parse_mode="Markdown", reply_markup=_plans_kb(message.from_user.id))
+
+
+@router.message(F.text == "✅ Я оплатил / Проверить доступ")
+async def menu_check_payment(message: Message, state: FSMContext) -> None:
+    await state.set_state(RegistrationForm.phone_check)
+    await message.answer(
+        "Поделись номером телефона, который указывал при оплате — "
+        "бот сверится с базой и сразу откроет доступ 👇",
+        reply_markup=request_contact_kb(),
+    )
 
 
 @router.message(F.text == "❓ Поддержка")

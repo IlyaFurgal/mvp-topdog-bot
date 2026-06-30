@@ -2,6 +2,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class RegistrationForm(StatesGroup):
+    phone_check = State()  # подтверждение телефона перед анкетой
+
     greeting = State()
 
     # 0. Имя — до анкеты
