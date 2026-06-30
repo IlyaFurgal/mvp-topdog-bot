@@ -3263,7 +3263,7 @@ select optgroup {
   position: relative;
   display: inline-block;
   font-size: clamp(2.6rem, 13vw, 3.6rem);
-  font-weight: 700;
+  font-weight: 400;
   font-style: italic;
   letter-spacing: -0.02em;
   text-transform: uppercase;
@@ -3288,12 +3288,12 @@ select optgroup {
 
 .screen-title::before {
   clip-path: polygon(0 0, 100% 0, 100% 38%, 0 30%);
-  transform: translate(3px, -2px);
+  transform: translate(9px, -6px);
 }
 
 .screen-title::after {
   clip-path: polygon(0 62%, 100% 70%, 100% 100%, 0 100%);
-  transform: translate(-3px, 2px);
+  transform: translate(-9px, 6px);
 }
 
 .screen-title--lime {
