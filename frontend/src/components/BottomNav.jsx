@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 
 const tabs = [
-  { path: '/ai',        label: 'ИИ'      },
+  { path: '/ai',        label: 'ЧАТ'     },
   { path: '/trackers',  label: 'ТРЕКЕР'  },
   { path: '/progress',  label: 'ПРОГРЕСС' },
   { path: '/knowledge', label: 'БАЗА'     },

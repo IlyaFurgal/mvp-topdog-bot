@@ -1666,8 +1666,10 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    radial-gradient(130% 90% at 75% 15%, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 50%),
-    linear-gradient(135deg, #222 0%, #141414 45%, #0c0c0c 100%);
+    radial-gradient(ellipse 70% 50% at 20% 15%, rgba(255,255,255,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 80% 75%, rgba(255,255,255,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 60% at 50% 45%, rgba(255,255,255,0.04) 0%, transparent 65%),
+    linear-gradient(145deg, #1c1c1c 0%, #0d0d0d 40%, #080808 100%);
 }
 
 .ai-header {
@@ -2135,8 +2137,9 @@ html, body {
 }
 
 .ai-send:disabled {
-  background: var(--border);
-  color: #555;
+  background: var(--accent);
+  color: #000;
+  opacity: 0.35;
   cursor: default;
 }
 
@@ -3145,6 +3148,13 @@ select optgroup {
   margin-bottom: 16px;
 }
 
+.screen-title--lime {
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  color: var(--accent);
+}
+
 .clip-skew {
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
 }
@@ -3199,7 +3209,7 @@ select optgroup {
   background: var(--accent);
   overflow: hidden;
   white-space: nowrap;
-  padding: 6px 0;
+  padding: 4px 0;
   transform: rotate(-0.4deg);
   display: flex;
   align-items: center;
@@ -3208,15 +3218,15 @@ select optgroup {
 .mvp-ribbon__unit {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
-  margin-right: 22px;
+  gap: 4px;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
 .mvp-ribbon__unit b {
   font-style: italic;
   font-weight: 900;
-  font-size: 1.15rem;
+  font-size: 0.8rem;
   color: var(--accent-text);
   letter-spacing: -0.02em;
 }
@@ -3224,10 +3234,41 @@ select optgroup {
 .mvp-ribbon__unit i {
   font-style: italic;
   font-weight: 800;
-  font-size: 0.6rem;
+  font-size: 0.48rem;
   color: var(--accent-text);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  border-bottom: 2px double var(--accent-text);
-  padding-bottom: 1px;
+  border-top: 1px solid var(--accent-text);
+  border-bottom: 1px solid var(--accent-text);
+  padding: 1px 0;
+}
+
+/* ── AI chat chips ────────────────────────────────────── */
+
+.ai-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  margin-top: auto;
+}
+
+.ai-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
+  padding: 10px 16px;
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.92rem;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ai-chip:active {
+  background: rgba(255, 255, 255, 0.13);
 }

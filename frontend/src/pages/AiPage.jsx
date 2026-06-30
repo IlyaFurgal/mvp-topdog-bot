@@ -517,10 +517,10 @@ export default function AiPage() {
   return (
     <div className="ai-page">
       <div className="ai-header">
-        <h1 className="screen-title" style={{ margin: 0 }}>ЧАТ</h1>
+        <h1 className="screen-title screen-title--lime" style={{ margin: 0 }}>ЧАТ</h1>
       </div>
       <div className="mvp-ribbon">
-        {Array.from({ length: 7 }, (_, i) => (
+        {Array.from({ length: 14 }, (_, i) => (
           <span key={i} className="mvp-ribbon__unit">
             <b>MVP</b><i>BY TOP DOG</i>
           </span>
@@ -581,6 +581,27 @@ export default function AiPage() {
             <div className="ai-msg__bubble ai-msg__bubble--typing">
               <span /><span /><span />
             </div>
+          </div>
+        )}
+        {messages.length === 0 && historyLoaded && !typing && (
+          <div className="ai-chips">
+            {[
+              'Как поднять энергию?',
+              'Составь план тренировок на неделю',
+              'Что приготовить на ужин в рамках КБЖУ',
+              'Болит колено после бега — что делать',
+            ].map((text) => (
+              <button
+                key={text}
+                className="ai-chip"
+                onClick={() => {
+                  setInput(text)
+                  setTimeout(() => textareaRef.current?.focus(), 0)
+                }}
+              >
+                {text}
+              </button>
+            ))}
           </div>
         )}
         <div ref={bottomRef} />
