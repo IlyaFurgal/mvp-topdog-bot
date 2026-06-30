@@ -580,7 +580,7 @@ export default function AiPage() {
             </div>
           </div>
         )}
-        {messages.length === 0 && historyLoaded && !typing && (
+        {messages.length === 1 && messages[0].from === 'ai' && historyLoaded && !typing && (
           <div className="ai-chips">
             {[
               'Как поднять энергию?',
