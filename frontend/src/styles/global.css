@@ -2045,18 +2045,15 @@ html, body {
   min-height: 52px;
 }
 
-/* Attachment popup menu */
+/* Attachment popup menu — static sibling above input bar */
 .ai-attach-menu {
-  position: absolute;
-  bottom: 74px;
-  left: 0;
-  right: 0;
+  position: static;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
   background: transparent;
   padding: 4px 0;
-  z-index: 20;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -2120,7 +2117,7 @@ html, body {
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 1rem;
+  font-size: 0.82rem;
   font-style: italic;
   letter-spacing: 0.04em;
   line-height: 1.4;
@@ -3227,7 +3224,7 @@ select optgroup {
   background: var(--accent);
   overflow: hidden;
   white-space: nowrap;
-  padding: 5px 0;
+  padding: 2px 0;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -3236,15 +3233,15 @@ select optgroup {
 .mvp-ribbon__unit {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-right: 16px;
+  gap: 3px;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
 .mvp-ribbon__unit b {
   font-style: italic;
   font-weight: 900;
-  font-size: 1.05rem;
+  font-size: 0.72rem;
   color: var(--accent-text);
   letter-spacing: -0.01em;
   text-transform: uppercase;
@@ -3253,7 +3250,7 @@ select optgroup {
 .mvp-ribbon__unit i {
   font-style: italic;
   font-weight: 800;
-  font-size: 0.58rem;
+  font-size: 0.42rem;
   color: var(--accent-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;

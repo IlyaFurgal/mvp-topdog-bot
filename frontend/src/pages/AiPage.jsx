@@ -621,47 +621,9 @@ export default function AiPage() {
       {fileError && <div className="ai-image-error">{fileError}</div>}
       {voiceError && <div className="ai-voice-error">{voiceError}</div>}
 
-      {/* Recording bar — заменяет input bar во время записи */}
-      {recording ? (
-        <div className="ai-record-bar">
-          <button className="ai-record-cancel" onClick={cancelRecording} title="Отмена">✕</button>
-          <div className="ai-record-indicator">
-            <span className="ai-record-dot" />
-            <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
-            <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
-          </div>
-          <button className="ai-record-send" onClick={stopAndSend}>
-            Отправить →
-          </button>
-        </div>
-      ) : (
-        <div className="ai-input-bar">
-          {/* three hidden file inputs — all reuse the existing handleFileChange */}
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-
-          {attachOpen && (
-            <div className="ai-attach-menu">
+      {/* Attach menu — static, pushes input bar down, doesn't overlay messages */}
+      {attachOpen && !recording && (
+        <div className="ai-attach-menu">
               <button
                 className="ai-attach-menu__item"
                 onClick={() => { setAttachOpen(false); cameraInputRef.current?.click() }}
@@ -701,6 +663,44 @@ export default function AiPage() {
             </div>
           )}
 
+      {/* Recording bar or input bar */}
+      {recording ? (
+        <div className="ai-record-bar">
+          <button className="ai-record-cancel" onClick={cancelRecording} title="Отмена">✕</button>
+          <div className="ai-record-indicator">
+            <span className="ai-record-dot" />
+            <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
+            <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
+          </div>
+          <button className="ai-record-send" onClick={stopAndSend}>
+            Отправить →
+          </button>
+        </div>
+      ) : (
+        <div className="ai-input-bar">
+          {/* three hidden file inputs */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
           <div className="ai-input-bar__inner">
             <button
               className="ai-attach"
