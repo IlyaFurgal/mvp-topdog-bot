@@ -1927,10 +1927,15 @@ html, body {
 }
 
 /* Copy button on AI messages */
-.ai-msg__copy {
-  display: block;
+.ai-msg__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
   margin-top: 6px;
-  margin-left: auto;
+}
+
+.ai-msg__copy,
+.ai-msg__save {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -1942,7 +1947,8 @@ html, body {
   transition: opacity 0.15s;
 }
 
-.ai-msg__copy:active { opacity: 1; }
+.ai-msg__copy:active,
+.ai-msg__save:active { opacity: 1; }
 
 /* Image in chat bubble */
 .ai-msg__image {

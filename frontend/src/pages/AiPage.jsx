@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
+import { createSavedMessage } from '../api/savedMessages'
 import { useProfile } from '../context/ProfileContext'
 
 const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
@@ -99,6 +100,7 @@ export default function AiPage() {
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
   const [copiedId, setCopiedId] = useState(null)
+  const [savedId, setSavedId] = useState(null)
   const [attachOpen, setAttachOpen] = useState(false)
 
   // ── Voice recording state ────────────────────────────
@@ -175,6 +177,12 @@ export default function AiPage() {
     navigator.clipboard?.writeText(text).catch(() => {})
     setCopiedId(id)
     setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1500)
+  }
+
+  function handleSaveMessage(id, text) {
+    createSavedMessage(text).catch(() => {})
+    setSavedId(id)
+    setTimeout(() => setSavedId((prev) => (prev === id ? null : prev)), 1500)
   }
 
   function scrollToBottom() {
@@ -535,13 +543,22 @@ export default function AiPage() {
                   : <span>{msg.text}</span>
               )}
               {msg.from === 'ai' && msg.text && (
-                <button
-                  className="ai-msg__copy"
-                  onClick={() => handleCopy(msg.id, msg.text)}
-                  title="Копировать"
-                >
-                  {copiedId === msg.id ? '✓' : '⎘'}
-                </button>
+                <div className="ai-msg__actions">
+                  <button
+                    className="ai-msg__copy"
+                    onClick={() => handleCopy(msg.id, msg.text)}
+                    title="Копировать"
+                  >
+                    {copiedId === msg.id ? '✓' : '⎘'}
+                  </button>
+                  <button
+                    className="ai-msg__save"
+                    onClick={() => handleSaveMessage(msg.id, msg.text)}
+                    title="Сохранить в программы"
+                  >
+                    {savedId === msg.id ? '✓' : '🔖'}
+                  </button>
+                </div>
               )}
             </div>
             {msg.status === 'failed' && (

@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.routers import admin, auth, checkins, config, debug, insights, profile, suvvy, trackers, webhooks, workouts
+from api.routers import admin, auth, checkins, config, debug, insights, profile, saved_messages, suvvy, trackers, webhooks, workouts
 from database.models import User
 from database.session import get_session
 
@@ -35,6 +35,7 @@ app.include_router(suvvy.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(workouts.router, prefix="/api")
+app.include_router(saved_messages.router, prefix="/api")
 app.include_router(admin.router)  # без prefix — пути /admin, /admin/users, ...
 
 # Static uploads (images saved from AI chat)

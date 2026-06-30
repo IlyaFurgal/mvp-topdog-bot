@@ -305,3 +305,17 @@ class HealthMetrics(Base):
     metabolic_age: Mapped[float | None] = mapped_column(Float, nullable=True)
     body_fat_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SavedMessage(Base):
+    """AI message saved by the user as a programme/note."""
+    __tablename__ = "saved_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
