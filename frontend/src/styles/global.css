@@ -1838,39 +1838,49 @@ html, body {
 /* ── Voice recording bar ──────────────────────────────── */
 
 .ai-record-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px 12px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  padding: 10px 12px 14px;
   flex-shrink: 0;
 }
 
-.ai-record-cancel {
-  width: 44px;
-  height: 44px;
-  border-radius: 4px;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  color: var(--text-muted);
-  font-size: 1rem;
-  cursor: pointer;
-  flex-shrink: 0;
+.ai-record-bar__inner {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #1e1e1e;
+  border-radius: 26px;
+  padding: 6px 6px 6px 14px;
+  min-height: 52px;
 }
+
+.ai-record-cancel {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.ai-record-cancel:active { opacity: 1; }
 
 .ai-record-indicator {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 4px;
+  padding: 0 10px;
   min-width: 0;
 }
 
 .ai-record-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--danger);
   flex-shrink: 0;
@@ -1883,7 +1893,8 @@ html, body {
 }
 
 .ai-record-timer {
-  font-size: 1.15rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
@@ -1891,31 +1902,26 @@ html, body {
 }
 
 .ai-record-limit {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   letter-spacing: 0.04em;
 }
 
 .ai-record-send {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: var(--accent);
   border: none;
-  border-radius: 4px;
   color: #000;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0 14px;
-  height: 44px;
   cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.ai-record-send:active {
-  filter: brightness(0.9);
-}
+.ai-record-send:active { filter: brightness(0.9); }
 
 /* ── Voice error ──────────────────────────────────────── */
 

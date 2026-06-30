@@ -120,6 +120,7 @@ export default function AiPage() {
   const recTimerRef       = useRef(null)
   const streamRef         = useRef(null)
   const stoppingRef       = useRef(false)   // guard against double stop
+  const micHoldRef        = useRef(false)   // true while finger is held on mic
 
   // ── Load history on mount ────────────────────────────
   useEffect(() => {
@@ -361,6 +362,26 @@ export default function AiPage() {
 
   function handleKey(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+
+  // ── Hold-to-record handlers ───────────────────────────
+  function handleMicPointerDown(e) {
+    e.preventDefault()
+    if (typing) return
+    micHoldRef.current = true
+    startRecording()
+  }
+
+  function handleMicPointerUp() {
+    if (!micHoldRef.current) return
+    micHoldRef.current = false
+    if (mediaRecorderRef.current) stopAndSend()
+  }
+
+  function handleMicPointerLeave() {
+    if (!micHoldRef.current) return
+    micHoldRef.current = false
+    if (mediaRecorderRef.current) cancelRecording()
   }
 
   // ── Voice recording ───────────────────────────────────
@@ -671,15 +692,23 @@ export default function AiPage() {
       {/* Recording bar or input bar */}
       {recording ? (
         <div className="ai-record-bar">
-          <button className="ai-record-cancel" onClick={cancelRecording} title="Отмена">✕</button>
-          <div className="ai-record-indicator">
-            <span className="ai-record-dot" />
-            <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
-            <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
+          <div className="ai-record-bar__inner">
+            <button className="ai-record-cancel" onClick={cancelRecording} title="Отмена">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <div className="ai-record-indicator">
+              <span className="ai-record-dot" />
+              <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
+              <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
+            </div>
+            <button className="ai-record-send" onClick={stopAndSend}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
           </div>
-          <button className="ai-record-send" onClick={stopAndSend}>
-            Отправить →
-          </button>
         </div>
       ) : (
         <div className="ai-input-bar">
@@ -729,9 +758,11 @@ export default function AiPage() {
             />
             <button
               className="ai-mic"
-              onClick={startRecording}
+              onPointerDown={handleMicPointerDown}
+              onPointerUp={handleMicPointerUp}
+              onPointerLeave={handleMicPointerLeave}
               disabled={typing}
-              title="Записать голосовое"
+              title="Удержи для записи"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="2" width="6" height="12" rx="3" />
