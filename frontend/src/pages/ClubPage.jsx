@@ -163,7 +163,7 @@ export default function ClubPage() {
         ))}
       </div>
 
-      <h1 className="screen-title" data-text="КЛУБ">КЛУБ</h1>
+      <h1 className="screen-title">К<span className="glitch-letter" data-text="Л">Л</span>УБ</h1>
 
       <button className="club-card" onClick={() => setView('knowledge')}>
         <span className="club-card__title">БАЗА ЗНАНИЙ</span>

@@ -3275,8 +3275,17 @@ select optgroup {
   margin-bottom: 16px;
 }
 
-.screen-title::before,
-.screen-title::after {
+.glitch-letter {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glitch-letter::before,
+.glitch-letter::after {
   content: attr(data-text);
   position: absolute;
   inset: 0;
@@ -3286,12 +3295,12 @@ select optgroup {
   color: transparent;
 }
 
-.screen-title::before {
+.glitch-letter::before {
   clip-path: polygon(0 0, 100% 0, 100% 38%, 0 30%);
   transform: translate(6px, -4px);
 }
 
-.screen-title::after {
+.glitch-letter::after {
   clip-path: polygon(0 62%, 100% 70%, 100% 100%, 0 100%);
   transform: translate(-6px, 4px);
 }
