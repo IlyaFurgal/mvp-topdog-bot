@@ -749,6 +749,7 @@ export default function AiPage() {
             </button>
             <textarea
               ref={textareaRef}
+              rows={1}
               className="ai-input"
               placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
               value={input}

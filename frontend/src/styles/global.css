@@ -2049,8 +2049,8 @@ html, body {
   gap: 0;
   background: #1e1e1e;
   border-radius: 26px;
-  padding: 6px 6px 6px 14px;
-  min-height: 52px;
+  padding: 4px 4px 4px 14px;
+  min-height: 44px;
 }
 
 /* Attachment popup menu — static sibling above input bar */
@@ -2130,9 +2130,9 @@ html, body {
   font-style: italic;
   letter-spacing: 0.04em;
   line-height: 1.4;
-  padding: 4px 8px;
+  padding: 0 8px;
   resize: none;
-  min-height: 28px;
+  min-height: 0;
   max-height: 120px;
   overflow-y: auto;
 }
