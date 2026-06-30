@@ -3268,8 +3268,12 @@ select optgroup {
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
+  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   margin-bottom: 16px;
+  clip-path: polygon(0 32%, 100% 38%, 100% 68%, 0 62%);
 }
 
 .screen-title::before,
@@ -3284,12 +3288,12 @@ select optgroup {
 }
 
 .screen-title::before {
-  clip-path: polygon(0 0, 100% 0, 100% 50%, 0 42%);
+  clip-path: polygon(0 0, 100% 0, 100% 38%, 0 32%);
   transform: translate(2px, -2px);
 }
 
 .screen-title::after {
-  clip-path: polygon(0 42%, 100% 50%, 100% 100%, 0 100%);
+  clip-path: polygon(0 62%, 100% 68%, 100% 100%, 0 100%);
   transform: translate(-2px, 2px);
 }
 
