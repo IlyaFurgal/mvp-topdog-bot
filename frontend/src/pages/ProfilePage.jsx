@@ -579,7 +579,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page" style={{ position: 'relative' }}>
-      <h1 className="screen-title">ПРО<span className="glitch-letter" data-text="Ф">Ф</span>ИЛЬ</h1>
+      <h1 className="screen-title" data-text="ПРОФИЛЬ">ПРОФИЛЬ</h1>
       <button
         onClick={() => setEditOpen(true)}
         style={{

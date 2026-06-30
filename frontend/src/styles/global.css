@@ -3268,41 +3268,28 @@ select optgroup {
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
-  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
   color: transparent;
   margin-bottom: 16px;
 }
 
-.glitch-letter {
-  position: relative;
-  display: inline-block;
+.screen-title::before,
+.screen-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
   background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  clip-path: polygon(0 30%, 100% 38%, 100% 70%, 0 62%);
 }
 
-.glitch-letter::before,
-.glitch-letter::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.glitch-letter::before {
-  clip-path: polygon(0 0, 100% 0, 100% 38%, 0 30%);
+.screen-title::before {
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 0 42%);
   transform: translate(6px, -4px);
 }
 
-.glitch-letter::after {
-  clip-path: polygon(0 62%, 100% 70%, 100% 100%, 0 100%);
+.screen-title::after {
+  clip-path: polygon(0 42%, 100% 50%, 100% 100%, 0 100%);
   transform: translate(-6px, 4px);
 }
 
