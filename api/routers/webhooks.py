@@ -15,7 +15,8 @@ from api.services.getcourse import sync_user_to_gc
 from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
-from database.models import AiMessage, HealthMetrics, Profile, Tracker, TrackerType, User
+from core.utils.phone import normalize_phone
+from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, Tracker, TrackerType, User
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -368,37 +369,101 @@ def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
 # ── GetCourse webhook ─────────────────────────────────────────────────────────
 
 @router.post("/getcourse")
-async def getcourse_webhook(request: Request):  # noqa: no session — diagnostic only
-    # TODO: убрать после диагностики формата GC
+async def getcourse_webhook(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     raw_body = await request.body()
-    logger.warning(
-        "GC_WEBHOOK_RAW headers=%s body=%s",
-        dict(request.headers),
-        raw_body.decode("utf-8", errors="replace"),
-    )
-    content_type = request.headers.get("content-type", "")
-    if "form" in content_type:
-        form = await request.form()
-        logger.warning("GC_WEBHOOK_FORM %s", dict(form))
-    elif "json" in content_type:
-        try:
-            logger.warning("GC_WEBHOOK_JSON %s", await request.json())
-        except Exception:
-            pass
+    raw_str = raw_body.decode("utf-8", errors="replace")
+    logger.info("GC_WEBHOOK body=%s", raw_str)
 
-    # --- старая бизнес-логика (матчинг по email) закомментирована до
-    #     выяснения реального формата полей, которые шлёт GetCourse ---
-    #
-    # result = await session.execute(select(User).where(User.email == email))
-    # user = result.scalar_one_or_none()
-    # if not user:
-    #     logger.warning("GC webhook: user not found for email=%s", email)
-    #     return {"status": "ok", "message": "user not found"}
-    # if event == "payment":
-    #     sub_type, period_days = _resolve_offer(offer_code)
-    #     ...  (активация подписки, welcome-push, sync_to_gc)
-    # elif event == "refund":
-    #     ...  (деактивация, refund-push)
+    try:
+        form = await request.form()
+        data = dict(form)
+    except Exception:
+        # fallback: try parsing raw body manually
+        from urllib.parse import parse_qs
+        parsed = parse_qs(raw_str)
+        data = {k: v[0] for k, v in parsed.items()}
+
+    event = data.get("event", "").strip().lower()
+    raw_phone = data.get("phone", "")
+    email = (data.get("email") or "").strip() or None
+    raw_tier = (data.get("tier") or "").strip().lower()
+    offer_code = (data.get("offer_id") or data.get("offer_code") or "").strip()
+    raw_payed_at = (data.get("payed_at") or "").strip()
+
+    phone = normalize_phone(raw_phone)
+    if not phone:
+        logger.warning("GC webhook: unrecognised phone=%r body=%s", raw_phone, raw_str)
+        return {"status": "ok"}
+
+    # Resolve tier
+    if raw_tier in ("plus", "pro"):
+        tier = GcTier(raw_tier)
+        period_days = 30
+    else:
+        sub_type, period_days = _resolve_offer(offer_code)
+        if not sub_type:
+            logger.warning("GC webhook: unknown tier/offer phone=%s offer=%r", phone, offer_code)
+            return {"status": "ok"}
+        tier = GcTier(sub_type)
+
+    # Parse payed_at
+    payed_at: datetime | None = None
+    if raw_payed_at:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+            try:
+                payed_at = datetime.strptime(raw_payed_at, fmt).replace(tzinfo=timezone.utc)
+                break
+            except ValueError:
+                pass
+    if payed_at is None:
+        payed_at = datetime.now(timezone.utc)
+
+    # Find or create GcSubscription record
+    result = await session.execute(
+        select(GcSubscription).where(GcSubscription.phone_normalized == phone)
+    )
+    sub = result.scalar_one_or_none()
+
+    if event == "payment":
+        expires_at = payed_at + timedelta(days=period_days)
+        if sub:
+            sub.tier = tier
+            sub.status = GcStatus.active
+            sub.payed_at = payed_at
+            sub.expires_at = expires_at
+            if email:
+                sub.email = email
+        else:
+            sub = GcSubscription(
+                phone_normalized=phone,
+                email=email,
+                tier=tier,
+                status=GcStatus.active,
+                payed_at=payed_at,
+                expires_at=expires_at,
+            )
+            session.add(sub)
+        await session.commit()
+        logger.info("GC payment recorded phone=%s tier=%s expires=%s", phone, tier, expires_at)
+
+        if sub.telegram_id:
+            await _send_payment_welcome(sub.telegram_id, tier.value)
+
+    elif event == "refund":
+        if sub:
+            sub.status = GcStatus.cancelled
+            await session.commit()
+            logger.info("GC refund recorded phone=%s", phone)
+            if sub.telegram_id:
+                await _send_refund_notice(sub.telegram_id)
+        else:
+            logger.warning("GC refund: no subscription found for phone=%s", phone)
+
+    else:
+        logger.warning("GC webhook: unknown event=%r", event)
 
     return {"status": "ok"}
 

@@ -68,6 +68,16 @@ class TrackerType(str, enum.Enum):
     calories = "calories"
 
 
+class GcTier(str, enum.Enum):
+    plus = "plus"
+    pro = "pro"
+
+
+class GcStatus(str, enum.Enum):
+    active = "active"
+    cancelled = "cancelled"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -318,4 +328,24 @@ class SavedMessage(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class GcSubscription(Base):
+    """GetCourse subscription record, keyed by normalised phone (10 digits)."""
+    __tablename__ = "gc_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    phone_normalized: Mapped[str] = mapped_column(String(10), nullable=False, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    tier: Mapped[GcTier] = mapped_column(Enum(GcTier, name="gctier"), nullable=False)
+    status: Mapped[GcStatus] = mapped_column(
+        Enum(GcStatus, name="gcstatus"), nullable=False, server_default="active"
+    )
+    payed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
