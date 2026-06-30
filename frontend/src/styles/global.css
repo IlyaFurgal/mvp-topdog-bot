@@ -4,7 +4,7 @@
   --surface: #1e1e1e;
   --surface-2: #252525;
   --accent: #C8FF00;
-  --accent-club: #CFEB00;
+  --accent-club: #C8FF00;
   --accent-text: #000000;
   --text: #FFFFFF;
   --text-muted: #888888;
@@ -2256,17 +2256,18 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 8px 10px 60px;
   margin-bottom: 16px;
 }
 
 .club-block-header .page-title {
   margin: 0;
   text-align: left;
+  line-height: 0.85;
 }
 
 .club-block-header .page-subtitle {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   text-align: left;
 }
 
@@ -3268,10 +3269,27 @@ select optgroup {
   background-clip: text;
   color: transparent;
   margin-bottom: 16px;
-  text-shadow:
-    6px -5px 0 rgba(200, 200, 200, 0.30),
-    -6px 5px 0 rgba(60, 60, 60, 0.45),
-    11px -9px 0 rgba(200, 200, 200, 0.16);
+}
+
+.screen-title::before,
+.screen-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.screen-title::before {
+  clip-path: polygon(0 0, 100% 0, 100% 38%, 0 30%);
+  transform: translate(10px, -7px);
+}
+
+.screen-title::after {
+  clip-path: polygon(0 62%, 100% 70%, 100% 100%, 0 100%);
+  transform: translate(-10px, 7px);
 }
 
 .screen-title--lime {

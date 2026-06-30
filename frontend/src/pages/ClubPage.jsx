@@ -155,15 +155,15 @@ export default function ClubPage() {
 
   return (
     <div className="page club-page">
-      <h1 className="screen-title">КЛУБ</h1>
-
-      <div className="mvp-ribbon" style={{ margin: '12px -16px 20px' }}>
+      <div className="mvp-ribbon" style={{ margin: '0 -16px 16px' }}>
         {Array.from({ length: 6 }, (_, i) => (
           <span key={i} className="mvp-ribbon__unit">
             <b>MVP</b><i>BY TOP DOG</i>
           </span>
         ))}
       </div>
+
+      <h1 className="screen-title" data-text="КЛУБ">КЛУБ</h1>
 
       <button className="club-card" onClick={() => setView('knowledge')}>
         <span className="club-card__title">БАЗА ЗНАНИЙ</span>
