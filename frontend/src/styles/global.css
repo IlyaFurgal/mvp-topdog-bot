@@ -3285,12 +3285,12 @@ select optgroup {
 
 .screen-title::before {
   clip-path: polygon(0 0, 100% 0, 100% 50%, 0 42%);
-  transform: translate(6px, -4px);
+  transform: translate(2px, -2px);
 }
 
 .screen-title::after {
   clip-path: polygon(0 42%, 100% 50%, 100% 100%, 0 100%);
-  transform: translate(-6px, 4px);
+  transform: translate(-2px, 2px);
 }
 
 .screen-title--lime {
