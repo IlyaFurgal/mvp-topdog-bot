@@ -1666,9 +1666,10 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 45% at 25% 20%, rgba(255,255,255,0.09) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 75% 70%, rgba(255,255,255,0.06) 0%, transparent 50%),
-    linear-gradient(145deg, #282828 0%, #181818 45%, #111 100%);
+    radial-gradient(ellipse 80% 60% at 30% 15%, rgba(255,255,255,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 70% at 55% 55%, rgba(255,255,255,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 50% at 20% 80%, rgba(255,255,255,0.04) 0%, transparent 50%),
+    linear-gradient(160deg, #1a1a1a 0%, #0e0e0e 50%, #080808 100%);
 }
 
 .ai-header {
@@ -2050,27 +2051,26 @@ html, body {
   position: static;
   flex-shrink: 0;
   display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  align-items: center;
+  flex-direction: column;
+  gap: 0;
   background: transparent;
-  padding: 8px 16px;
+  padding: 4px 0 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ai-attach-menu__item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
+  gap: 12px;
+  padding: 7px 20px;
   background: transparent;
   border: none;
   color: #fff;
   font-family: 'Barlow Condensed', sans-serif;
   font-style: italic;
   font-weight: 800;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
