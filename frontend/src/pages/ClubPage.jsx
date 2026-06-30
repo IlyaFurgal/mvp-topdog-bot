@@ -51,8 +51,10 @@ function KnowledgeView({ subscriptionType, onBack }) {
         />
       ) : (
         <>
-          <h1 className="page-title page-title--lime">БАЗА ЗНАНИЙ</h1>
-          <p className="page-subtitle">МАТЕРИАЛЫ НА GETCOURSE</p>
+          <div className="club-block-header">
+            <h1 className="page-title page-title--lime">БАЗА ЗНАНИЙ</h1>
+            <p className="page-subtitle">МАТЕРИАЛЫ НА GETCOURSE</p>
+          </div>
           <div className="knowledge-list">
             {MATERIALS.map((item) => (
               <a
@@ -113,8 +115,10 @@ function CommunityView({ subscriptionType, onBack }) {
         </div>
       ) : (
         <>
-          <h1 className="page-title page-title--lime">КОМЬЮНИТИ</h1>
-          <p className="page-subtitle">РЕЗИДЕНТЫ PRO</p>
+          <div className="club-block-header">
+            <h1 className="page-title page-title--lime">КОМЬЮНИТИ</h1>
+            <p className="page-subtitle">РЕЗИДЕНТЫ PRO</p>
+          </div>
           <div className="card" style={{ textAlign: 'center', padding: '32px 16px' }}>
             <p style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8, letterSpacing: '0.04em' }}>
               Telegram-группа резидентов

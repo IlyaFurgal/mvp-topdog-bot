@@ -4,7 +4,7 @@
   --surface: #1e1e1e;
   --surface-2: #252525;
   --accent: #C8FF00;
-  --accent-club: #AECF2E;
+  --accent-club: #CFEB00;
   --accent-text: #000000;
   --text: #FFFFFF;
   --text-muted: #888888;
@@ -2252,6 +2252,24 @@ html, body {
 
 .club-back:active { color: var(--text); }
 
+.club-block-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.club-block-header .page-title {
+  margin: 0;
+  text-align: left;
+}
+
+.club-block-header .page-subtitle {
+  margin: 4px 0 0;
+  text-align: left;
+}
+
 .club-card {
   display: block;
   width: 100%;
@@ -3237,21 +3255,23 @@ select optgroup {
 /* ── Design tokens ────────────────────────────────────── */
 
 .screen-title {
+  position: relative;
+  display: inline-block;
   font-size: clamp(2.6rem, 13vw, 3.6rem);
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
-  background:
-    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%25" height="100%25" filter="url(%23n)"/></svg>'),
-    linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
-  background-blend-mode: overlay;
-  background-size: 140px 140px, 100% 100%;
+  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   margin-bottom: 16px;
+  text-shadow:
+    6px -5px 0 rgba(200, 200, 200, 0.30),
+    -6px 5px 0 rgba(60, 60, 60, 0.45),
+    11px -9px 0 rgba(200, 200, 200, 0.16);
 }
 
 .screen-title--lime {
