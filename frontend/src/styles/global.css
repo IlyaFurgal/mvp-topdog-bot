@@ -3268,17 +3268,28 @@ select optgroup {
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
-  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
   color: transparent;
   margin-bottom: 16px;
-  clip-path: polygon(0 32%, 100% 38%, 100% 68%, 0 62%);
 }
 
 .screen-title::before,
 .screen-title::after {
   content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.title-mid-mask {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 32%, 100% 38%, 100% 68%, 0 62%);
+}
+
+.title-mid-text {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
