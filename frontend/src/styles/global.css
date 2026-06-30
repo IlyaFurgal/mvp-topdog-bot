@@ -4,6 +4,7 @@
   --surface: #1e1e1e;
   --surface-2: #252525;
   --accent: #C8FF00;
+  --accent-club: #AECF2E;
   --accent-text: #000000;
   --text: #FFFFFF;
   --text-muted: #888888;
@@ -106,7 +107,7 @@ html, body {
 }
 
 .page-title--lime {
-  color: var(--accent);
+  color: var(--accent-club);
 }
 
 .page-subtitle {
@@ -2257,8 +2258,8 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 18px 18px 0;
-  margin-bottom: 16px;
+  padding: 12px 14px 0;
+  margin-bottom: 14px;
   text-decoration: none;
   text-align: left;
   cursor: pointer;
@@ -2269,27 +2270,27 @@ html, body {
 
 .club-card__title {
   display: block;
-  font-size: 1.5rem;
+  font-size: 1.05rem;
   font-weight: 900;
   font-style: italic;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-club);
   letter-spacing: -0.01em;
 }
 
 .club-card__sub {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  margin: 2px 0 14px;
+  margin: 2px 0 10px;
 }
 
 .club-card__art {
   display: block;
-  height: 110px;
+  height: 90px;
   margin: 0 -1px -1px;
   clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
   background:
@@ -3242,7 +3243,11 @@ select optgroup {
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 0.9;
-  background: linear-gradient(180deg, #c4c4c4 0%, #5a5a5a 100%);
+  background:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%25" height="100%25" filter="url(%23n)"/></svg>'),
+    linear-gradient(180deg, #d8d8d8 0%, #4a4a4a 100%);
+  background-blend-mode: overlay;
+  background-size: 140px 140px, 100% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -3307,7 +3312,7 @@ select optgroup {
 }
 
 .mvp-ribbon {
-  background: var(--accent);
+  background: var(--accent-club);
   padding: 2px 0;
   display: flex;
   align-items: center;
@@ -3325,7 +3330,7 @@ select optgroup {
 .mvp-ribbon__unit b {
   font-style: italic;
   font-weight: 900;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: var(--accent-text);
   letter-spacing: -0.01em;
   text-transform: uppercase;
@@ -3334,7 +3339,7 @@ select optgroup {
 .mvp-ribbon__unit i {
   font-style: italic;
   font-weight: 800;
-  font-size: 0.42rem;
+  font-size: 0.36rem;
   color: var(--accent-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
