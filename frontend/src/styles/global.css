@@ -2270,7 +2270,8 @@ html, body {
   margin: 2px 0 0;
   text-align: left;
   color: var(--text);
-  font-size: 9px;
+  font-size: 7px;
+  font-style: italic;
 }
 
 .club-card {
@@ -2301,8 +2302,9 @@ html, body {
 
 .club-card__sub {
   display: block;
-  font-size: 0.52rem;
+  font-size: 0.44rem;
   font-weight: 700;
+  font-style: italic;
   color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -3261,7 +3263,7 @@ select optgroup {
   position: relative;
   display: inline-block;
   font-size: clamp(2.6rem, 13vw, 3.6rem);
-  font-weight: 900;
+  font-weight: 700;
   font-style: italic;
   letter-spacing: -0.02em;
   text-transform: uppercase;
