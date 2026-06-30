@@ -51,7 +51,7 @@ function KnowledgeView({ subscriptionType, onBack }) {
         />
       ) : (
         <>
-          <h1 className="page-title">БАЗА ЗНАНИЙ</h1>
+          <h1 className="page-title page-title--lime">БАЗА ЗНАНИЙ</h1>
           <p className="page-subtitle">МАТЕРИАЛЫ НА GETCOURSE</p>
           <div className="knowledge-list">
             {MATERIALS.map((item) => (
@@ -113,7 +113,7 @@ function CommunityView({ subscriptionType, onBack }) {
         </div>
       ) : (
         <>
-          <h1 className="page-title">КОМЬЮНИТИ</h1>
+          <h1 className="page-title page-title--lime">КОМЬЮНИТИ</h1>
           <p className="page-subtitle">РЕЗИДЕНТЫ PRO</p>
           <div className="card" style={{ textAlign: 'center', padding: '32px 16px' }}>
             <p style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8, letterSpacing: '0.04em' }}>
@@ -154,7 +154,7 @@ export default function ClubPage() {
       <h1 className="screen-title">КЛУБ</h1>
 
       <div className="mvp-ribbon" style={{ margin: '12px -16px 20px' }}>
-        {Array.from({ length: 7 }, (_, i) => (
+        {Array.from({ length: 6 }, (_, i) => (
           <span key={i} className="mvp-ribbon__unit">
             <b>MVP</b><i>BY TOP DOG</i>
           </span>

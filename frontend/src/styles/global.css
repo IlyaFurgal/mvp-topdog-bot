@@ -105,6 +105,10 @@ html, body {
   color: #FFFFFF;
 }
 
+.page-title--lime {
+  color: var(--accent);
+}
+
 .page-subtitle {
   font-size: 11px;
   color: var(--text-muted);
