@@ -2255,8 +2255,8 @@ html, body {
 .club-block-header {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px 60px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  padding: 2px 6px 60px;
   margin-bottom: 16px;
 }
 
@@ -2269,6 +2269,8 @@ html, body {
 .club-block-header .page-subtitle {
   margin: 2px 0 0;
   text-align: left;
+  color: var(--text);
+  font-size: 9px;
 }
 
 .club-card {
@@ -2276,8 +2278,8 @@ html, body {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  padding: 2px 6px 0;
   margin-bottom: 14px;
   text-decoration: none;
   text-align: left;
@@ -2299,11 +2301,11 @@ html, body {
 
 .club-card__sub {
   display: block;
-  font-size: 0.6rem;
+  font-size: 0.52rem;
   font-weight: 700;
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
   margin: 2px 0 10px;
 }
 
@@ -3284,12 +3286,12 @@ select optgroup {
 
 .screen-title::before {
   clip-path: polygon(0 0, 100% 0, 100% 38%, 0 30%);
-  transform: translate(10px, -7px);
+  transform: translate(3px, -2px);
 }
 
 .screen-title::after {
   clip-path: polygon(0 62%, 100% 70%, 100% 100%, 0 100%);
-  transform: translate(-10px, 7px);
+  transform: translate(-3px, 2px);
 }
 
 .screen-title--lime {
