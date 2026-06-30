@@ -1666,10 +1666,9 @@ html, body {
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 30% 15%, rgba(255,255,255,0.07) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 70% at 55% 55%, rgba(255,255,255,0.04) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 50% at 20% 80%, rgba(255,255,255,0.04) 0%, transparent 50%),
-    linear-gradient(160deg, #1a1a1a 0%, #0e0e0e 50%, #080808 100%);
+    linear-gradient(125deg, transparent 20%, rgba(255,255,255,0.13) 38%, rgba(255,255,255,0.06) 45%, transparent 58%),
+    linear-gradient(125deg, transparent 48%, rgba(255,255,255,0.08) 60%, rgba(255,255,255,0.04) 65%, transparent 75%),
+    #090909;
 }
 
 .ai-header {
@@ -1697,6 +1696,7 @@ html, body {
 
 .ai-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px;
   display: flex;
