@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import { getLocalUtcStr } from './utils/timezone'
-import BottomNav from './components/BottomNav'
+import TopNav from './components/TopNav'
 import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
@@ -11,10 +11,8 @@ import { lazyWithRetry } from './utils/lazyWithRetry'
 import { useTelegram } from './hooks/useTelegram'
 import ProfilePage from './pages/ProfilePage'   // стартовая страница — статический импорт
 
-const AiPage            = lazyWithRetry(() => import('./pages/AiPage'))
-const ClubPage          = lazyWithRetry(() => import('./pages/ClubPage'))
-const ProgressPage      = lazyWithRetry(() => import('./pages/ProgressPage'))
-const TrackersPage      = lazyWithRetry(() => import('./pages/TrackersPage'))
+const AiPage   = lazyWithRetry(() => import('./pages/AiPage'))
+const ClubPage = lazyWithRetry(() => import('./pages/ClubPage'))
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
@@ -140,6 +138,7 @@ function AppContent() {
 
   return (
     <>
+      <TopNav />
       <OnboardingModal />
       <main className="main-content">
         <SwipeNavigator>
@@ -152,15 +151,12 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<Navigate to="/profile" replace />} />
               <Route path="/ai"        element={<AiPage />} />
-              <Route path="/trackers"  element={<TrackersPage />} />
-              <Route path="/progress"  element={<ProgressPage />} />
               <Route path="/profile"   element={<ProfilePage />} />
               <Route path="/club"      element={<ClubPage />} />
             </Routes>
           </Suspense>
         </SwipeNavigator>
       </main>
-      <BottomNav />
     </>
   )
 }

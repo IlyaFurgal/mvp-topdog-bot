@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
+import MvpRibbon from '../components/MvpRibbon'
 import { useProfile } from '../context/ProfileContext'
 import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
@@ -155,13 +156,7 @@ export default function ClubPage() {
 
   return (
     <div className="page club-page">
-      <div className="mvp-ribbon" style={{ margin: '0 -16px 16px' }}>
-        {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className="mvp-ribbon__unit">
-            <b>MVP</b><i>BY TOP DOG</i>
-          </span>
-        ))}
-      </div>
+      <MvpRibbon />
 
       <h1 className="screen-title" data-text="КЛУБ">
         КЛУБ

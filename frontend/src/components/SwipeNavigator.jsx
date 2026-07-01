@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-const TAB_ORDER = ['/ai', '/trackers', '/progress', '/profile', '/club']
+const TAB_ORDER = ['/ai', '/profile', '/club']
 
 const THRESHOLD    = 60   // мин. горизонтальное смещение, px
 const MAX_OFF_AXIS = 50   // макс. вертикальное смещение, px

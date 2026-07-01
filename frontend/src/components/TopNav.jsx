@@ -1,16 +1,14 @@
 import { NavLink } from 'react-router-dom'
 
 const tabs = [
-  { path: '/ai',        label: 'ЧАТ'     },
-  { path: '/trackers',  label: 'ТРЕКЕР'  },
-  { path: '/progress',  label: 'ПРОГРЕСС' },
-  { path: '/profile',   label: 'ПРОФИЛЬ'  },
-  { path: '/club',      label: 'КЛУБ'     },
+  { path: '/ai',      label: 'ЧАТ'     },
+  { path: '/profile', label: 'ПРОФИЛЬ' },
+  { path: '/club',    label: 'КЛУБ'    },
 ]
 
-export default function BottomNav() {
+export default function TopNav() {
   return (
-    <nav className="bottom-nav">
+    <nav className="top-nav">
       {tabs.map((tab) => (
         <NavLink
           key={tab.path}

@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
+import { getTodayCheckins } from '../api/checkins'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
+import CheckinCard from '../components/CheckinCard'
+import CheckinFlow from '../components/CheckinFlow'
+import MvpRibbon from '../components/MvpRibbon'
+import MyDataCard from '../components/MyDataCard'
+import ProgressSection from '../components/ProgressSection'
+import SavedProgramsBlock from '../components/SavedProgramsBlock'
+import WorkoutBlock from '../components/WorkoutBlock'
 import { useProfile } from '../context/ProfileContext'
-import { useTelegram } from '../hooks/useTelegram'
+
+const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
 
 const GOAL_OPTIONS = [
   ['muscle_gain',    'Набор мышц'],
@@ -15,14 +24,6 @@ const GOAL_OPTIONS = [
   ['competition',    'Соревнования'],
   ['flexibility',    'Гибкость / растяжка'],
 ]
-
-const GOAL_LABELS = Object.fromEntries(GOAL_OPTIONS)
-
-const FITNESS_LABELS = {
-  beginner:     'Начинающий',
-  intermediate: 'Средний',
-  advanced:     'Продвинутый',
-}
 
 const FITNESS_OPTIONS = [
   ['beginner',     '🌱 Новичок'],
@@ -72,11 +73,6 @@ for (let h = 18; h <= 23; h++) {
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
 }
 
-const SUB_BADGE = {
-  plus: { label: 'Plus', cls: 'badge--plus' },
-  pro:  { label: 'Pro',  cls: 'badge--pro'  },
-}
-
 const PRICES = {
   plus: { monthly: 990,  biannual: 4990  },
   pro:  { monthly: 2990, biannual: 14990 },
@@ -109,6 +105,13 @@ function SubInfo({ type, period }) {
 }
 
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
+
+function getOverallStatus(checkins) {
+  const done = CHECKIN_TYPES.filter((t) => checkins[t]).length
+  if (done === 3) return { label: 'LOCKED IN 🔒', cls: 'status--locked' }
+  if (done > 0) return { label: 'IN PROGRESS ⚡', cls: 'status--progress' }
+  return { label: 'OPEN 📋', cls: 'status--open' }
+}
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 
@@ -548,163 +551,65 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const { user } = useTelegram()
   const { profile, subscriptionType, subscriptionPeriod, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
-  const [imgFailed, setImgFailed] = useState(false)
 
-  // Prefer the name the user set during registration
-  const displayName = profile?.preferred_name
-    || (user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'Пользователь')
+  const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
+  const [checkinsLoading, setCheckinsLoading] = useState(true)
+  const [activeFlow, setActiveFlow] = useState(null)
+  const [editCheckin, setEditCheckin] = useState(null) // { type, id, data }
 
-  const initials = (() => {
-    const words = displayName.trim().split(/\s+/)
-    return words.length >= 2
-      ? (words[0][0] + words[1][0]).toUpperCase()
-      : displayName.slice(0, 2).toUpperCase()
-  })()
+  async function loadCheckins() {
+    try {
+      setCheckins(await getTodayCheckins())
+    } catch (_) {}
+    setCheckinsLoading(false)
+  }
 
-  const badge = subscriptionType ? SUB_BADGE[subscriptionType] : null
+  useEffect(() => { loadCheckins() }, [])
 
-  // Goals display: prefer new goals array, fall back to single goal
-  const goalsDisplay = (() => {
-    const arr = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
-    if (!arr.length) return '—'
-    return arr.map((g) => GOAL_LABELS[g] ?? g).join(', ')
-  })()
+  if (activeFlow) {
+    return (
+      <CheckinFlow
+        type={activeFlow}
+        ctx={{ hasPostWorkout: !!checkins.post_workout }}
+        onClose={() => { setActiveFlow(null); loadCheckins() }}
+      />
+    )
+  }
 
-  const tzLabel = profile?.timezone
-    ? (TIMEZONE_OPTIONS.find(([k]) => k === profile.timezone)?.[1] ?? profile.timezone)
-    : '—'
+  if (editCheckin) {
+    return (
+      <CheckinFlow
+        type={editCheckin.type}
+        ctx={{ hasPostWorkout: !!checkins.post_workout }}
+        editMode
+        checkinId={editCheckin.id}
+        initialData={editCheckin.data}
+        onClose={() => { setEditCheckin(null); loadCheckins() }}
+      />
+    )
+  }
+
+  const status = getOverallStatus(checkins)
 
   return (
     <div className="page" style={{ position: 'relative' }}>
+      <MvpRibbon />
+
       <h1 className="screen-title" data-text="ПРОФИЛЬ">
         ПРОФИЛЬ
         <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОФИЛЬ</span></span>
       </h1>
-      <button
-        onClick={() => setEditOpen(true)}
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          background: 'transparent',
-          border: '1px solid #2a2a2a',
-          color: '#888888',
-          fontSize: 12,
-          padding: '6px 12px',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-          fontWeight: 600,
-          letterSpacing: '0.04em',
-        }}
-      >
-        Изменить
-      </button>
 
-      <div className="profile-header">
-        {user?.photo_url && !imgFailed ? (
-          <div className="avatar avatar--photo">
-            <img
-              src={user.photo_url}
-              alt=""
-              className="avatar-img"
-              onError={() => setImgFailed(true)}
-            />
-          </div>
-        ) : (
-          <div className="avatar">{initials}</div>
-        )}
-        <div className="profile-name">
-          <div className="profile-name-row">
-            <span className="profile-name-text">{displayName}</span>
-            {badge && (
-              <span className={`sub-badge ${badge.cls}`}>{badge.label}</span>
-            )}
-          </div>
-          {user?.username && (
-            <span className="profile-username">@{user.username}</span>
-          )}
-        </div>
-      </div>
+      <MyDataCard onEditClick={() => setEditOpen(true)} />
 
-      <div className="mvp-ribbon" style={{ margin: '12px -16px 20px' }}>
-        {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className="mvp-ribbon__unit">
-            <b>MVP</b><i>BY TOP DOG</i>
-          </span>
-        ))}
-      </div>
-
-      <div className="data-row" style={{ alignItems: 'flex-start' }}>
-        <span className="data-row__label">ЦЕЛЬ</span>
-        <span className="data-row__value">
-          {goalsDisplay === '—' ? '—' : goalsDisplay.split(', ').map((g) => (
-            <span key={g} style={{ display: 'block' }}>{g}</span>
-          ))}
-        </span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">УРОВЕНЬ</span>
-        <span className="data-row__value">{FITNESS_LABELS[profile?.fitness_level] ?? '—'}</span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ВИД СПОРТА</span>
-        <span className="data-row__value">{profile?.sport_type ?? '—'}</span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
-        <span className="data-row__value">
-          {profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}
-        </span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
-        <span className="data-row__value" style={{ fontSize: '0.85rem' }}>{profile?.timezone ?? '—'}</span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">УТРО</span>
-        <span className="data-row__value">{profile?.morning_reminder_time ?? '08:00'}</span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ВЕЧЕР</span>
-        <span className="data-row__value">{profile?.evening_reminder_time ?? '21:00'}</span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ПУШИ</span>
-        <span className="data-row__value">
-          {profile?.notifications_enabled === false ? '🔕 выкл' : '🔔 вкл'}
-        </span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">ВЕС (старт)</span>
-        <span className="data-row__value">
-          {profile?.weight != null ? `${profile.weight} кг` : '—'}
-        </span>
-      </div>
-      <div className="data-row">
-        <span className="data-row__label">РОСТ</span>
-        <span className="data-row__value">
-          {profile?.height != null ? `${profile.height} см` : '—'}
-        </span>
-      </div>
       <div className="data-row">
         <span className="data-row__label">ТАРИФ</span>
         <span className="data-row__value">
           <SubInfo type={subscriptionType} period={subscriptionPeriod} />
         </span>
       </div>
-
-      {profile?.additional_info && (
-        <div className="data-row" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
-          <span className="data-row__label">О СЕБЕ</span>
-          <span className="data-row__value" style={{ textAlign: 'left', whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.9rem', fontStyle: 'normal', fontWeight: 600 }}>
-            {profile.additional_info}
-          </span>
-        </div>
-      )}
 
       {subscriptionType === 'plus' && (
         <a
@@ -717,6 +622,50 @@ export default function ProfilePage() {
         >
           УЛУЧШИТЬ ДО PRO
         </a>
+      )}
+
+      <h2 className="page-title" style={{ fontSize: '1.7rem', marginTop: 28, marginBottom: 4 }}>ПРОГРЕСС</h2>
+      <ProgressSection />
+
+      {checkinsLoading ? (
+        <div className="card"><p className="card-muted">Загрузка...</p></div>
+      ) : (
+        <>
+          <div className="card tracker-tip" style={{ marginTop: 24 }}>
+            <p className="tracker-tip__text">
+              💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
+              Чекины и трекеры можно заполнить в любое время дня.
+            </p>
+          </div>
+
+          <div className="page-header">
+            <p className="section-label">ЧЕКИНЫ</p>
+            {status.cls !== 'status--open' && (
+              <span className={`checkin-status ${status.cls}`}>{status.label}</span>
+            )}
+          </div>
+          <div className="checkin-cards">
+            {CHECKIN_TYPES.map((type) => (
+              <CheckinCard
+                key={type}
+                type={type}
+                checkin={checkins[type]}
+                onClick={() => setActiveFlow(type)}
+                onEdit={checkins[type] ? () => setEditCheckin({
+                  type,
+                  id: checkins[type].id,
+                  data: checkins[type].data,
+                }) : undefined}
+              />
+            ))}
+          </div>
+
+          <p className="section-label">ТРЕНИРОВКИ</p>
+          <WorkoutBlock />
+
+          <p className="section-label">СОХРАНЁННЫЕ ПРОГРАММЫ</p>
+          <SavedProgramsBlock />
+        </>
       )}
 
       {editOpen && (

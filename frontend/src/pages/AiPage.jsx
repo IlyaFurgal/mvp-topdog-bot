@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { createSavedMessage } from '../api/savedMessages'
+import MvpRibbon from '../components/MvpRibbon'
 import { useProfile } from '../context/ProfileContext'
 
 const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
@@ -542,13 +543,7 @@ export default function AiPage() {
   // ── Render ────────────────────────────────────────────
   return (
     <div className="ai-page">
-      <div className="mvp-ribbon">
-        {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className="mvp-ribbon__unit">
-            <b>MVP</b><i>BY TOP DOG</i>
-          </span>
-        ))}
-      </div>
+      <MvpRibbon />
 
       <div className="ai-messages">
         {messages.map((msg) => (

@@ -49,7 +49,7 @@ html, body {
 
 .main-content {
   flex: 1;
-  padding-bottom: var(--nav-height);
+  padding-top: var(--nav-height);
   min-height: calc(100vh - var(--nav-height, 64px));
   min-height: calc(100dvh - var(--nav-height, 64px));
   display: flex;
@@ -163,19 +163,19 @@ html, body {
   opacity: 0.85;
 }
 
-/* ── Bottom Nav ───────────────────────────────────────── */
+/* ── Top Nav ──────────────────────────────────────────── */
 
-.bottom-nav {
+.top-nav {
   position: fixed;
-  bottom: 0;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: calc(var(--nav-height) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  height: calc(var(--nav-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
   display: flex;
   z-index: 100;
 }
@@ -183,19 +183,15 @@ html, body {
 .nav-tab {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: var(--text-muted);
-  gap: 4px;
-  border-top: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
+  color: #fff;
+  transition: color 0.15s;
 }
 
 .nav-tab.active {
-  color: var(--accent);
-  border-top-color: var(--accent);
+  color: var(--accent-club);
 }
 
 .nav-icon {
@@ -204,9 +200,10 @@ html, body {
 }
 
 .nav-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -1651,16 +1648,6 @@ html, body {
   color: var(--accent);
   font-weight: 700;
   flex-shrink: 0;
-}
-
-/* ── 6-tab BottomNav ──────────────────────────────────── */
-
-.bottom-nav .nav-label {
-  font-size: 9px;
-}
-
-.bottom-nav .nav-icon {
-  font-size: 1.3rem;
 }
 
 /* ── AiPage ───────────────────────────────────────────── */
@@ -3345,6 +3332,105 @@ select optgroup {
   text-align: right;
 }
 
+/* ── My Data card ─────────────────────────────────────── */
+
+.my-data-card {
+  margin-bottom: 24px;
+}
+
+.my-data-header {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 0 10px;
+  cursor: pointer;
+}
+
+.my-data-body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.my-data-avatar-wrap {
+  position: relative;
+  width: 120px;
+  height: 150px;
+  flex-shrink: 0;
+  border: 2px solid var(--accent-club);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #111;
+}
+
+.my-data-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05);
+  display: block;
+}
+
+.my-data-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-club);
+}
+
+.my-data-avatar-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  color: var(--accent-club);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.my-data-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.my-data-grid .data-row {
+  padding: 8px 10px;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.my-data-grid .data-row__label {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.my-data-grid .data-row__value {
+  font-size: 0.85rem;
+  color: var(--accent-club);
+  white-space: nowrap;
+}
+
 .tab-skew {
   font-style: italic;
   font-weight: 800;
@@ -3367,6 +3453,7 @@ select optgroup {
 
 .mvp-ribbon {
   background: var(--accent-club);
+  margin: 0 -16px 16px;
   padding: 2px 0;
   display: flex;
   align-items: center;

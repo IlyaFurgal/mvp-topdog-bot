@@ -6,8 +6,8 @@ import {
 import { getCheckinHistory } from '../api/checkins'
 import { getTrackerHistory, getTrackerStats, getWeeklyInsight } from '../api/trackers'
 import { getWorkoutCategories, getWorkouts } from '../api/workouts'
-import WorkoutCalendar from '../components/WorkoutCalendar'
-import WorkoutCharts from '../components/WorkoutCharts'
+import WorkoutCalendar from './WorkoutCalendar'
+import WorkoutCharts from './WorkoutCharts'
 
 const PERIODS = [
   { label: '30 ДНЕЙ', days: 30 },
@@ -57,30 +57,12 @@ function disciplineColor(pct) {
   return 'var(--danger)'
 }
 
-const RPE_LABELS = {
-  1: 'почти нет нагрузки',
-  2: 'очень легко',
-  3: 'легко',
-  4: 'умеренно',
-  5: 'средне',
-  6: 'тяжело, но контролируемо',
-  7: 'очень тяжело',
-  8: 'почти максимум',
-  9: 'предельная нагрузка',
-  10: 'максимум',
-}
-
 function rpeColor(rpe) {
   if (!rpe) return '#888'
   const n = parseFloat(rpe)
   if (n <= 3) return 'var(--accent)'
   if (n <= 6) return '#f59e0b'
   return 'var(--danger)'
-}
-
-function rpeLabel(rpe) {
-  if (!rpe) return ''
-  return RPE_LABELS[Math.round(parseFloat(rpe))] ?? ''
 }
 
 const SCORE_MAP = {
@@ -146,7 +128,7 @@ function recoveryGrade(pct) {
   return { label: 'Критическое', color: '#7f1d1d', sub: 'Снизь нагрузку и восстановись.' }
 }
 
-export default function ProgressPage() {
+export default function ProgressSection() {
   const [view, setView]           = useState('state')  // 'state' | 'workouts'
   const [periodIdx, setPeriodIdx] = useState(0)
   const [woPeriodIdx, setWoPeriodIdx] = useState(0)
@@ -233,9 +215,7 @@ export default function ProgressPage() {
   const hasMetrics = displayedDiscipline !== null || avgRpe !== null || recoveryPct !== null
 
   return (
-    <div className="page">
-      <h1 className="page-title">ПРОГРЕСС</h1>
-
+    <>
       {/* ── View tabs ────────────────────────────────────── */}
       <div className="progress-views">
         <button
@@ -540,6 +520,6 @@ export default function ProgressPage() {
       )}
       </>
       )}
-    </div>
+    </>
   )
 }
