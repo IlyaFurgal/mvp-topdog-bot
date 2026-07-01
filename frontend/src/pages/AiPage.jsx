@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { createSavedMessage } from '../api/savedMessages'
 import MvpRibbon from '../components/MvpRibbon'
-import { useProfile } from '../context/ProfileContext'
+import { useChat } from '../context/ChatContext'
 
 const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
 const RESIZE_THRESHOLD  =  5 * 1024 * 1024   // 5 МБ  — порог ресайза изображений
@@ -53,51 +53,11 @@ function formatRecTime(secs) {
   return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`
 }
 
-const GREETING = {
-  aggressive:
-    'Готов работать. В твоём распоряжении:\n\n' +
-    '- 🏋️ **ТРЕНЕР** — программы, техника, нагрузка под твои цели\n' +
-    '- 🥗 **НУТРИЦИОЛОГ** — питание, калории, восстановление через еду\n' +
-    '- 🩺 **ВРАЧ** — здоровье, ограничения, безопасный подход к нагрузкам\n' +
-    '- 🔥 **МОТИВАТОР** — когда нужен толчок и фокус\n\n' +
-    'Задавай вопросы — отвечу по делу.',
-  soft:
-    'Привет! Я твой персональный ассистент. Вот кто со мной на связи:\n\n' +
-    '- 🏋️ **ТРЕНЕР** — составит программу и подберёт нагрузку под тебя\n' +
-    '- 🥗 **НУТРИЦИОЛОГ** — поможет с питанием и восстановлением\n' +
-    '- 🩺 **ВРАЧ** — ответит на вопросы по здоровью и ограничениям\n' +
-    '- 🔥 **МОТИВАТОР** — поддержит когда тяжело\n\n' +
-    'Спрашивай — я здесь 🙌',
-}
-
-function buildGreeting(tone, name) {
-  const base = GREETING[tone] ?? GREETING.soft
-  if (tone === 'soft' && name) return base.replace('Привет!', `Привет, ${name}!`)
-  return base
-}
-
-const POLL_INTERVAL_MS = 1500
-const POLL_MAX_ATTEMPTS = 40
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-  : ''
-
-function resolveImagePath(imagePath) {
-  if (!imagePath) return null
-  if (imagePath.startsWith('http')) return imagePath
-  return `${API_BASE}${imagePath}`
-}
-
 export default function AiPage() {
-  const { tone, profile } = useProfile()
-  const name = profile?.preferred_name || ''
+  const { messages, setMessages, typing, setTyping, historyLoaded, addMessage, startPolling } = useChat()
 
   // ── Chat state ───────────────────────────────────────
-  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const [typing, setTyping] = useState(false)
-  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [filePreview, setFilePreview] = useState(null)
   const [fileError, setFileError] = useState('')
   const [copiedId, setCopiedId] = useState(null)
@@ -111,7 +71,6 @@ export default function AiPage() {
 
   // ── Refs ─────────────────────────────────────────────
   const bottomRef         = useRef(null)
-  const pollRef           = useRef(null)
   const fileInputRef      = useRef(null)   // ФАЙЛЫ (image + pdf)
   const cameraInputRef    = useRef(null)   // КАМЕРА (capture)
   const photoInputRef     = useRef(null)   // ФОТО (gallery)
@@ -123,39 +82,16 @@ export default function AiPage() {
   const stoppingRef       = useRef(false)   // guard against double stop
   const micHoldRef        = useRef(false)   // true while finger is held on mic
 
-  // ── Load history on mount ────────────────────────────
-  useEffect(() => {
-    async function fetchHistory() {
-      try {
-        const { data } = await client.get('/suvvy/history')
-        const history = (data.messages ?? []).filter((m) => m.text?.trim())
-        if (history.length > 0) {
-          setMessages(history.map((m) => ({
-            id: m.id,
-            from: m.role,
-            text: m.text,
-            imagePath: resolveImagePath(m.image_path),
-          })))
-        } else {
-          setMessages([{ id: 1, from: 'ai', text: buildGreeting(tone, name) }])
-        }
-      } catch {
-        setMessages([{ id: 1, from: 'ai', text: buildGreeting(tone, name) }])
-      } finally {
-        setHistoryLoaded(true)
-      }
-    }
-    fetchHistory()
-  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Scroll to bottom on initial load and whenever new messages arrive
+  // (including ones appended by the background poll while this page is mounted)
   useEffect(() => {
     if (historyLoaded) scrollToBottom()
-  }, [historyLoaded])
+  }, [historyLoaded, messages.length])
 
-  // Cleanup on unmount
+  // Cleanup on unmount — recording only; chat polling lives in ChatContext
+  // and must keep running across tab switches, so it's not stopped here.
   useEffect(() => {
     return () => {
-      stopPolling()
       if (recTimerRef.current) clearInterval(recTimerRef.current)
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
     }
@@ -194,37 +130,6 @@ export default function AiPage() {
 
   function scrollToBottom() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-  }
-
-  function addMessage(from, text, imagePath) {
-    if (!text?.trim()) return
-    setMessages((m) => [...m, { id: Date.now() + Math.random(), from, text, imagePath }])
-    scrollToBottom()
-  }
-
-  function stopPolling() {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
-  }
-
-  async function startPolling() {
-    let attempts = 0
-    pollRef.current = setInterval(async () => {
-      attempts++
-      try {
-        const { data } = await client.get('/suvvy/messages')
-        if (data.messages && data.messages.length > 0) {
-          stopPolling()
-          setTyping(false)
-          data.messages.forEach((text) => { if (text?.trim()) addMessage('ai', text) })
-          return
-        }
-      } catch (_) {}
-      if (attempts >= POLL_MAX_ATTEMPTS) {
-        stopPolling()
-        setTyping(false)
-        addMessage('ai', 'Ассистент не ответил. Попробуй ещё раз.')
-      }
-    }, POLL_INTERVAL_MS)
   }
 
   // ── File/photo handling ───────────────────────────────

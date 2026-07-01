@@ -7,6 +7,7 @@ import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
+import { ChatProvider } from './context/ChatContext'
 import { lazyWithRetry } from './utils/lazyWithRetry'
 import { useTelegram } from './hooks/useTelegram'
 import ProfilePage from './pages/ProfilePage'   // стартовая страница — статический импорт
@@ -214,11 +215,13 @@ export default function App() {
 
   return (
     <ProfileProvider>
-      <BrowserRouter>
-        <div className="app">
-          <AppContent />
-        </div>
-      </BrowserRouter>
+      <ChatProvider>
+        <BrowserRouter>
+          <div className="app">
+            <AppContent />
+          </div>
+        </BrowserRouter>
+      </ChatProvider>
     </ProfileProvider>
   )
 }

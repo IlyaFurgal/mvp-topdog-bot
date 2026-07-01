@@ -82,6 +82,77 @@ function getOverallStatus(checkins) {
   return { label: 'OPEN 📋', cls: 'status--open' }
 }
 
+function formatTariff(profile) {
+  if (!profile?.subscription_type) return null
+  const typeLabel = profile.subscription_type === 'pro' ? 'PRO' : 'PLUS'
+  const periodDays = profile.subscription_period === 'biannual' ? 180 : 30
+  const periodLabel = profile.subscription_period === 'biannual' ? '6 МЕС' : '1 МЕС'
+  if (!profile.subscription_expires_at) return `${typeLabel} | ${periodLabel}`
+  const end = new Date(profile.subscription_expires_at)
+  const start = new Date(end.getTime() - periodDays * 24 * 60 * 60 * 1000)
+  const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+  return `${typeLabel} | ${periodLabel} · ${fmt(start)}–${fmt(end)}`
+}
+
+// ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
+
+function MyDataView({ profile, onBack, onEdit }) {
+  const tzLabel = profile?.timezone
+    ? (TIMEZONE_OPTIONS.find(([k]) => k === profile.timezone)?.[1] ?? profile.timezone)
+    : '—'
+  const tariff = formatTariff(profile)
+
+  return (
+    <div className="page club-page">
+      <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
+      <MvpRibbon />
+
+      <h1 className="screen-title" data-text="МОИ ДАННЫЕ">
+        МОИ ДАННЫЕ
+        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">МОИ ДАННЫЕ</span></span>
+      </h1>
+      <div className="stripe-divider" />
+
+      <div className="data-row">
+        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
+        <span className="data-row__value">
+          {profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
+        <span className="data-row__value" style={{ fontSize: '0.85rem' }}>{tzLabel}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">УТРО</span>
+        <span className="data-row__value">{profile?.morning_reminder_time ?? '08:00'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ВЕЧЕР</span>
+        <span className="data-row__value">{profile?.evening_reminder_time ?? '21:00'}</span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ПУШИ</span>
+        <span className="data-row__value">
+          {profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-row__label">ТАРИФ</span>
+        <span className="data-row__value">{tariff ?? '—'}</span>
+      </div>
+
+      <button
+        className="btn btn-accent clip-skew"
+        style={{ marginTop: 24 }}
+        onClick={onEdit}
+      >
+        РЕДАКТИРОВАТЬ
+      </button>
+    </div>
+  )
+}
+
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 
 function EditProfileModal({ profile, onClose, onSaved }) {
@@ -504,6 +575,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 export default function ProfilePage() {
   const { profile, subscriptionType, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
+  const [myDataOpen, setMyDataOpen] = useState(false)
 
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [checkinsLoading, setCheckinsLoading] = useState(true)
@@ -542,10 +614,29 @@ export default function ProfilePage() {
     )
   }
 
+  if (myDataOpen) {
+    return (
+      <>
+        <MyDataView
+          profile={profile}
+          onBack={() => setMyDataOpen(false)}
+          onEdit={() => setEditOpen(true)}
+        />
+        {editOpen && (
+          <EditProfileModal
+            profile={profile}
+            onClose={() => setEditOpen(false)}
+            onSaved={() => { setEditOpen(false); refreshProfile() }}
+          />
+        )}
+      </>
+    )
+  }
+
   const status = getOverallStatus(checkins)
 
   return (
-    <div className="page" style={{ position: 'relative' }}>
+    <div className="page club-page" style={{ position: 'relative' }}>
       <MvpRibbon />
 
       <h1 className="screen-title" data-text="ПРОФИЛЬ">
@@ -553,7 +644,7 @@ export default function ProfilePage() {
         <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОФИЛЬ</span></span>
       </h1>
 
-      <MyDataCard onEditClick={() => setEditOpen(true)} />
+      <MyDataCard onEditClick={() => setMyDataOpen(true)} />
 
       {subscriptionType === 'plus' && (
         <a
@@ -613,14 +704,6 @@ export default function ProfilePage() {
           <p className="section-label">СОХРАНЁННЫЕ ПРОГРАММЫ</p>
           <SavedProgramsBlock />
         </>
-      )}
-
-      {editOpen && (
-        <EditProfileModal
-          profile={profile}
-          onClose={() => setEditOpen(false)}
-          onSaved={() => { setEditOpen(false); refreshProfile() }}
-        />
       )}
     </div>
   )

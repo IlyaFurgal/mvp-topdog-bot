@@ -24,6 +24,13 @@ function formatValue(type, data) {
   return null
 }
 
+function formatBmi(weightKg, heightCm) {
+  if (!weightKg || !heightCm) return null
+  const heightM = heightCm / 100
+  const bmi = weightKg / (heightM * heightM)
+  return bmi.toFixed(1)
+}
+
 function resizeAvatar(file) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -77,6 +84,7 @@ export default function MyDataCard({ onEditClick }) {
   })()
 
   const tierLabel = subscriptionType === 'pro' ? 'PRO' : subscriptionType === 'plus' ? 'PLUS' : '—'
+  const bmi = formatBmi(trackers.weight?.value ?? profile?.weight, profile?.height)
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -125,6 +133,10 @@ export default function MyDataCard({ onEditClick }) {
           <div className="data-row" onClick={() => setActiveTracker('weight')}>
             <span className="data-row__label">ВЕС</span>
             <span className="data-row__value">{formatValue('weight', trackers.weight) ?? '—'}</span>
+          </div>
+          <div className="data-row">
+            <span className="data-row__label">ИМТ</span>
+            <span className="data-row__value">{bmi ?? '—'}</span>
           </div>
           <div className="data-row" onClick={() => setActiveTracker('calories')}>
             <span className="data-row__label">КАЛОРИИ</span>

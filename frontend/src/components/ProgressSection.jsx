@@ -28,6 +28,15 @@ const TOOLTIP_STYLE = {
   fontFamily: 'Barlow Condensed',
 }
 
+const CHART_GREEN = '#B0F326'
+const AXIS_TICK = { fill: CHART_GREEN, fontSize: 10 }
+
+function SquareDot({ cx, cy, r = 4, fill = CHART_GREEN }) {
+  if (cx == null || cy == null) return null
+  const s = r * 2
+  return <rect x={cx - r} y={cy - r} width={s} height={s} fill={fill} />
+}
+
 function fmtDate(str) {
   const d = new Date(str)
   return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -323,13 +332,13 @@ export default function ProgressSection() {
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={['auto', 'auto']}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     width={36}
                     axisLine={false}
                     tickLine={false}
@@ -342,10 +351,10 @@ export default function ProgressSection() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#aaff00"
+                    stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, fill: '#aaff00' }}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={5} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -377,12 +386,12 @@ export default function ProgressSection() {
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     width={44}
                     axisLine={false}
                     tickLine={false}
@@ -393,7 +402,7 @@ export default function ProgressSection() {
                     labelFormatter={fmtDate}
                   />
                   <ReferenceLine y={2000} stroke="#444" strokeDasharray="4 4" />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="value" fill={CHART_GREEN} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -424,13 +433,13 @@ export default function ProgressSection() {
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={['auto', 'auto']}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     width={44}
                     axisLine={false}
                     tickLine={false}
@@ -443,10 +452,10 @@ export default function ProgressSection() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#C8FF00"
+                    stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={{ r: 3, fill: '#C8FF00', strokeWidth: 0 }}
-                    activeDot={{ r: 5, fill: '#C8FF00' }}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={5} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -478,13 +487,13 @@ export default function ProgressSection() {
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0, 12]}
-                    tick={{ fill: '#666', fontSize: 10 }}
+                    tick={AXIS_TICK}
                     width={30}
                     axisLine={false}
                     tickLine={false}
@@ -498,10 +507,10 @@ export default function ProgressSection() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#8b5cf6"
+                    stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, fill: '#8b5cf6' }}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={5} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
