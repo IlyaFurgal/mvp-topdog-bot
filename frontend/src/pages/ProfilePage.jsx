@@ -73,37 +73,6 @@ for (let h = 18; h <= 23; h++) {
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
 }
 
-const PRICES = {
-  plus: { monthly: 990,  biannual: 4990  },
-  pro:  { monthly: 2990, biannual: 14990 },
-}
-
-function fmtPrice(n) {
-  return new Intl.NumberFormat('ru-RU').format(n) + ' ₽'
-}
-
-function SubInfo({ type, period }) {
-  if (!type) return <span>Нет подписки</span>
-
-  const typeLabel = type === 'pro' ? 'Pro' : 'Plus'
-  const periodLabel = period === 'biannual' ? '6 месяцев' : '1 месяц'
-  const price = PRICES[type]?.[period ?? 'monthly']
-  const isDiscount = period === 'biannual'
-
-  return (
-    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
-        {typeLabel} / {periodLabel}
-      </span>
-      {price != null && (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-          {fmtPrice(price)}{isDiscount ? ' (–16%)' : ''}
-        </span>
-      )}
-    </span>
-  )
-}
-
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
 function getOverallStatus(checkins) {
@@ -451,6 +420,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         {/* Weight */}
         <p className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
         <input
+          className="field-input"
           type="number"
           inputMode="decimal"
           value={weight}
@@ -459,17 +429,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           min="30"
           max="300"
           step="0.1"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            boxSizing: 'border-box',
-            marginBottom: 4,
-          }}
+          style={{ marginBottom: 4 }}
         />
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
           Стартовый вес для расчёта нормы калорий. Текущий вес меняй через трекер.
@@ -478,6 +438,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         {/* Height */}
         <p className="section-label" style={{ marginBottom: 8 }}>РОСТ (см)</p>
         <input
+          className="field-input"
           type="number"
           inputMode="numeric"
           value={height}
@@ -485,17 +446,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           placeholder="Например: 178"
           min="100"
           max="250"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            boxSizing: 'border-box',
-            marginBottom: 16,
-          }}
+          style={{ marginBottom: 16 }}
         />
 
         {/* Additional info */}
@@ -551,7 +502,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const { profile, subscriptionType, subscriptionPeriod, refreshProfile } = useProfile()
+  const { profile, subscriptionType, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
 
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
@@ -604,13 +555,6 @@ export default function ProfilePage() {
 
       <MyDataCard onEditClick={() => setEditOpen(true)} />
 
-      <div className="data-row">
-        <span className="data-row__label">ТАРИФ</span>
-        <span className="data-row__value">
-          <SubInfo type={subscriptionType} period={subscriptionPeriod} />
-        </span>
-      </div>
-
       {subscriptionType === 'plus' && (
         <a
           href={PRO_URL}
@@ -624,7 +568,10 @@ export default function ProfilePage() {
         </a>
       )}
 
-      <h2 className="page-title" style={{ fontSize: '1.7rem', marginTop: 28, marginBottom: 4 }}>ПРОГРЕСС</h2>
+      <h2 className="screen-title" data-text="ПРОГРЕСС" style={{ fontSize: '1.7rem', marginTop: 28, marginBottom: 4 }}>
+        ПРОГРЕСС
+        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОГРЕСС</span></span>
+      </h2>
       <ProgressSection />
 
       {checkinsLoading ? (
