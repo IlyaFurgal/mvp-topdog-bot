@@ -368,6 +368,24 @@ def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
 
 # ── GetCourse webhook ─────────────────────────────────────────────────────────
 
+def _apply_subscription_to_user(
+    user: User,
+    tier: str | None,
+    active: str,
+    expires_at: datetime | None = None,
+) -> None:
+    """Set the 4 User subscription fields consistently for payment and refund.
+
+    Gating checks by_active (subscription_active=="active") OR by_status
+    (subscription_status==premium) — both signals must move together, otherwise
+    a stale legacy status="premium" alone would keep access open after a refund.
+    """
+    user.subscription_type = tier
+    user.subscription_active = active
+    user.subscription_expires_at = expires_at
+    user.subscription_status = SubscriptionStatus.premium if active == "active" else SubscriptionStatus.free
+
+
 @router.post("/getcourse")
 async def getcourse_webhook(
     request: Request,
@@ -477,10 +495,7 @@ async def getcourse_webhook(
             )
             user = user_res.scalar_one_or_none()
             if user:
-                user.subscription_type = tier.value
-                user.subscription_active = "active"
-                user.subscription_expires_at = expires_at
-                user.subscription_status = SubscriptionStatus.premium
+                _apply_subscription_to_user(user, tier.value, "active", expires_at)
                 await session.commit()
                 logger.info("GC payment: updated User sub fields for tg_id=%s", effective_tg_id)
             await _send_payment_welcome(effective_tg_id, tier.value)
@@ -491,6 +506,14 @@ async def getcourse_webhook(
             await session.commit()
             logger.info("GC refund recorded phone=%s", phone)
             if sub.telegram_id:
+                user_res = await session.execute(
+                    select(User).where(User.telegram_id == sub.telegram_id)
+                )
+                user = user_res.scalar_one_or_none()
+                if user:
+                    _apply_subscription_to_user(user, None, "inactive")
+                    await session.commit()
+                    logger.info("GC refund: reset User sub fields for tg_id=%s", sub.telegram_id)
                 await _send_refund_notice(sub.telegram_id)
         else:
             logger.warning("GC refund: no subscription found for phone=%s", phone)
