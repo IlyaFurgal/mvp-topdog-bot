@@ -361,10 +361,6 @@ export default function AiPage() {
     }
   }
 
-  function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
-  }
-
   // ── Hold-to-record handlers ───────────────────────────
   function handleMicPointerDown(e) {
     e.preventDefault()
@@ -749,7 +745,6 @@ export default function AiPage() {
               placeholder="СПРОСИТЬ ИИ-АССИСТЕНТА"
               value={input}
               onChange={handleTextareaChange}
-              onKeyDown={handleKey}
               onPaste={handlePaste}
             />
             <button
