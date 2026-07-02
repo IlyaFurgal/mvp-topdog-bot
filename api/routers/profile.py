@@ -84,7 +84,9 @@ async def update_my_profile(
     )).scalar_one_or_none()
 
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        profile = Profile(user_id=user.id)
+        session.add(profile)
+        await session.flush()  # чтобы profile.id был доступен до commit в конце функции
 
     if body.preferred_name is not None:
         profile.preferred_name = body.preferred_name
