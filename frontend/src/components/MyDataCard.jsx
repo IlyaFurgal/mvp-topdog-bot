@@ -104,25 +104,27 @@ export default function MyDataCard({ onEditClick }) {
       <button className="my-data-header" onClick={onEditClick}>МОИ ДАННЫЕ</button>
 
       <div className="my-data-body">
-        <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
-          <span className="my-data-avatar-tag">MVP</span>
-          {photoSrc ? (
-            <img
-              src={photoSrc}
-              alt=""
-              className="my-data-avatar-img"
-              onError={() => setImgFailed(true)}
+        <div className="my-data-avatar-col">
+          <span className="my-data-tag"><b>MVP</b><i>BY TOP DOG</i></span>
+          <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
+            {photoSrc ? (
+              <img
+                src={photoSrc}
+                alt=""
+                className="my-data-avatar-img"
+                onError={() => setImgFailed(true)}
+              />
+            ) : (
+              <div className="my-data-avatar-fallback">{initials}</div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handlePhotoChange}
             />
-          ) : (
-            <div className="my-data-avatar-fallback">{initials}</div>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handlePhotoChange}
-          />
+          </div>
         </div>
 
         <div className="my-data-grid">
