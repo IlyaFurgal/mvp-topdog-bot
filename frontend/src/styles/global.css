@@ -2045,9 +2045,15 @@ html, body {
   flex: 1;
   gap: 0;
   background: #1e1e1e;
+  border: 1px solid transparent;
   border-radius: 26px;
   padding: 4px 4px 4px 14px;
   min-height: 44px;
+  transition: border-color 0.15s;
+}
+
+.ai-input-bar__inner:focus-within {
+  border-color: var(--accent-club);
 }
 
 /* Attachment popup menu — static sibling above input bar */
