@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.bot_sender import send_message, webapp_kb
-from api.deps import _is_subscription_active, get_current_user
+from api.deps import _is_eligible_for_pushes, get_current_user
 from database.models import Profile, Tracker, TrackerType, User
 from database.session import get_session
 
@@ -121,7 +121,7 @@ async def _calories_today_sum(session, user_id: int) -> float:
 
 async def _maybe_push_calorie_over(session, user, profile, prev_sum: float, new_sum: float) -> None:
     """Шлёт пуш только если ИМЕННО эта запись пересекла дневной лимит."""
-    if not _is_subscription_active(user):
+    if not _is_eligible_for_pushes(user):
         return
     limit = calculate_calorie_limit(profile)
     if limit <= 0:

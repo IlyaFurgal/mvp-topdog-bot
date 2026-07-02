@@ -100,6 +100,11 @@ class User(Base):
     subscription_period: Mapped[str | None] = mapped_column(String(16), nullable=True)  # null / "monthly" / "biannual"
     subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # App visit tracking — gates pushes on actual Mini App usage, not just an active subscription
+    subscription_activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_app_open_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_app_open_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     profile: Mapped["Profile | None"] = relationship(back_populates="user", uselist=False)
     checkins: Mapped[list["Checkin"]] = relationship(back_populates="user")
     trackers: Mapped[list["Tracker"]] = relationship(back_populates="user")

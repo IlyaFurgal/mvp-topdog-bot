@@ -38,6 +38,18 @@ def _is_subscription_active(user: User) -> bool:
     return True
 
 
+def _has_used_app_since_subscription(user: User) -> bool:
+    """True if the user has opened the Mini App at least once since this subscription activated."""
+    if not user.subscription_activated_at or not user.last_app_open_at:
+        return False
+    return user.last_app_open_at >= user.subscription_activated_at
+
+
+def _is_eligible_for_pushes(user: User) -> bool:
+    """Gate content pushes on actual Mini App usage, not just an active subscription."""
+    return _is_subscription_active(user) and _has_used_app_since_subscription(user)
+
+
 def require_subscription(required_type: str = "plus"):
     """
     Dependency factory.

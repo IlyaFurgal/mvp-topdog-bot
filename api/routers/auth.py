@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, unquote
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -135,6 +135,11 @@ async def auth_telegram(
         except Exception as e:
             logger.error("Auth: failed to auto-create user telegram_id=%s: %s: %s", telegram_id, type(e).__name__, str(e))
             raise HTTPException(status_code=500, detail="Failed to create user")
+
+    if user.first_app_open_at is None:
+        user.first_app_open_at = datetime.now(timezone.utc)
+    user.last_app_open_at = datetime.now(timezone.utc)
+    await session.commit()
 
     logger.info("Auth OK: telegram_id=%s user_id=%s", telegram_id, user.id)
     return TokenResponse(access_token=_create_token(telegram_id))

@@ -380,10 +380,14 @@ def _apply_subscription_to_user(
     (subscription_status==premium) — both signals must move together, otherwise
     a stale legacy status="premium" alone would keep access open after a refund.
     """
+    was_active = (user.subscription_active == "active")
     user.subscription_type = tier
     user.subscription_active = active
     user.subscription_expires_at = expires_at
     user.subscription_status = SubscriptionStatus.premium if active == "active" else SubscriptionStatus.free
+    # Only stamp activation on the inactive/None → active transition, not on renewals
+    if active == "active" and not was_active:
+        user.subscription_activated_at = datetime.now(timezone.utc)
 
 
 @router.post("/getcourse")
