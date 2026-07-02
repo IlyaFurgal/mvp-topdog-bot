@@ -113,31 +113,31 @@ function MyDataView({ profile, onBack, onEdit }) {
       </h1>
       <div className="stripe-divider" />
 
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
         <span className="data-row__value">
           {profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}
         </span>
       </div>
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
         <span className="data-row__value" style={{ fontSize: '0.85rem' }}>{tzLabel}</span>
       </div>
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">УТРО</span>
         <span className="data-row__value">{profile?.morning_reminder_time ?? '08:00'}</span>
       </div>
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">ВЕЧЕР</span>
         <span className="data-row__value">{profile?.evening_reminder_time ?? '21:00'}</span>
       </div>
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">ПУШИ</span>
         <span className="data-row__value">
           {profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}
         </span>
       </div>
-      <div className="data-row">
+      <div className="data-row skew-chip">
         <span className="data-row__label">ТАРИФ</span>
         <span className="data-row__value">{tariff ?? '—'}</span>
       </div>

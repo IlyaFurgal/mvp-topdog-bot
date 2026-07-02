@@ -8,19 +8,23 @@ import TrackerModal from './TrackerModal'
 const AVATAR_STORAGE_KEY = 'topdog_custom_avatar'
 const AVATAR_MAX_DIMENSION = 300
 
+function fmtNum(value, decimals) {
+  return Math.abs(value % 1) < 0.001 ? value.toFixed(0) : value.toFixed(decimals)
+}
+
 function formatValue(type, data) {
   if (!data) return null
   const { value } = data
-  if (type === 'weight') return `${value.toFixed(1)} кг`
+  if (type === 'weight') return `${fmtNum(value, 1)} КГ`
   if (type === 'water') {
-    return value >= 1000 ? `${(value / 1000).toFixed(1)} л` : `${Math.round(value)} мл`
+    return value >= 1000 ? `${fmtNum(value / 1000, 1)} Л.` : `${Math.round(value)} МЛ`
   }
   if (type === 'sleep') {
     const h = Math.floor(value)
     const m = Math.round((value - h) * 60)
-    return m > 0 ? `${h}ч ${m}м` : `${h}ч`
+    return m > 0 ? `${h} Ч. ${m} М.` : `${h} Ч.`
   }
-  if (type === 'calories') return `${Math.round(value)} ккал`
+  if (type === 'calories') return new Intl.NumberFormat('ru-RU').format(Math.round(value))
   return null
 }
 
@@ -128,31 +132,31 @@ export default function MyDataCard({ onEditClick }) {
         </div>
 
         <div className="my-data-grid">
-          <div className="data-row" onClick={onEditClick}>
+          <div className="data-row data-row--name skew-chip" onClick={onEditClick}>
             <span className="data-row__label">{displayName.toUpperCase()}</span>
-            <span className="data-row__value">{tierLabel}</span>
+            <span className="tariff-badge"><span>{tierLabel}</span></span>
           </div>
-          <div className="data-row" onClick={() => setActiveTracker('weight')}>
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('weight')}>
             <span className="data-row__label">ВЕС</span>
             <span className="data-row__value">{formatValue('weight', trackers.weight) ?? '—'}</span>
           </div>
-          <div className="data-row">
+          <div className="data-row skew-chip">
             <span className="data-row__label">ИМТ</span>
             <span className="data-row__value">{bmi ?? '—'}</span>
           </div>
-          <div className="data-row" onClick={() => setActiveTracker('calories')}>
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('calories')}>
             <span className="data-row__label">КАЛОРИИ</span>
             <span className="data-row__value">{formatValue('calories', trackers.calories) ?? '—'}</span>
           </div>
-          <div className="data-row" onClick={() => setActiveTracker('sleep')}>
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('sleep')}>
             <span className="data-row__label">СОН</span>
             <span className="data-row__value">{formatValue('sleep', trackers.sleep) ?? '—'}</span>
           </div>
-          <div className="data-row">
+          <div className="data-row skew-chip">
             <span className="data-row__label">ПУЛЬС</span>
             <span className="data-row__value">{pulse != null ? pulse : '—'}</span>
           </div>
-          <div className="data-row" onClick={() => setActiveTracker('water')}>
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
             <span className="data-row__label">ВОДА</span>
             <span className="data-row__value">{formatValue('water', trackers.water) ?? '—'}</span>
           </div>

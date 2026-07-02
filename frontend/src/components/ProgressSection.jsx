@@ -212,7 +212,10 @@ export default function ProgressSection() {
     .filter((v) => Number.isFinite(v) && v >= 1 && v <= 10)
   const avgRpe =
     rpeVals.length > 0
-      ? (rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length).toFixed(1)
+      ? (() => {
+          const rounded = Math.round((rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length) * 10) / 10
+          return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+        })()
       : null
 
   const recoveryPct = calcRecoveryPct(checkins)
@@ -230,11 +233,11 @@ export default function ProgressSection() {
         <button
           className={`progress-view ${view === 'state'    ? 'active' : ''}`}
           onClick={() => setView('state')}
-        >СОСТОЯНИЕ</button>
+        ><span>СОСТОЯНИЕ</span></button>
         <button
           className={`progress-view ${view === 'workouts' ? 'active' : ''}`}
           onClick={() => setView('workouts')}
-        >ТРЕНИРОВКИ</button>
+        ><span>ТРЕНИРОВКИ</span></button>
       </div>
 
       {/* ── Workouts tab ─────────────────────────────────── */}
@@ -249,7 +252,7 @@ export default function ProgressSection() {
                 key={p.label}
                 className={`period-tab ${woPeriodIdx === i ? 'active' : ''}`}
                 onClick={() => setWoPeriodIdx(i)}
-              >{p.label}</button>
+              ><span>{p.label}</span></button>
             ))}
           </div>
 
@@ -275,7 +278,7 @@ export default function ProgressSection() {
             className={`period-tab ${periodIdx === i ? 'active' : ''}`}
             onClick={() => setPeriodIdx(i)}
           >
-            {p.label}
+            <span>{p.label}</span>
           </button>
         ))}
       </div>
@@ -284,27 +287,19 @@ export default function ProgressSection() {
         <div className="card"><p className="card-muted">Загрузка...</p></div>
       ) : (
         <>
-          {/* ── Insight ─────────────────────────────────── */}
-          {insight && (
-            <div className="insight-block">
-              <span className="insight-label">ИНСАЙТ НЕДЕЛИ</span>
-              <p className="insight-text">"{insight.text}"</p>
-            </div>
-          )}
-
           {/* ── Metrics ─────────────────────────────────── */}
           {hasMetrics && (
             <div className="metrics-cards">
               <div className="metric-card">
-                <span className="metric-label">ДИСЦИПЛИНА</span>
-                <span className="metric-value" style={{ color: disciplineColor(displayedDiscipline) }}>
-                  {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
+                <span className="metric-label">НАГРУЗКА</span>
+                <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
+                  {avgRpe ?? 'Нет данных'}
                 </span>
               </div>
               <div className="metric-card">
-                <span className="metric-label">НАГРУЗКА RPE</span>
-                <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
-                  {avgRpe ?? 'Нет данных'}
+                <span className="metric-label">ДИСЦИПЛИНА</span>
+                <span className="metric-value" style={{ color: disciplineColor(displayedDiscipline) }}>
+                  {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
                 </span>
               </div>
               <div className="metric-card">
@@ -313,6 +308,14 @@ export default function ProgressSection() {
                   {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* ── Insight ─────────────────────────────────── */}
+          {insight && (
+            <div className="insight-block">
+              <span className="insight-label">ИНСАЙТ НЕДЕЛИ</span>
+              <p className="insight-text">"{insight.text}"</p>
             </div>
           )}
 
