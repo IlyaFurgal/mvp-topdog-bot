@@ -59,21 +59,6 @@ function StatRow({ items }) {
   )
 }
 
-function disciplineColor(pct) {
-  if (pct == null) return '#888'
-  if (pct >= 80) return 'var(--accent)'
-  if (pct >= 50) return '#fff'
-  return 'var(--danger)'
-}
-
-function rpeColor(rpe) {
-  if (!rpe) return '#888'
-  const n = parseFloat(rpe)
-  if (n <= 3) return 'var(--accent)'
-  if (n <= 6) return '#f59e0b'
-  return 'var(--danger)'
-}
-
 const SCORE_MAP = {
   // body_feeling
   fresh: 100, slightly_tired: 67, heavy: 33, sick: 10,
@@ -125,16 +110,6 @@ function calcRecoveryPct(checkins) {
   }
 
   return Math.max(0, base - pulsePenalty)
-}
-
-function recoveryGrade(pct) {
-  if (pct === null) return { label: 'Нет данных', color: '#888', sub: '' }
-  if (pct >= 85) return { label: 'Отличное', color: '#22c55e', sub: 'Организм восстановлен. Можно работать.' }
-  if (pct >= 70) return { label: 'Хорошее', color: '#86efac', sub: 'Режим стабильный. Нагрузка допустима.' }
-  if (pct >= 55) return { label: 'Среднее', color: '#f59e0b', sub: 'Есть признаки усталости. Не перегружайся.' }
-  if (pct >= 40) return { label: 'Нестабильное', color: '#f97316', sub: 'Нужен режим. Выровняй сон и нагрузку.' }
-  if (pct >= 25) return { label: 'Слабое', color: '#ef4444', sub: 'Организм не успевает восстановиться.' }
-  return { label: 'Критическое', color: '#7f1d1d', sub: 'Снизь нагрузку и восстановись.' }
 }
 
 export default function ProgressSection() {
@@ -219,7 +194,6 @@ export default function ProgressSection() {
       : null
 
   const recoveryPct = calcRecoveryPct(checkins)
-  const rec = recoveryGrade(recoveryPct)
 
   // Prefer insight's discipline_pct (7-day window) so the % and the insight text always agree
   const displayedDiscipline = insight?.discipline_pct != null ? insight.discipline_pct : discipline
@@ -292,19 +266,19 @@ export default function ProgressSection() {
             <div className="metrics-cards">
               <div className="metric-card">
                 <span className="metric-label">НАГРУЗКА</span>
-                <span className="metric-value" style={{ color: rpeColor(avgRpe) }}>
+                <span className="metric-value">
                   {avgRpe ?? 'Нет данных'}
                 </span>
               </div>
               <div className="metric-card">
                 <span className="metric-label">ДИСЦИПЛИНА</span>
-                <span className="metric-value" style={{ color: disciplineColor(displayedDiscipline) }}>
+                <span className="metric-value">
                   {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
                 </span>
               </div>
               <div className="metric-card">
                 <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
-                <span className="metric-value" style={{ color: rec.color }}>
+                <span className="metric-value">
                   {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
                 </span>
               </div>
