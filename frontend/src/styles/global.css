@@ -2277,11 +2277,7 @@ html, body {
 
 .club-page {
   min-height: calc(100vh - var(--nav-height));
-  background:
-    radial-gradient(ellipse 80% 42% at 78% 15%, rgba(255,255,255,0.20) 0%, transparent 72%),
-    linear-gradient(162deg, transparent 38%, rgba(255,255,255,0.16) 54%, rgba(255,255,255,0.08) 62%, transparent 76%),
-    linear-gradient(198deg, transparent 38%, rgba(255,255,255,0.13) 54%, rgba(255,255,255,0.06) 62%, transparent 76%),
-    #090909;
+  background: url('../assets/4.png') center / cover no-repeat, #090909;
 }
 
 .club-back {
@@ -3397,6 +3393,14 @@ select optgroup {
   margin-bottom: 16px;
 }
 
+.screen-title-img {
+  display: block;
+  height: clamp(32px, 8.5vw, 44px);
+  width: auto;
+  max-width: 100%;
+  margin-bottom: 16px;
+}
+
 .screen-title::before,
 .screen-title::after {
   content: attr(data-text);
@@ -3500,25 +3504,10 @@ select optgroup {
   white-space: nowrap;
 }
 
-/* Stripes grow thicker left-to-right, starting from a proper thin bar
-   (not a hairline) and merging into one solid block at the end —
-   hand-placed stops since repeating-linear-gradient can only tile a
-   fixed-width cell, not a progressive one. */
 .stripe-divider {
-  height: 14px;
-  width: 112px;
-  background: linear-gradient(
-    115deg,
-    var(--accent-club) 0px,  var(--accent-club) 3px,  transparent 3px,  transparent 6px,
-    var(--accent-club) 6px,  var(--accent-club) 10px, transparent 10px, transparent 13px,
-    var(--accent-club) 13px, var(--accent-club) 18px, transparent 18px, transparent 21px,
-    var(--accent-club) 21px, var(--accent-club) 27px, transparent 27px, transparent 30px,
-    var(--accent-club) 30px, var(--accent-club) 37px, transparent 37px, transparent 40px,
-    var(--accent-club) 40px, var(--accent-club) 48px, transparent 48px, transparent 51px,
-    var(--accent-club) 51px, var(--accent-club) 60px, transparent 60px, transparent 63px,
-    var(--accent-club) 63px, var(--accent-club) 74px, transparent 74px, transparent 77px,
-    var(--accent-club) 77px, var(--accent-club) 112px
-  );
+  height: 16px;
+  width: 118px;
+  background: url('../assets/5.png') left center / contain no-repeat;
   margin: 4px 0 20px;
 }
 
@@ -3691,42 +3680,11 @@ select optgroup {
 }
 
 .mvp-ribbon {
-  background: var(--accent-club);
+  display: block;
+  width: 100%;
+  height: auto;
   margin: 0;
-  padding: 2px 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-evenly;
   flex-shrink: 0;
-}
-
-.mvp-ribbon__unit {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.mvp-ribbon__unit b {
-  font-style: italic;
-  font-weight: 900;
-  font-size: 0.62rem;
-  color: var(--accent-text);
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
-
-.mvp-ribbon__unit i {
-  font-style: italic;
-  font-weight: 800;
-  font-size: 0.36rem;
-  color: var(--accent-text);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-top: 1px solid var(--accent-text);
-  border-bottom: 1px solid var(--accent-text);
-  padding: 1px 0;
-  line-height: 1.2;
 }
 
 /* ── AI chat chips ────────────────────────────────────── */

@@ -3,6 +3,7 @@ import { trackUpgradeIntent } from '../api/trackUpgrade'
 import knowledgeImg from '../assets/1.png'
 import communityImg from '../assets/2.png'
 import supportImg from '../assets/3.png'
+import clubHeading from '../assets/9.png'
 import { useProfile } from '../context/ProfileContext'
 import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
@@ -103,10 +104,7 @@ export default function ClubPage() {
 
   return (
     <div className="page club-page">
-      <h1 className="screen-title" data-text="КЛУБ">
-        КЛУБ
-        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">КЛУБ</span></span>
-      </h1>
+      <img src={clubHeading} alt="КЛУБ" className="screen-title-img" />
 
       <a
         className="club-card"

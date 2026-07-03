@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
+import myDataHeading from '../assets/8.png'
+import profileHeading from '../assets/7.png'
 import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
 import MyDataCard from '../components/MyDataCard'
@@ -103,10 +105,7 @@ function MyDataView({ profile, onBack, onEdit }) {
     <div className="page club-page" ref={chipRef}>
       <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
 
-      <h1 className="screen-title" data-text="МОИ ДАННЫЕ" style={{ display: 'block', fontSize: 'clamp(1.8rem, 9vw, 2.6rem)', whiteSpace: 'nowrap' }}>
-        МОИ ДАННЫЕ
-        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">МОИ ДАННЫЕ</span></span>
-      </h1>
+      <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
       <div className="stripe-divider" />
 
       <div className="data-row skew-chip" onClick={() => onEdit('tone')}>
@@ -657,10 +656,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page club-page" style={{ position: 'relative' }}>
-      <h1 className="screen-title" data-text="ПРОФИЛЬ">
-        ПРОФИЛЬ
-        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОФИЛЬ</span></span>
-      </h1>
+      <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img" />
 
       <MyDataCard onEditClick={() => setMyDataOpen(true)} />
 
