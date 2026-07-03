@@ -102,6 +102,17 @@ function MyDataView({ profile, onBack, onEdit }) {
     : '—'
   const tariff = formatTariff(profile)
 
+  const goalsList = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
+  const goalsLabel = goalsList.length > 0
+    ? goalsList.map((g) => GOAL_OPTIONS.find(([k]) => k === g)?.[1] ?? g).join(', ')
+    : '—'
+  const fitnessLabel = profile?.fitness_level
+    ? (FITNESS_OPTIONS.find(([k]) => k === profile.fitness_level)?.[1] ?? profile.fitness_level)
+    : '—'
+  const additionalPreview = profile?.additional_info?.trim()
+    ? profile.additional_info.trim().split('\n')[0]
+    : '—'
+
   return (
     <div className="page club-page">
       <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
@@ -113,31 +124,67 @@ function MyDataView({ profile, onBack, onEdit }) {
       </h1>
       <div className="stripe-divider" />
 
-      <div className="data-row skew-chip" onClick={onEdit}>
-        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
+      <div className="data-row skew-chip" onClick={() => onEdit('name')}>
+        <span className="data-row__label">ИМЯ</span>
+        <span className="data-row__value"><span>{profile?.preferred_name || '—'}</span></span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('tone')}>
+        <span className="data-row__label">СТИЛЬ ОБЩЕНИЯ</span>
         <span className="data-row__value">
           <span>{profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}</span>
         </span>
       </div>
-      <div className="data-row skew-chip" onClick={onEdit}>
+      <div className="data-row skew-chip" onClick={() => onEdit('goals')}>
+        <span className="data-row__label">ЦЕЛИ</span>
+        <span className="data-row__value"><span style={{ fontSize: '0.75rem' }}>{goalsLabel}</span></span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('fitness')}>
+        <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
+        <span className="data-row__value"><span style={{ fontSize: '0.85rem' }}>{fitnessLabel}</span></span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('sport')}>
+        <span className="data-row__label">ВИД СПОРТА</span>
+        <span className="data-row__value"><span>{profile?.sport_type || '—'}</span></span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('timezone')}>
         <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
         <span className="data-row__value"><span style={{ fontSize: '0.85rem' }}>{tzLabel}</span></span>
       </div>
-      <div className="data-row skew-chip" onClick={onEdit}>
-        <span className="data-row__label">УТРО</span>
+      <div className="data-row skew-chip" onClick={() => onEdit('morning')}>
+        <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
         <span className="data-row__value"><span>{profile?.morning_reminder_time ?? '08:00'}</span></span>
       </div>
-      <div className="data-row skew-chip" onClick={onEdit}>
-        <span className="data-row__label">ВЕЧЕР</span>
+      <div className="data-row skew-chip" onClick={() => onEdit('evening')}>
+        <span className="data-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
         <span className="data-row__value"><span>{profile?.evening_reminder_time ?? '21:00'}</span></span>
       </div>
-      <div className="data-row skew-chip" onClick={onEdit}>
-        <span className="data-row__label">ПУШИ</span>
+      <div className="data-row skew-chip" onClick={() => onEdit('notifications')}>
+        <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
         <span className="data-row__value">
           <span>{profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}</span>
         </span>
       </div>
-      <div className="data-row skew-chip" onClick={onEdit}>
+      <div className="data-row skew-chip" onClick={() => onEdit('weight')}>
+        <span className="data-row__label">ВЕС</span>
+        <span className="data-row__value">
+          <span>{profile?.weight != null ? `${profile.weight} КГ` : '—'}</span>
+        </span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('height')}>
+        <span className="data-row__label">РОСТ</span>
+        <span className="data-row__value">
+          <span>{profile?.height != null ? `${profile.height} СМ` : '—'}</span>
+        </span>
+      </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('additional')}>
+        <span className="data-row__label">ДОП. ИНФОРМАЦИЯ</span>
+        <span className="data-row__value">
+          <span style={{ fontSize: '0.72rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {additionalPreview}
+          </span>
+        </span>
+      </div>
+      <div className="data-row skew-chip">
         <span className="data-row__label">ТАРИФ</span>
         <span className="data-row__value"><span>{tariff ?? '—'}</span></span>
       </div>
@@ -147,7 +194,7 @@ function MyDataView({ profile, onBack, onEdit }) {
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 
-function EditProfileModal({ profile, onClose, onSaved }) {
+function EditProfileModal({ profile, focusField, onClose, onSaved }) {
   const overlayRef = useRef(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -202,6 +249,16 @@ function EditProfileModal({ profile, onClose, onSaved }) {
     setAdditionalInfo(profile.additional_info ?? '')
   }, [profile])
 
+  // Jump straight to the field the user tapped in МОИ ДАННЫЕ instead of
+  // always opening at the top of a long form
+  useEffect(() => {
+    if (!focusField) return
+    const id = setTimeout(() => {
+      document.getElementById(`field-${focusField}`)?.scrollIntoView({ block: 'start' })
+    }, 0)
+    return () => clearTimeout(id)
+  }, [focusField])
+
   function toggleGoal(key) {
     setSelectedGoals((prev) =>
       prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]
@@ -248,7 +305,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </div>
 
         {/* Preferred name */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ИМЯ</p>
+        <p id="field-name" className="section-label" style={{ marginBottom: 8 }}>ИМЯ</p>
         <input
           type="text"
           value={preferredName}
@@ -268,7 +325,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         />
 
         {/* Tone */}
-        <p className="section-label" style={{ marginBottom: 8 }}>СТИЛЬ ОБЩЕНИЯ</p>
+        <p id="field-tone" className="section-label" style={{ marginBottom: 8 }}>СТИЛЬ ОБЩЕНИЯ</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {[
             ['aggressive', '💪 Жёсткий'],
@@ -295,7 +352,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </div>
 
         {/* Goals */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ЦЕЛИ</p>
+        <p id="field-goals" className="section-label" style={{ marginBottom: 8 }}>ЦЕЛИ</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
           {GOAL_OPTIONS.map(([key, label]) => (
             <button
@@ -319,7 +376,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </div>
 
         {/* Fitness level */}
-        <p className="section-label" style={{ marginBottom: 8 }}>УРОВЕНЬ ПОДГОТОВКИ</p>
+        <p id="field-fitness" className="section-label" style={{ marginBottom: 8 }}>УРОВЕНЬ ПОДГОТОВКИ</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
           {FITNESS_OPTIONS.map(([key, label]) => (
             <button
@@ -342,7 +399,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </div>
 
         {/* Sport type */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ВИД СПОРТА</p>
+        <p id="field-sport" className="section-label" style={{ marginBottom: 8 }}>ВИД СПОРТА</p>
         <input
           type="text"
           value={sportType}
@@ -362,7 +419,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         />
 
         {/* Timezone */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ЧАСОВОЙ ПОЯС</p>
+        <p id="field-timezone" className="section-label" style={{ marginBottom: 8 }}>ЧАСОВОЙ ПОЯС</p>
         <select
           value={tz}
           onChange={(e) => setTz(e.target.value)}
@@ -388,7 +445,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </select>
 
         {/* Morning reminder */}
-        <p className="section-label" style={{ marginBottom: 8 }}>УТРЕННЕЕ НАПОМИНАНИЕ</p>
+        <p id="field-morning" className="section-label" style={{ marginBottom: 8 }}>УТРЕННЕЕ НАПОМИНАНИЕ</p>
         <select
           value={morningTime}
           onChange={(e) => setMorningTime(e.target.value)}
@@ -414,7 +471,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </select>
 
         {/* Evening reminder */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ВЕЧЕРНЕЕ НАПОМИНАНИЕ</p>
+        <p id="field-evening" className="section-label" style={{ marginBottom: 8 }}>ВЕЧЕРНЕЕ НАПОМИНАНИЕ</p>
         <select
           value={eveningTime}
           onChange={(e) => setEveningTime(e.target.value)}
@@ -440,7 +497,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </select>
 
         {/* Notifications toggle */}
-        <p className="section-label" style={{ marginBottom: 8 }}>УВЕДОМЛЕНИЯ</p>
+        <p id="field-notifications" className="section-label" style={{ marginBottom: 8 }}>УВЕДОМЛЕНИЯ</p>
         <div
           onClick={() => setNotifEnabled(v => !v)}
           style={{
@@ -481,7 +538,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </div>
 
         {/* Weight */}
-        <p className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
+        <p id="field-weight" className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
         <input
           className="field-input"
           type="number"
@@ -499,7 +556,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         </p>
 
         {/* Height */}
-        <p className="section-label" style={{ marginBottom: 8 }}>РОСТ (см)</p>
+        <p id="field-height" className="section-label" style={{ marginBottom: 8 }}>РОСТ (см)</p>
         <input
           className="field-input"
           type="number"
@@ -513,7 +570,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
         />
 
         {/* Additional info */}
-        <p className="section-label" style={{ marginBottom: 4 }}>ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</p>
+        <p id="field-additional" className="section-label" style={{ marginBottom: 4 }}>ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</p>
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8 }}>
           Травмы, ограничения, пожелания — ИИ учтёт это в рекомендациях
         </p>
@@ -567,6 +624,7 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 export default function ProfilePage() {
   const { profile, subscriptionType, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
+  const [editFocusField, setEditFocusField] = useState(null)
   const [myDataOpen, setMyDataOpen] = useState(false)
 
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
@@ -612,13 +670,14 @@ export default function ProfilePage() {
         <MyDataView
           profile={profile}
           onBack={() => setMyDataOpen(false)}
-          onEdit={() => setEditOpen(true)}
+          onEdit={(field) => { setEditFocusField(field); setEditOpen(true) }}
         />
         {editOpen && (
           <EditProfileModal
             profile={profile}
-            onClose={() => setEditOpen(false)}
-            onSaved={() => { setEditOpen(false); refreshProfile() }}
+            focusField={editFocusField}
+            onClose={() => { setEditOpen(false); setEditFocusField(null) }}
+            onSaved={() => { setEditOpen(false); setEditFocusField(null); refreshProfile() }}
           />
         )}
       </>
