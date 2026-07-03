@@ -5,6 +5,10 @@ import {
 } from 'recharts'
 import { getCheckinHistory } from '../api/checkins'
 import { getTrackerHistory, getTrackerStats, getWeeklyInsight } from '../api/trackers'
+import weightTitle from '../assets/13.png'
+import waterTitle from '../assets/14.png'
+import caloriesTitle from '../assets/15.png'
+import sleepTitle from '../assets/16.png'
 import WorkoutCalendar from './WorkoutCalendar'
 
 const PERIODS = [
@@ -245,7 +249,7 @@ export default function ProgressSection() {
           {/* ── Weight ──────────────────────────────────── */}
           <div className="card chart-card">
             <div className="chart-header">
-              <span className="chart-title">ВЕС</span>
+              <img src={weightTitle} alt="ВЕС" className="chart-title-img" />
               {stats?.weight && (
                 <span className="chart-current">{stats.weight.current} кг</span>
               )}
@@ -299,7 +303,7 @@ export default function ProgressSection() {
           {/* ── Water ───────────────────────────────────── */}
           <div className="card chart-card">
             <div className="chart-header">
-              <span className="chart-title">ВОДА</span>
+              <img src={waterTitle} alt="ВОДА" className="chart-title-img" />
               {stats?.water && (
                 <span className="chart-current">{Math.round(stats.water.avg_7days)} мл/день</span>
               )}
@@ -346,7 +350,7 @@ export default function ProgressSection() {
           {/* ── Calories ────────────────────────────────── */}
           <div className="card chart-card">
             <div className="chart-header">
-              <span className="chart-title">КАЛОРИИ</span>
+              <img src={caloriesTitle} alt="КАЛОРИИ" className="chart-title-img" />
               {stats?.calories && (
                 <span className="chart-current">{Math.round(stats.calories.avg_7days)} ккал/день</span>
               )}
@@ -400,7 +404,7 @@ export default function ProgressSection() {
           {/* ── Sleep ───────────────────────────────────── */}
           <div className="card chart-card">
             <div className="chart-header">
-              <span className="chart-title">СОН</span>
+              <img src={sleepTitle} alt="СОН" className="chart-title-img" />
               {stats?.sleep?.avg_7days && (
                 <span className="chart-current">{stats.sleep.avg_7days}ч ср.</span>
               )}

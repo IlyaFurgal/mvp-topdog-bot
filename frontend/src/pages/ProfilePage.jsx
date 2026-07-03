@@ -4,6 +4,7 @@ import { getTodayCheckins } from '../api/checkins'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
 import myDataHeading from '../assets/8.png'
 import profileHeading from '../assets/7.png'
+import progressHeading from '../assets/12.png'
 import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
 import MyDataCard from '../components/MyDataCard'
@@ -673,10 +674,7 @@ export default function ProfilePage() {
         </a>
       )}
 
-      <h2 className="screen-title" data-text="ПРОГРЕСС" style={{ fontSize: '1.7rem', marginTop: 28, marginBottom: 4 }}>
-        ПРОГРЕСС
-        <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОГРЕСС</span></span>
-      </h2>
+      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(24px, 6.5vw, 34px)', marginTop: 28, marginBottom: 4 }} />
       <ProgressSection />
 
       {checkinsLoading ? (
