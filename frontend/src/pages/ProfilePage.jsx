@@ -86,25 +86,12 @@ function getOverallStatus(checkins) {
   return { label: 'OPEN 📋', cls: 'status--open' }
 }
 
-function formatTariff(profile) {
-  if (!profile?.subscription_type) return null
-  const typeLabel = profile.subscription_type === 'pro' ? 'PRO' : 'PLUS'
-  const periodDays = profile.subscription_period === 'biannual' ? 180 : 30
-  const periodLabel = profile.subscription_period === 'biannual' ? '6 МЕС' : '1 МЕС'
-  if (!profile.subscription_expires_at) return `${typeLabel} | ${periodLabel}`
-  const end = new Date(profile.subscription_expires_at)
-  const start = new Date(end.getTime() - periodDays * 24 * 60 * 60 * 1000)
-  const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
-  return `${typeLabel} | ${periodLabel} · ${fmt(start)}–${fmt(end)}`
-}
-
 // ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
 
 function MyDataView({ profile, onBack, onEdit }) {
   const tzLabel = profile?.timezone
     ? (TIMEZONE_OPTIONS.find(([k]) => k === profile.timezone)?.[1] ?? profile.timezone)
     : '—'
-  const tariff = formatTariff(profile)
 
   const goalsList = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
   const goalsLabel = goalsList.length > 0
@@ -187,10 +174,6 @@ function MyDataView({ profile, onBack, onEdit }) {
             {additionalPreview}
           </span>
         </span>
-      </div>
-      <div className="data-row skew-chip">
-        <span className="data-row__label">ТАРИФ</span>
-        <span className="data-row__value"><span>{tariff ?? '—'}</span></span>
       </div>
     </div>
   )
