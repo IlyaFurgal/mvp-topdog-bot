@@ -4,7 +4,6 @@ import { getTodayCheckins } from '../api/checkins'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
 import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
-import MvpRibbon from '../components/MvpRibbon'
 import MyDataCard from '../components/MyDataCard'
 import ProgressSection from '../components/ProgressSection'
 import { useProfile } from '../context/ProfileContext'
@@ -89,25 +88,13 @@ function getOverallStatus(checkins) {
 // ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
 
 function MyDataView({ profile, onBack, onEdit }) {
-  const tzLabel = profile?.timezone
-    ? (TIMEZONE_OPTIONS.find(([k]) => k === profile.timezone)?.[1] ?? profile.timezone)
-    : '—'
-
-  const goalsList = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
-  const goalsLabel = goalsList.length > 0
-    ? goalsList.map((g) => GOAL_OPTIONS.find(([k]) => k === g)?.[1] ?? g).join(', ')
-    : '—'
   const fitnessLabel = profile?.fitness_level
     ? (FITNESS_LABELS_PLAIN[profile.fitness_level] ?? profile.fitness_level)
-    : '—'
-  const additionalPreview = profile?.additional_info?.trim()
-    ? profile.additional_info.trim().split('\n')[0]
     : '—'
 
   return (
     <div className="page club-page">
       <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
-      <MvpRibbon />
 
       <h1 className="screen-title" data-text="МОИ ДАННЫЕ">
         МОИ ДАННЫЕ
@@ -115,10 +102,6 @@ function MyDataView({ profile, onBack, onEdit }) {
       </h1>
       <div className="stripe-divider" />
 
-      <div className="data-row skew-chip" onClick={() => onEdit('name')}>
-        <span className="data-row__label">ИМЯ</span>
-        <span className="data-row__value"><span>{profile?.preferred_name || '—'}</span></span>
-      </div>
       <div className="data-row skew-chip" onClick={() => onEdit('tone')}>
         <span className="data-row__label">СТИЛЬ ОБЩЕНИЯ</span>
         <span className="data-row__value">
@@ -127,7 +110,7 @@ function MyDataView({ profile, onBack, onEdit }) {
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('goals')}>
         <span className="data-row__label">ЦЕЛИ</span>
-        <span className="data-row__value"><span style={{ fontSize: '0.75rem' }}>{goalsLabel}</span></span>
+        <span className="data-row__value"><span>Раскрыть</span></span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('fitness')}>
         <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
@@ -135,11 +118,7 @@ function MyDataView({ profile, onBack, onEdit }) {
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('sport')}>
         <span className="data-row__label">ВИД СПОРТА</span>
-        <span className="data-row__value"><span>{profile?.sport_type || '—'}</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('timezone')}>
-        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
-        <span className="data-row__value"><span style={{ fontSize: '0.85rem' }}>{tzLabel}</span></span>
+        <span className="data-row__value"><span>Раскрыть</span></span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('morning')}>
         <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
@@ -169,11 +148,7 @@ function MyDataView({ profile, onBack, onEdit }) {
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('additional')}>
         <span className="data-row__label">ДОП. ИНФОРМАЦИЯ</span>
-        <span className="data-row__value">
-          <span style={{ fontSize: '0.72rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {additionalPreview}
-          </span>
-        </span>
+        <span className="data-row__value"><span>Раскрыть</span></span>
       </div>
     </div>
   )
@@ -675,8 +650,6 @@ export default function ProfilePage() {
 
   return (
     <div className="page club-page" style={{ position: 'relative' }}>
-      <MvpRibbon />
-
       <h1 className="screen-title" data-text="ПРОФИЛЬ">
         ПРОФИЛЬ
         <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">ПРОФИЛЬ</span></span>

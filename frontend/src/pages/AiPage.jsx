@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { createSavedMessage } from '../api/savedMessages'
-import MvpRibbon from '../components/MvpRibbon'
 import { useChat } from '../context/ChatContext'
 
 const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
@@ -444,8 +443,6 @@ export default function AiPage() {
   // ── Render ────────────────────────────────────────────
   return (
     <div className="ai-page">
-      <MvpRibbon />
-
       <div className="ai-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`ai-msg ai-msg--${msg.from}`}>

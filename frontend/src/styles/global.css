@@ -235,7 +235,7 @@ html, body {
 }
 
 .period-tab.active {
-  background: linear-gradient(100deg, #3c3c3c 0%, #202020 100%);
+  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
   transform: skewX(-10deg);
   transform-origin: 0 100%;
 }
@@ -3105,7 +3105,7 @@ html, body {
 }
 
 .progress-view.active {
-  background: linear-gradient(100deg, #3c3c3c 0%, #202020 100%);
+  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
   transform: skewX(-10deg);
   transform-origin: 0 100%;
 }
@@ -3250,10 +3250,58 @@ html, body {
   gap: 8px;
 }
 
+.wo-cal-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.wo-cal-detail-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.wo-cal-detail-add {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-club);
+  color: #111;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wo-cal-detail-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .wo-cal-detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wo-cal-detail-item__text {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+.wo-cal-detail-item__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .wo-cal-detail-cat {
@@ -3433,7 +3481,7 @@ select optgroup {
   min-width: 76px;
   margin: -10px 0;
   transform: none;
-  background: linear-gradient(100deg, #4a4a4a 0%, #222222 100%);
+  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
   border-radius: 2px;
   padding: 0 14px;
   box-sizing: border-box;
@@ -3444,19 +3492,28 @@ select optgroup {
   transform: skewX(10deg);
   color: var(--accent-club);
   font-style: italic;
-  font-weight: 800;
+  font-weight: 500;
   font-size: 1.05rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
+/* Stripes grow thicker left-to-right (2px up to 11px) instead of a
+   uniform repeating pattern — hand-placed stops since repeating-
+   linear-gradient can only tile a fixed-width cell. */
 .stripe-divider {
   height: 14px;
-  width: 140px;
-  background: repeating-linear-gradient(
+  width: 88px;
+  background: linear-gradient(
     115deg,
-    var(--accent-club) 0px, var(--accent-club) 4px,
-    transparent 4px, transparent 8px
+    var(--accent-club) 0px,  var(--accent-club) 2px,  transparent 2px,  transparent 6px,
+    var(--accent-club) 6px,  var(--accent-club) 9px,  transparent 9px,  transparent 13px,
+    var(--accent-club) 13px, var(--accent-club) 17px, transparent 17px, transparent 21px,
+    var(--accent-club) 21px, var(--accent-club) 26px, transparent 26px, transparent 30px,
+    var(--accent-club) 30px, var(--accent-club) 36px, transparent 36px, transparent 40px,
+    var(--accent-club) 40px, var(--accent-club) 47px, transparent 47px, transparent 51px,
+    var(--accent-club) 51px, var(--accent-club) 60px, transparent 60px, transparent 64px,
+    var(--accent-club) 64px, var(--accent-club) 75px, transparent 75px
   );
   margin: 4px 0 20px;
 }
@@ -3629,13 +3686,9 @@ select optgroup {
   color: var(--accent-text);
 }
 
-.page > .mvp-ribbon:first-child {
-  margin-top: -24px;
-}
-
 .mvp-ribbon {
   background: var(--accent-club);
-  margin: 0 -16px 16px;
+  margin: 0;
   padding: 2px 0;
   display: flex;
   align-items: center;

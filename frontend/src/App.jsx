@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import { getLocalUtcStr } from './utils/timezone'
 import TopNav from './components/TopNav'
+import MvpRibbon from './components/MvpRibbon'
 import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
 import OnboardingModal from './components/OnboardingModal'
@@ -142,6 +143,7 @@ function AppContent() {
       <TopNav />
       <OnboardingModal />
       <main className="main-content">
+        <MvpRibbon />
         <SwipeNavigator>
           <Suspense fallback={
             <div style={{

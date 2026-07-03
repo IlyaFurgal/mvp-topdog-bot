@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getWorkoutCategories, getWorkouts } from '../api/workouts'
+import { deleteWorkout, getWorkoutCategories, getWorkouts } from '../api/workouts'
+import WorkoutModal from './WorkoutModal'
 
 const DAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const MONTHS_RU = [
@@ -63,20 +64,27 @@ export default function WorkoutCalendar() {
   const [categories, setCategories] = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
   const [loading, setLoading]     = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editWorkout, setEditWorkout] = useState(null)
 
   useEffect(() => {
     getWorkoutCategories().then(setCategories).catch(() => {})
   }, [])
 
-  useEffect(() => {
+  function loadMonth() {
     setLoading(true)
-    setSelectedDay(null)
     const from = new Date(year, month, 1).toISOString().split('T')[0]
     const to   = new Date(year, month + 1, 0).toISOString().split('T')[0]
     getWorkouts(from, to)
       .then(setWorkouts)
       .catch(() => setWorkouts([]))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    setSelectedDay(null)
+    loadMonth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month])
 
   function prevMonth() {
@@ -84,10 +92,31 @@ export default function WorkoutCalendar() {
     else setMonth(m => m - 1)
   }
   function nextMonth() {
-    const today = new Date()
-    if (year > today.getFullYear() || (year === today.getFullYear() && month >= today.getMonth())) return
     if (month === 11) { setYear(y => y + 1); setMonth(0) }
     else setMonth(m => m + 1)
+  }
+
+  function openAdd() {
+    setEditWorkout(null)
+    setModalOpen(true)
+  }
+  function openEdit(w) {
+    setEditWorkout(w)
+    setModalOpen(true)
+  }
+  function closeModal() {
+    setModalOpen(false)
+    setEditWorkout(null)
+  }
+  function handleSaved() {
+    closeModal()
+    loadMonth()
+  }
+  async function handleDelete(id) {
+    try {
+      await deleteWorkout(id)
+      loadMonth()
+    } catch (_) {}
   }
 
   const catMap = Object.fromEntries(categories.map(c => [c.id, c]))
@@ -109,7 +138,6 @@ export default function WorkoutCalendar() {
 
   const today = new Date()
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
-  const canGoNext = !(isCurrentMonth || (year === today.getFullYear() && month > today.getMonth()))
 
   const selectedKey = selectedDay
     ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
@@ -122,7 +150,7 @@ export default function WorkoutCalendar() {
       <div className="wo-cal-nav">
         <button className="wo-cal-btn" onClick={prevMonth}>‹</button>
         <span className="wo-cal-month">{MONTHS_RU[month]} {year}</span>
-        <button className="wo-cal-btn" onClick={nextMonth} disabled={!canGoNext}>›</button>
+        <button className="wo-cal-btn" onClick={nextMonth}>›</button>
       </div>
 
       {/* Day-of-week header */}
@@ -152,7 +180,7 @@ export default function WorkoutCalendar() {
                 isSelected ? 'wo-cal-cell--selected' : '',
                 hasDots    ? 'wo-cal-cell--active'   : '',
               ].filter(Boolean).join(' ')}
-              onClick={() => hasDots && setSelectedDay(selectedDay === day ? null : day)}
+              onClick={() => setSelectedDay(selectedDay === day ? null : day)}
             >
               <span className="wo-cal-day-num">{day}</span>
               {hasDots && (
@@ -170,21 +198,46 @@ export default function WorkoutCalendar() {
       {loading && <p className="wo-cal-loading">Загрузка...</p>}
 
       {/* Day detail */}
-      {selectedWorkouts.length > 0 && (
+      {selectedDay && (
         <div className="wo-cal-detail">
+          <div className="wo-cal-detail-header">
+            <span className="wo-cal-detail-date">{selectedDay} {MONTHS_SHORT[month]}</span>
+            <button className="wo-cal-detail-add" onClick={openAdd}>+</button>
+          </div>
+
+          {selectedWorkouts.length === 0 && (
+            <p className="wo-cal-detail-empty">Нет тренировок на этот день</p>
+          )}
+
           {selectedWorkouts.map(w => {
             const cat    = catMap[w.category_id]
             const color  = CAT_COLORS[cat?.code] ?? '#aaff00'
             const summary = fmtSummary(w, cat?.metric_type)
             return (
               <div key={w.id} className="wo-cal-detail-item">
-                <span className="wo-cal-detail-cat" style={{ color }}>{cat?.name ?? '—'}</span>
-                {summary && <span className="wo-cal-detail-summary">{summary}</span>}
-                {w.note  && <span className="wo-cal-detail-note">{w.note}</span>}
+                <div className="wo-cal-detail-item__text">
+                  <span className="wo-cal-detail-cat" style={{ color }}>{cat?.name ?? '—'}</span>
+                  {summary && <span className="wo-cal-detail-summary">{summary}</span>}
+                  {w.note  && <span className="wo-cal-detail-note">{w.note}</span>}
+                </div>
+                <div className="wo-cal-detail-item__actions">
+                  <button className="tracker-row__edit" onClick={() => openEdit(w)} title="Редактировать">✏</button>
+                  <button className="tracker-row__del" onClick={() => handleDelete(w.id)} title="Удалить">🗑</button>
+                </div>
               </div>
             )
           })}
         </div>
+      )}
+
+      {modalOpen && categories.length > 0 && (
+        <WorkoutModal
+          categories={categories}
+          editWorkout={editWorkout}
+          initialDate={selectedKey}
+          onClose={closeModal}
+          onSaved={handleSaved}
+        />
       )}
     </div>
   )
