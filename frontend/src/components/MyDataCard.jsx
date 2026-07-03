@@ -110,8 +110,8 @@ export default function MyDataCard({ onEditClick }) {
 
       <div className="my-data-body">
         <div className="my-data-avatar-col">
+          <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
           <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
-            <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
             {photoSrc ? (
               <img
                 src={photoSrc}

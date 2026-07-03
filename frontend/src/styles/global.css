@@ -3509,6 +3509,7 @@ select optgroup {
 }
 
 .my-data-avatar-col {
+  position: relative;
   flex: 0 0 40%;
   display: flex;
 }
