@@ -24,6 +24,7 @@ const TITLES = {
   water:    'ЗАПИСАТЬ ВОДУ',
   sleep:    'ЗАПИСАТЬ СОН',
   calories: 'ЗАПИСАТЬ КАЛОРИИ',
+  pulse:    'ЗАПИСАТЬ ПУЛЬС',
 }
 
 export default function TrackerModal({ type, todayData, calorieLimit, onClose, onSaved }) {
@@ -31,6 +32,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   const [saving, setSaving] = useState(false)
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
+  const [pulse, setPulse] = useState(todayData?.value ?? 60)
   const [waterAmount, setWaterAmount] = useState(0)
   const [caloriesAmount, setCaloriesAmount] = useState(0)
   const [mealType, setMealType] = useState(() => type === 'calories' ? getDefaultMealType() : null)
@@ -62,6 +64,10 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
           source: 'manual',
         })
         onSaved('calories')
+      } else if (type === 'pulse') {
+        const val = Math.round(pulse)
+        await saveTracker('pulse', val, 'bpm')
+        onSaved('pulse', val)
       } else {
         const val = parseFloat((sleepHours + sleepMinutes / 60).toFixed(2))
         await saveTracker('sleep', val, 'h')
@@ -110,6 +116,9 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
             mealType={mealType}
             onMealType={setMealType}
           />
+        )}
+        {type === 'pulse' && (
+          <PulseInput value={pulse} onChange={setPulse} />
         )}
 
         <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
@@ -162,6 +171,52 @@ function WeightInput({ value, onChange }) {
         />
         <button className="weight-btn" onClick={() => adjust(0.1)}>+0.1</button>
         <button className="weight-btn" onClick={() => adjust(0.5)}>+0.5</button>
+      </div>
+    </div>
+  )
+}
+
+function PulseInput({ value, onChange }) {
+  const [draft, setDraft] = useState(() => String(Math.round(value)))
+
+  useEffect(() => { setDraft(String(Math.round(value))) }, [value])
+
+  function adjust(delta) {
+    onChange((v) => Math.max(30, Math.min(220, Math.round(v) + delta)))
+  }
+
+  function handleBlur() {
+    const parsed = parseInt(draft, 10)
+    if (!isNaN(parsed) && parsed >= 30 && parsed <= 220) {
+      onChange(parsed)
+    } else {
+      setDraft(String(Math.round(value)))  // revert on invalid
+    }
+  }
+
+  return (
+    <div className="tracker-input">
+      <div className="weight-display">
+        <span className="weight-value">{Math.round(value)}</span>
+        <span className="weight-unit">уд/мин</span>
+      </div>
+      <div className="weight-controls">
+        <button className="weight-btn" onClick={() => adjust(-5)}>−5</button>
+        <button className="weight-btn" onClick={() => adjust(-1)}>−1</button>
+        <input
+          type="number"
+          inputMode="numeric"
+          className="weight-num-input"
+          value={draft}
+          step="1"
+          min="30"
+          max="220"
+          placeholder="уд/мин"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={handleBlur}
+        />
+        <button className="weight-btn" onClick={() => adjust(1)}>+1</button>
+        <button className="weight-btn" onClick={() => adjust(5)}>+5</button>
       </div>
     </div>
   )

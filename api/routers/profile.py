@@ -1,13 +1,13 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import FitnessLevel, Profile, Tone, UpgradeIntent, User
+from database.models import FitnessLevel, Profile, Tone, Tracker, TrackerType, UpgradeIntent, User
 from database.session import get_session
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -140,6 +140,19 @@ async def update_my_profile(
 
     if body.weight is not None:
         profile.weight = body.weight
+        # Keep the ВЕС tracker/graph in sync so a weight set here (not just
+        # via the tracker modal) actually shows up in the progress chart.
+        today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        await session.execute(
+            delete(Tracker).where(
+                and_(
+                    Tracker.user_id == user.id,
+                    Tracker.type == TrackerType.weight,
+                    Tracker.created_at >= today_start,
+                )
+            )
+        )
+        session.add(Tracker(user_id=user.id, type=TrackerType.weight, value=body.weight, unit="kg", source="manual"))
 
     if body.height is not None:
         profile.height = body.height

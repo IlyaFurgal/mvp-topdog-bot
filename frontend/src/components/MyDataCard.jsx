@@ -64,8 +64,8 @@ export default function MyDataCard({ onEditClick }) {
   const [imgFailed, setImgFailed] = useState(false)
   const fileInputRef = useRef(null)
 
-  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null })
-  const [pulse, setPulse] = useState(null)
+  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
+  const [checkinPulse, setCheckinPulse] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
 
   async function load() {
@@ -73,7 +73,7 @@ export default function MyDataCard({ onEditClick }) {
       const [trackData, checkData] = await Promise.all([getTodayTrackers(), getTodayCheckins()])
       const { calorie_limit, calories_meals, ...rest } = trackData
       setTrackers(rest)
-      setPulse(checkData?.morning?.data?.resting_pulse ?? null)
+      setCheckinPulse(checkData?.morning?.data?.resting_pulse ?? null)
     } catch (_) {}
   }
 
@@ -91,6 +91,7 @@ export default function MyDataCard({ onEditClick }) {
 
   const tierLabel = subscriptionType === 'pro' ? 'PRO' : subscriptionType === 'plus' ? 'PLUS' : '—'
   const bmi = formatBmi(trackers.weight?.value ?? profile?.weight, profile?.height)
+  const pulseValue = trackers.pulse?.value ?? checkinPulse
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -108,7 +109,7 @@ export default function MyDataCard({ onEditClick }) {
   const chipRef = useUniformChipWidth([
     tierLabel, formatValue('weight', trackers.weight), bmi,
     formatValue('calories', trackers.calories), formatValue('sleep', trackers.sleep),
-    pulse, formatValue('water', trackers.water),
+    pulseValue, formatValue('water', trackers.water),
   ])
 
   return (
@@ -152,7 +153,7 @@ export default function MyDataCard({ onEditClick }) {
             <span className="data-row__label">ВЕС</span>
             <span className="data-row__value"><span>{formatValue('weight', trackers.weight) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip">
+          <div className="data-row skew-chip" onClick={onEditClick}>
             <span className="data-row__label">ИМТ</span>
             <span className="data-row__value"><span>{bmi ?? '—'}</span></span>
           </div>
@@ -164,9 +165,9 @@ export default function MyDataCard({ onEditClick }) {
             <span className="data-row__label">СОН</span>
             <span className="data-row__value"><span>{formatValue('sleep', trackers.sleep) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip">
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
             <span className="data-row__label">ПУЛЬС</span>
-            <span className="data-row__value"><span>{pulse != null ? pulse : '—'}</span></span>
+            <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
           </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
             <span className="data-row__label">ВОДА</span>

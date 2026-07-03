@@ -26,7 +26,7 @@ const SUPPORT_URL = import.meta.env.VITE_SUPPORT_TG_URL || 'https://t.me/topdog_
 
 function BackButton({ onBack }) {
   return (
-    <button className="club-back" onClick={onBack}>‹ КЛУБ</button>
+    <button className="club-back" onClick={onBack}>‹ НАЗАД</button>
   )
 }
 

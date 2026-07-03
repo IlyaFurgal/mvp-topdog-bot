@@ -66,6 +66,7 @@ class TrackerType(str, enum.Enum):
     water = "water"
     sleep = "sleep"
     calories = "calories"
+    pulse = "pulse"
 
 
 class GcTier(str, enum.Enum):

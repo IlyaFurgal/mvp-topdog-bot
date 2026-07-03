@@ -295,7 +295,7 @@ async def get_today_trackers(
     )
     trackers = result.scalars().all()
 
-    out: dict = {"weight": None, "water": None, "sleep": None, "calories": None}
+    out: dict = {"weight": None, "water": None, "sleep": None, "calories": None, "pulse": None}
     water_total = 0.0
     has_water = False
     last_water_id: int | None = None
@@ -314,6 +314,8 @@ async def get_today_trackers(
             last_water_id = t.id
         elif t.type == TrackerType.sleep:
             out["sleep"] = {"value": t.value, "unit": t.unit, "id": t.id}
+        elif t.type == TrackerType.pulse:
+            out["pulse"] = {"value": t.value, "unit": t.unit, "id": t.id}
         elif t.type == TrackerType.calories:
             cal_total += t.value
             has_calories = True

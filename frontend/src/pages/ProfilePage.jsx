@@ -104,7 +104,7 @@ function MyDataView({ profile, onBack, onEdit }) {
 
   return (
     <div className="page club-page" ref={chipRef}>
-      <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
+      <button className="club-back" onClick={onBack}>‹ НАЗАД</button>
 
       <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
       <div className="stripe-divider" />
@@ -674,7 +674,7 @@ export default function ProfilePage() {
         </a>
       )}
 
-      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(24px, 6.5vw, 34px)', marginTop: 28, marginBottom: 4 }} />
+      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
       <ProgressSection />
 
       {checkinsLoading ? (
