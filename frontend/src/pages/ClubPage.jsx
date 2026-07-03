@@ -1,7 +1,23 @@
 import { useState } from 'react'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
+import knowledgeImg from '../assets/1.png'
+import communityImg from '../assets/2.png'
+import supportImg from '../assets/3.png'
 import { useProfile } from '../context/ProfileContext'
 import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
+
+function CardArt({ img }) {
+  return (
+    <span
+      className="club-card__art"
+      style={{
+        backgroundImage: `linear-gradient(135deg, transparent 35%, rgba(255,255,255,0.10) 50%, transparent 65%), url(${img})`,
+        backgroundSize: 'auto, cover',
+        backgroundPosition: 'center, center',
+      }}
+    />
+  )
+}
 
 const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/+5_3U13qeveA3OWJi'
 const KNOWLEDGE_URL = 'https://topdog-mvp.ru/teach/control/stream'
@@ -100,13 +116,13 @@ export default function ClubPage() {
       >
         <span className="club-card__title">БАЗА ЗНАНИЙ</span>
         <span className="club-card__sub">ПОЛЕЗНЫЕ МАТЕРИАЛЫ</span>
-        <span className="club-card__art" />
+        <CardArt img={knowledgeImg} />
       </a>
 
       <button className="club-card" onClick={() => setView('community')}>
         <span className="club-card__title">КОМЬЮНИТИ</span>
         <span className="club-card__sub">ОБЩЕНИЕ И ВСТРЕЧИ</span>
-        <span className="club-card__art" />
+        <CardArt img={communityImg} />
       </button>
 
       <a
@@ -117,7 +133,7 @@ export default function ClubPage() {
       >
         <span className="club-card__title">ПОДДЕРЖКА</span>
         <span className="club-card__sub">НУЖНА ПОМОЩЬ? НАПИШИ</span>
-        <span className="club-card__art" />
+        <CardArt img={supportImg} />
       </a>
     </div>
   )
