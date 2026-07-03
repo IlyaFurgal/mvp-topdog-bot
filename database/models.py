@@ -170,6 +170,10 @@ class Tracker(Base):
     meal_type: Mapped[str | None] = mapped_column(String(16), nullable=True)   # breakfast|lunch|dinner|snack
     label: Mapped[str | None] = mapped_column(String(256), nullable=True)      # название блюда (задел под фото→калории)
     source: Mapped[str | None] = mapped_column(String(16), nullable=True)      # manual|photo
+    # Macros (calories only); nullable, grams per entry
+    protein_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fat_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    carbs_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="trackers")

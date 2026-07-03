@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Bar, BarChart, Line, LineChart,
+  Line, LineChart,
   ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { getCheckinHistory } from '../api/checkins'
@@ -312,7 +312,7 @@ export default function ProgressSection({ refreshKey }) {
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={waterData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <LineChart data={waterData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -332,8 +332,15 @@ export default function ProgressSection({ refreshKey }) {
                     labelFormatter={fmtDate}
                   />
                   <ReferenceLine y={2000} stroke="#444" strokeDasharray="4 4" />
-                  <Bar dataKey="value" fill={CHART_GREEN} radius={[3, 3, 0, 0]} />
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_GREEN}
+                    strokeWidth={2}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={9} />}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             )}
             {stats?.water && (

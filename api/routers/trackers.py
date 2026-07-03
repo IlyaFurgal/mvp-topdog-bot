@@ -24,6 +24,9 @@ class TrackerCreate(BaseModel):
     meal_type: Optional[str] = None   # breakfast|lunch|dinner|snack; только для calories
     label:     Optional[str] = None   # название блюда (задел под фото→калории)
     source:    Optional[str] = "manual"  # manual|photo
+    protein_g: Optional[float] = None  # калории: БЖУ за эту запись, г
+    fat_g:     Optional[float] = None
+    carbs_g:   Optional[float] = None
 
     @field_validator("meal_type")
     @classmethod
@@ -152,6 +155,9 @@ async def create_tracker(
         meal_type=body.meal_type,
         label=body.label,
         source=body.source or "manual",
+        protein_g=body.protein_g,
+        fat_g=body.fat_g,
+        carbs_g=body.carbs_g,
     )
     session.add(tracker)
     await session.commit()
@@ -304,6 +310,9 @@ async def get_today_trackers(
     has_calories = False
     last_cal_id: int | None = None
     cal_meals: dict[str, float] = {"breakfast": 0.0, "lunch": 0.0, "dinner": 0.0, "snack": 0.0, "uncategorized": 0.0}
+    protein_total = 0.0
+    fat_total = 0.0
+    carbs_total = 0.0
 
     for t in trackers:
         if t.type == TrackerType.weight:
@@ -324,6 +333,9 @@ async def get_today_trackers(
                 manual_cal_total += t.value
             meal_key = t.meal_type if t.meal_type in _VALID_MEAL_TYPES else "uncategorized"
             cal_meals[meal_key] += t.value
+            protein_total += t.protein_g or 0.0
+            fat_total += t.fat_g or 0.0
+            carbs_total += t.carbs_g or 0.0
 
     if has_water:
         out["water"] = {"value": water_total, "unit": "ml", "id": last_water_id}
@@ -333,6 +345,9 @@ async def get_today_trackers(
             "unit": "kcal",
             "id": last_cal_id,
             "manual_value": round(manual_cal_total),
+            "protein_g": round(protein_total, 1),
+            "fat_g": round(fat_total, 1),
+            "carbs_g": round(carbs_total, 1),
         }
     out["calories_meals"] = {k: round(v) for k, v in cal_meals.items()}
 

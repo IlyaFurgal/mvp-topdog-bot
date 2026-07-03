@@ -51,17 +51,23 @@ SUVVY_URL = "https://api.suvvy.ai/api/webhook/custom/message"
 def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
     """
     Extract [[MEAL:{...}]] markers from AI response text.
-    Only `food` and `calories` are read; `meal` field (if present) is ignored —
+    `food` and `calories` are required; `protein_g`/`fat_g`/`carbs_g` are read
+    if present (optional — the AI prompt doesn't send them yet, this is just
+    forward-compatible plumbing). `meal` field (if present) is ignored —
     meal_type is determined server-side by user timezone via _meal_type_by_time().
 
     Returns:
         (cleaned_text, list_of_meal_dicts)
         cleaned_text — text with markers removed and excess blank lines trimmed.
-        Each meal_dict: {"food": str, "calories": int}
+        Each meal_dict: {"food": str, "calories": int, "protein_g"?, "fat_g"?, "carbs_g"?}
 
     Errors in JSON are logged as warnings; the marker is always removed from text.
     """
     meals: list[dict] = []
+
+    def _macro(payload: dict, key: str) -> float | None:
+        v = payload.get(key)
+        return float(v) if isinstance(v, (int, float)) and 0 <= v <= 1000 else None
 
     def _handle_match(m: re.Match) -> str:
         try:
@@ -77,6 +83,9 @@ def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
             meals.append({
                 "food": food.strip(),
                 "calories": int(calories),
+                "protein_g": _macro(payload, "protein_g"),
+                "fat_g": _macro(payload, "fat_g"),
+                "carbs_g": _macro(payload, "carbs_g"),
             })
         except Exception as exc:
             logger.warning("Suvvy meal marker parse error: %s | raw=%r", exc, m.group(0))
@@ -715,6 +724,9 @@ async def suvvy_webhook(
                     meal_type=meal_type,
                     label=meal["food"],
                     source="photo",
+                    protein_g=meal.get("protein_g"),
+                    fat_g=meal.get("fat_g"),
+                    carbs_g=meal.get("carbs_g"),
                 ))
                 logger.info(
                     "Photo calories logged: user=%s food=%r kcal=%s meal=%s",

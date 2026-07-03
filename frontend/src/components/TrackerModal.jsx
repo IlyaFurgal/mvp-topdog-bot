@@ -4,22 +4,6 @@ import ScrollPicker from './ScrollPicker'
 
 const GOAL_WATER = 2000
 
-const MEAL_OPTIONS = [
-  { value: 'breakfast', label: 'Завтрак' },
-  { value: 'lunch',     label: 'Обед'   },
-  { value: 'dinner',    label: 'Ужин'   },
-  { value: 'snack',     label: 'Перекус'},
-]
-
-function getDefaultMealType() {
-  const h = new Date().getHours()
-  if (h >= 5  && h < 11) return 'breakfast'
-  if (h >= 11 && h < 15) return 'lunch'
-  if (h >= 15 && h < 18) return 'snack'
-  if (h >= 18 && h < 23) return 'dinner'
-  return null
-}
-
 const TITLES = {
   weight:   'ЗАПИСАТЬ ВЕС',
   water:    'ЗАПИСАТЬ ВОДУ',
@@ -36,7 +20,9 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
   const [pulse, setPulse] = useState(todayData?.value ?? 60)
   const [waterAmount, setWaterAmount] = useState(0)
   const [caloriesAmount, setCaloriesAmount] = useState(0)
-  const [mealType, setMealType] = useState(() => type === 'calories' ? getDefaultMealType() : null)
+  const [protein, setProtein] = useState('')
+  const [fat, setFat] = useState('')
+  const [carbs, setCarbs] = useState('')
   const [sleepHours, setSleepHours] = useState(() => {
     if (todayData?.value) return Math.floor(todayData.value)
     return 8
@@ -61,8 +47,10 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
         onSaved('water')
       } else if (type === 'calories') {
         await saveTracker('calories', caloriesAmount, 'kcal', {
-          meal_type: mealType || undefined,
           source: 'manual',
+          protein_g: protein ? parseFloat(protein) : undefined,
+          fat_g: fat ? parseFloat(fat) : undefined,
+          carbs_g: carbs ? parseFloat(carbs) : undefined,
         })
         onSaved('calories')
       } else if (type === 'pulse') {
@@ -114,8 +102,13 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
             onChange={setCaloriesAmount}
             total={caloriesTotal}
             limit={calorieLimit ?? 2000}
-            mealType={mealType}
-            onMealType={setMealType}
+            todayMacros={todayData}
+            protein={protein}
+            onProtein={setProtein}
+            fat={fat}
+            onFat={setFat}
+            carbs={carbs}
+            onCarbs={setCarbs}
           />
         )}
         {type === 'pulse' && (
@@ -178,7 +171,7 @@ function WaterInput({ amount, onChange, total }) {
 
   function handleBlur() {
     const n = parseFloat(draft)
-    if (!isNaN(n) && n >= 0) onChange(Math.round(unit === 'l' ? n * 1000 : n))
+    if (!isNaN(n)) onChange(Math.round(unit === 'l' ? n * 1000 : n))
     else setDraft('')
   }
 
@@ -204,15 +197,21 @@ function WaterInput({ amount, onChange, total }) {
           Сброс
         </button>
       </div>
+      <div className="water-quick">
+        {[100, 250, 500].map((ml) => (
+          <button key={ml} className="water-btn water-btn--minus" onClick={() => addPreset(-ml)}>
+            −{ml} мл
+          </button>
+        ))}
+      </div>
       <div className="water-custom">
         <input
           type="number"
           inputMode="decimal"
           className="weight-num-input"
           value={draft}
-          min="0"
           step={unit === 'l' ? '0.1' : '1'}
-          placeholder={unit === 'l' ? 'или введи, л' : 'или введи, мл'}
+          placeholder={unit === 'l' ? 'или введи ± л' : 'или введи ± мл'}
           onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
           onBlur={handleBlur}
         />
@@ -231,12 +230,13 @@ function WaterInput({ amount, onChange, total }) {
   )
 }
 
-function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMealType }) {
+function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, protein, onProtein, fat, onFat, carbs, onCarbs }) {
   const [draft, setDraft] = useState('')
   // Live preview: bar reflects saved + current draft
   const displayTotal = total + amount
   const pct = Math.min((displayTotal / limit) * 100, 100)
   const overLimit = displayTotal > limit
+  const hasMacroTotals = todayMacros && (todayMacros.protein_g || todayMacros.fat_g || todayMacros.carbs_g)
 
   function addPreset(kcal) {
     const current = parseInt(draft, 10) || 0
@@ -247,23 +247,12 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
 
   function handleBlur() {
     const n = parseInt(draft, 10)
-    if (!isNaN(n) && n >= 0) onChange(n)
-    else setDraft(amount > 0 ? String(amount) : '')
+    if (!isNaN(n)) onChange(n)
+    else setDraft('')
   }
 
   return (
     <div className="tracker-input">
-      <div className="meal-type-row">
-        {MEAL_OPTIONS.map(({ value, label }) => (
-          <button
-            key={value}
-            className={`meal-type-btn${mealType === value ? ' meal-type-btn--active' : ''}`}
-            onClick={() => onMealType(mealType === value ? null : value)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       <p className="water-today">
         Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} ккал</strong>
         {' '}/ норма {limit.toLocaleString('ru')} ккал
@@ -277,6 +266,13 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
       {overLimit && (
         <p className="progress-label" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
           Норма на сегодня превышена — если хочешь, обсуди с ассистентом.
+        </p>
+      )}
+      {hasMacroTotals && (
+        <p className="water-today" style={{ marginTop: 4 }}>
+          Б: <strong>{Math.round(todayMacros.protein_g || 0)}г</strong>
+          {' '}Ж: <strong>{Math.round(todayMacros.fat_g || 0)}г</strong>
+          {' '}У: <strong>{Math.round(todayMacros.carbs_g || 0)}г</strong>
         </p>
       )}
       <div className="water-quick">
@@ -293,18 +289,63 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, mealType, onMeal
           Сброс
         </button>
       </div>
+      <div className="water-quick">
+        {[100, 300, 500].map((kcal) => (
+          <button key={kcal} className="water-btn water-btn--minus" onClick={() => addPreset(-kcal)}>
+            −{kcal}
+          </button>
+        ))}
+      </div>
       <div className="water-custom">
         <input
           type="number"
           inputMode="numeric"
           className="weight-num-input"
           value={draft}
-          min="0"
-          placeholder="или введи, ккал"
+          placeholder="или введи ± ккал"
           onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
           onBlur={handleBlur}
         />
         <span className="weight-unit">ккал</span>
+      </div>
+
+      <div className="macro-row">
+        <div className="macro-field">
+          <input
+            type="number"
+            inputMode="decimal"
+            className="weight-num-input"
+            value={protein}
+            min="0"
+            placeholder="0"
+            onChange={(e) => onProtein(e.target.value)}
+          />
+          <span className="macro-field__label">БЕЛКИ, Г</span>
+        </div>
+        <div className="macro-field">
+          <input
+            type="number"
+            inputMode="decimal"
+            className="weight-num-input"
+            value={fat}
+            min="0"
+            placeholder="0"
+            onChange={(e) => onFat(e.target.value)}
+          />
+          <span className="macro-field__label">ЖИРЫ, Г</span>
+        </div>
+        <div className="macro-field">
+          <input
+            type="number"
+            inputMode="decimal"
+            className="weight-num-input"
+            value={carbs}
+            min="0"
+            placeholder="0"
+            onChange={(e) => onCarbs(e.target.value)}
+          />
+          <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
+        </div>
       </div>
     </div>
   )

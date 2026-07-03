@@ -1203,6 +1203,7 @@ html, body {
 .water-quick {
   display: flex;
   gap: 8px;
+  margin-bottom: 8px;
 }
 
 .water-btn {
@@ -1236,32 +1237,6 @@ html, body {
   cursor: default;
 }
 
-.meal-type-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.meal-type-btn {
-  flex: 1;
-  padding: 8px 4px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 100ms, color 100ms, border-color 100ms;
-}
-
-.meal-type-btn--active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-}
-
 .water-custom {
   display: flex;
   align-items: center;
@@ -1270,6 +1245,36 @@ html, body {
 
 .water-custom .weight-num-input {
   flex: 1;
+}
+
+.water-btn--minus {
+  color: var(--text-muted);
+}
+
+.macro-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.macro-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.macro-field .weight-num-input {
+  text-align: center;
+}
+
+.macro-field__label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .water-unit-toggle {
@@ -1354,8 +1359,9 @@ html, body {
 
 .chart-header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
@@ -1374,7 +1380,8 @@ html, body {
 }
 
 .chart-current {
-  font-size: 1.05rem;
+  font-size: 1.3rem;
+  line-height: 20px;
   font-weight: 800;
   font-style: italic;
   color: var(--accent-club);
@@ -1415,8 +1422,9 @@ html, body {
 
 .chart-stat-value {
   font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent-club);
 }
 
 /* ── Metrics cards ────────────────────────────────────── */
