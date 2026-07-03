@@ -202,7 +202,8 @@ html, body {
 .nav-label {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
+  font-style: italic;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -3447,7 +3448,7 @@ select optgroup {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 10px 0 10px 14px;
   margin-bottom: 8px;
 }
 
@@ -3479,10 +3480,11 @@ select optgroup {
   justify-content: center;
   flex-shrink: 0;
   min-width: 76px;
+  width: var(--chip-w, auto);
   margin: -10px 0;
   transform: none;
   background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
-  border-radius: 2px;
+  border-radius: 2px 4px 4px 2px;
   padding: 0 14px;
   box-sizing: border-box;
 }
@@ -3498,22 +3500,24 @@ select optgroup {
   white-space: nowrap;
 }
 
-/* Stripes grow thicker left-to-right (2px up to 11px) instead of a
-   uniform repeating pattern — hand-placed stops since repeating-
-   linear-gradient can only tile a fixed-width cell. */
+/* Stripes grow thicker left-to-right, starting from a proper thin bar
+   (not a hairline) and merging into one solid block at the end —
+   hand-placed stops since repeating-linear-gradient can only tile a
+   fixed-width cell, not a progressive one. */
 .stripe-divider {
   height: 14px;
-  width: 88px;
+  width: 112px;
   background: linear-gradient(
     115deg,
-    var(--accent-club) 0px,  var(--accent-club) 2px,  transparent 2px,  transparent 6px,
-    var(--accent-club) 6px,  var(--accent-club) 9px,  transparent 9px,  transparent 13px,
-    var(--accent-club) 13px, var(--accent-club) 17px, transparent 17px, transparent 21px,
-    var(--accent-club) 21px, var(--accent-club) 26px, transparent 26px, transparent 30px,
-    var(--accent-club) 30px, var(--accent-club) 36px, transparent 36px, transparent 40px,
-    var(--accent-club) 40px, var(--accent-club) 47px, transparent 47px, transparent 51px,
-    var(--accent-club) 51px, var(--accent-club) 60px, transparent 60px, transparent 64px,
-    var(--accent-club) 64px, var(--accent-club) 75px, transparent 75px
+    var(--accent-club) 0px,  var(--accent-club) 3px,  transparent 3px,  transparent 6px,
+    var(--accent-club) 6px,  var(--accent-club) 10px, transparent 10px, transparent 13px,
+    var(--accent-club) 13px, var(--accent-club) 18px, transparent 18px, transparent 21px,
+    var(--accent-club) 21px, var(--accent-club) 27px, transparent 27px, transparent 30px,
+    var(--accent-club) 30px, var(--accent-club) 37px, transparent 37px, transparent 40px,
+    var(--accent-club) 40px, var(--accent-club) 48px, transparent 48px, transparent 51px,
+    var(--accent-club) 51px, var(--accent-club) 60px, transparent 60px, transparent 63px,
+    var(--accent-club) 63px, var(--accent-club) 74px, transparent 74px, transparent 77px,
+    var(--accent-club) 77px, var(--accent-club) 112px
   );
   margin: 4px 0 20px;
 }
@@ -3643,7 +3647,7 @@ select optgroup {
 }
 
 .my-data-grid .data-row {
-  padding: 8px 12px;
+  padding: 8px 0 8px 12px;
   margin-bottom: 0;
   cursor: pointer;
 }

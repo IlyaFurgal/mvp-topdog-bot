@@ -4,6 +4,7 @@ import { getTodayTrackers } from '../api/trackers'
 import mvpLogo from '../assets/mvp-logo.png'
 import { useProfile } from '../context/ProfileContext'
 import { useTelegram } from '../hooks/useTelegram'
+import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
 import TrackerModal from './TrackerModal'
 
 const AVATAR_STORAGE_KEY = 'topdog_custom_avatar'
@@ -104,6 +105,12 @@ export default function MyDataCard({ onEditClick }) {
 
   const photoSrc = customAvatar || (!imgFailed ? user?.photo_url : null)
 
+  const chipRef = useUniformChipWidth([
+    tierLabel, formatValue('weight', trackers.weight), bmi,
+    formatValue('calories', trackers.calories), formatValue('sleep', trackers.sleep),
+    pulse, formatValue('water', trackers.water),
+  ])
+
   return (
     <div className="my-data-card">
       <button className="my-data-header" onClick={onEditClick}>МОИ ДАННЫЕ</button>
@@ -136,7 +143,7 @@ export default function MyDataCard({ onEditClick }) {
           </div>
         </div>
 
-        <div className="my-data-grid">
+        <div className="my-data-grid" ref={chipRef}>
           <div className="data-row data-row--name skew-chip" onClick={onEditClick}>
             <span className="data-row__label">{displayName.toUpperCase()}</span>
             <span className="data-row__value"><span>{tierLabel}</span></span>

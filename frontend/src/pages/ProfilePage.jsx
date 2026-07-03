@@ -7,6 +7,7 @@ import CheckinFlow from '../components/CheckinFlow'
 import MyDataCard from '../components/MyDataCard'
 import ProgressSection from '../components/ProgressSection'
 import { useProfile } from '../context/ProfileContext'
+import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
 
@@ -92,11 +93,17 @@ function MyDataView({ profile, onBack, onEdit }) {
     ? (FITNESS_LABELS_PLAIN[profile.fitness_level] ?? profile.fitness_level)
     : '—'
 
+  const chipRef = useUniformChipWidth([
+    profile?.tone, fitnessLabel, profile?.morning_reminder_time,
+    profile?.evening_reminder_time, profile?.notifications_enabled,
+    profile?.weight, profile?.height,
+  ])
+
   return (
-    <div className="page club-page">
+    <div className="page club-page" ref={chipRef}>
       <button className="club-back" onClick={onBack}>‹ ПРОФИЛЬ</button>
 
-      <h1 className="screen-title" data-text="МОИ ДАННЫЕ">
+      <h1 className="screen-title" data-text="МОИ ДАННЫЕ" style={{ display: 'block', fontSize: 'clamp(1.8rem, 9vw, 2.6rem)', whiteSpace: 'nowrap' }}>
         МОИ ДАННЫЕ
         <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">МОИ ДАННЫЕ</span></span>
       </h1>
@@ -110,15 +117,15 @@ function MyDataView({ profile, onBack, onEdit }) {
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('goals')}>
         <span className="data-row__label">ЦЕЛИ</span>
-        <span className="data-row__value"><span>Раскрыть</span></span>
+        <span className="data-row__value"><span>Подроб.</span></span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('fitness')}>
         <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
-        <span className="data-row__value"><span style={{ fontSize: '0.85rem' }}>{fitnessLabel}</span></span>
+        <span className="data-row__value"><span>{fitnessLabel}</span></span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('sport')}>
         <span className="data-row__label">ВИД СПОРТА</span>
-        <span className="data-row__value"><span>Раскрыть</span></span>
+        <span className="data-row__value"><span>Подроб.</span></span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('morning')}>
         <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
@@ -148,7 +155,7 @@ function MyDataView({ profile, onBack, onEdit }) {
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('additional')}>
         <span className="data-row__label">ДОП. ИНФОРМАЦИЯ</span>
-        <span className="data-row__value"><span>Раскрыть</span></span>
+        <span className="data-row__value"><span>Подроб.</span></span>
       </div>
     </div>
   )
