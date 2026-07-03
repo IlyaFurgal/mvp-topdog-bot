@@ -113,42 +113,34 @@ function MyDataView({ profile, onBack, onEdit }) {
       </h1>
       <div className="stripe-divider" />
 
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
         <span className="data-row__value">
-          {profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}
+          <span>{profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}</span>
         </span>
       </div>
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
-        <span className="data-row__value" style={{ fontSize: '0.85rem' }}>{tzLabel}</span>
+        <span className="data-row__value"><span style={{ fontSize: '0.85rem' }}>{tzLabel}</span></span>
       </div>
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">УТРО</span>
-        <span className="data-row__value">{profile?.morning_reminder_time ?? '08:00'}</span>
+        <span className="data-row__value"><span>{profile?.morning_reminder_time ?? '08:00'}</span></span>
       </div>
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">ВЕЧЕР</span>
-        <span className="data-row__value">{profile?.evening_reminder_time ?? '21:00'}</span>
+        <span className="data-row__value"><span>{profile?.evening_reminder_time ?? '21:00'}</span></span>
       </div>
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">ПУШИ</span>
         <span className="data-row__value">
-          {profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}
+          <span>{profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}</span>
         </span>
       </div>
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={onEdit}>
         <span className="data-row__label">ТАРИФ</span>
-        <span className="data-row__value">{tariff ?? '—'}</span>
+        <span className="data-row__value"><span>{tariff ?? '—'}</span></span>
       </div>
-
-      <button
-        className="btn btn-accent clip-skew"
-        style={{ marginTop: 24 }}
-        onClick={onEdit}
-      >
-        РЕДАКТИРОВАТЬ
-      </button>
     </div>
   )
 }

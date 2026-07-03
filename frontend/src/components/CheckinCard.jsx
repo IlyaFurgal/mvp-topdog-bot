@@ -42,7 +42,7 @@ export default function CheckinCard({ type, checkin, onClick, onEdit }) {
 
   return (
     <div
-      className={`checkin-card ${done ? 'checkin-card--done' : 'checkin-card--empty'}`}
+      className={`checkin-card skew-chip ${done ? 'checkin-card--done' : 'checkin-card--empty'}`}
       onClick={!done ? onClick : undefined}
     >
       <div className="checkin-card__left">

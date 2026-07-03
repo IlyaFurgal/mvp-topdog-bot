@@ -213,7 +213,6 @@ html, body {
   display: flex;
   gap: 0;
   margin-bottom: 16px;
-  overflow-x: clip;
 }
 
 .period-tab {
@@ -240,6 +239,7 @@ html, body {
   border-left: 2px solid var(--accent-club);
   border-bottom: 2px solid var(--accent-club);
   transform: skewX(-10deg);
+  transform-origin: 0 100%;
 }
 
 .period-tab.active span {
@@ -388,8 +388,6 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--surface);
-  border-radius: 8px;
   padding: 14px 16px;
   border: 1px solid transparent;
 }
@@ -421,6 +419,7 @@ html, body {
 .checkin-card__title {
   font-size: 0.85rem;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -429,18 +428,19 @@ html, body {
 }
 
 .checkin-card__arrow {
-  color: var(--accent);
+  color: var(--accent-club);
 }
 
 .checkin-card__status {
   font-size: 1rem;
   font-weight: 700;
+  font-style: italic;
   color: var(--text);
   letter-spacing: 0.03em;
 }
 
 .checkin-card--done .checkin-card__status {
-  color: var(--accent);
+  color: var(--accent-club);
 }
 
 .checkin-card__caret {
@@ -829,6 +829,7 @@ html, body {
 }
 
 .tracker-card {
+  background: linear-gradient(100deg, #232323 0%, #131313 100%);
   padding: 0;
   overflow: hidden;
 }
@@ -865,6 +866,12 @@ html, body {
   letter-spacing: 0.08em;
   color: var(--text-muted);
   text-transform: uppercase;
+}
+
+.wo-block-header .tracker-row__label {
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent-club);
 }
 
 .tracker-row__right {
@@ -1325,7 +1332,6 @@ html, body {
   flex-direction: column;
   align-items: flex-start;
   margin: 8px 0 20px;
-  overflow-x: clip;
 }
 
 .metric-card {
@@ -1333,6 +1339,7 @@ html, body {
   border: 1px solid var(--accent-club);
   border-radius: 6px;
   transform: skewX(-10deg);
+  transform-origin: 0 100%;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -2634,6 +2641,7 @@ html, body {
 .wo-item__cat {
   font-size: 0.95rem;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: 0.04em;
   color: var(--text);
 }
@@ -3077,7 +3085,6 @@ html, body {
   display: flex;
   gap: 0;
   margin-bottom: 16px;
-  overflow-x: clip;
 }
 
 .progress-view {
@@ -3104,6 +3111,7 @@ html, body {
   border-left: 2px solid var(--accent-club);
   border-bottom: 2px solid var(--accent-club);
   transform: skewX(-10deg);
+  transform-origin: 0 100%;
 }
 
 .progress-view.active span {
@@ -3314,9 +3322,14 @@ select optgroup {
 /* ── Design tokens ────────────────────────────────────── */
 
 /* Reusable skewed-parallelogram chip. Apply alongside another class;
-   direct children are counter-skewed so their content stays upright. */
+   direct children are counter-skewed so their content stays upright.
+   transform-origin anchors the bottom-left corner so the skew leans
+   the top edge rightward instead of poking the shape's left edge past
+   the row's own box (which clipped visibly when a container had
+   overflow-x:clip, and poked out into the page margin without it). */
 .skew-chip {
   transform: skewX(-10deg);
+  transform-origin: 0 100%;
   background: linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
   border-radius: 4px;
 }
@@ -3388,13 +3401,14 @@ select optgroup {
 
 .data-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   padding: 10px 14px;
   margin-bottom: 8px;
 }
 
 .data-row__label {
+  align-self: center;
   font-style: normal;
   font-weight: 700;
   font-size: 0.72rem;
@@ -3407,45 +3421,35 @@ select optgroup {
   white-space: nowrap;
 }
 
+/* Grey rectangle badge for every row's value (incl. the tariff value on
+   the name row). It's a direct child of the row's .skew-chip, so it
+   inherits the row's own skew visually — override the row's generic
+   counter-skew here (transform: none) so the badge itself stays skewed
+   like the row, then counter-skew only its inner text so it reads
+   upright. Stretched to the row's full height via negative margin
+   canceling the row's own vertical padding; width hugs its text via
+   flex sizing so content always fits with no clipping. */
 .data-row__value {
-  font-style: italic;
-  font-weight: 800;
-  font-size: 1.05rem;
-  color: var(--accent-club);
-  text-align: right;
-  flex-shrink: 0;
-}
-
-/* Grey mini-badge for the tariff value on the name row. It's a direct
-   child of the row's .skew-chip, so it inherits the row's own skew
-   visually — override the row's generic counter-skew here (transform:
-   none) so the badge itself stays skewed like the row, then counter-skew
-   only its inner text so the label reads upright. Stretched to the
-   row's full height via negative margin canceling the row's padding. */
-.data-row--name {
-  align-items: stretch;
-}
-
-.tariff-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: stretch;
+  flex-shrink: 0;
   margin: -10px 0;
   transform: none;
-  background: linear-gradient(100deg, #3a3a3a 0%, #1a1a1a 100%);
+  background: linear-gradient(100deg, #4a4a4a 0%, #222222 100%);
   border-radius: 2px;
   padding: 0 14px;
 }
 
-.tariff-badge > * {
+.data-row__value > * {
   display: inline-block;
   transform: skewX(10deg);
   color: var(--accent-club);
   font-style: italic;
-  font-weight: 900;
-  font-size: 0.85rem;
+  font-weight: 800;
+  font-size: 1.05rem;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .stripe-divider {
@@ -3576,7 +3580,6 @@ select optgroup {
   justify-content: space-between;
   gap: 4px;
   min-width: 0;
-  overflow-x: clip;
 }
 
 .my-data-grid .data-row {
@@ -3590,6 +3593,11 @@ select optgroup {
 }
 
 .my-data-grid .data-row__value {
+  margin: -8px 0;
+  padding: 0 10px;
+}
+
+.my-data-grid .data-row__value > * {
   font-size: 0.92rem;
 }
 

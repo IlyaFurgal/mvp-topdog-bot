@@ -134,31 +134,31 @@ export default function MyDataCard({ onEditClick }) {
         <div className="my-data-grid">
           <div className="data-row data-row--name skew-chip" onClick={onEditClick}>
             <span className="data-row__label">{displayName.toUpperCase()}</span>
-            <span className="tariff-badge"><span>{tierLabel}</span></span>
+            <span className="data-row__value"><span>{tierLabel}</span></span>
           </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('weight')}>
             <span className="data-row__label">ВЕС</span>
-            <span className="data-row__value">{formatValue('weight', trackers.weight) ?? '—'}</span>
+            <span className="data-row__value"><span>{formatValue('weight', trackers.weight) ?? '—'}</span></span>
           </div>
           <div className="data-row skew-chip">
             <span className="data-row__label">ИМТ</span>
-            <span className="data-row__value">{bmi ?? '—'}</span>
+            <span className="data-row__value"><span>{bmi ?? '—'}</span></span>
           </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('calories')}>
             <span className="data-row__label">КАЛОРИИ</span>
-            <span className="data-row__value">{formatValue('calories', trackers.calories) ?? '—'}</span>
+            <span className="data-row__value"><span>{formatValue('calories', trackers.calories) ?? '—'}</span></span>
           </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('sleep')}>
             <span className="data-row__label">СОН</span>
-            <span className="data-row__value">{formatValue('sleep', trackers.sleep) ?? '—'}</span>
+            <span className="data-row__value"><span>{formatValue('sleep', trackers.sleep) ?? '—'}</span></span>
           </div>
           <div className="data-row skew-chip">
             <span className="data-row__label">ПУЛЬС</span>
-            <span className="data-row__value">{pulse != null ? pulse : '—'}</span>
+            <span className="data-row__value"><span>{pulse != null ? pulse : '—'}</span></span>
           </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
             <span className="data-row__label">ВОДА</span>
-            <span className="data-row__value">{formatValue('water', trackers.water) ?? '—'}</span>
+            <span className="data-row__value"><span>{formatValue('water', trackers.water) ?? '—'}</span></span>
           </div>
         </div>
       </div>
