@@ -4,78 +4,13 @@ import MvpRibbon from '../components/MvpRibbon'
 import { useProfile } from '../context/ProfileContext'
 import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 
-const GC_BASE = import.meta.env.VITE_GC_BASE_URL || 'https://topdog-mvp.getcourse.ru'
-const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/topdog_residents'
+const CHAT_URL = import.meta.env.VITE_RESIDENTS_CHAT_URL || 'https://t.me/+5_3U13qeveA3OWJi'
+const KNOWLEDGE_URL = 'https://topdog-mvp.ru/teach/control/stream'
 const SUPPORT_URL = import.meta.env.VITE_SUPPORT_TG_URL || 'https://t.me/topdog_support'
-
-const MATERIALS = [
-  { title: 'Тренировочные программы', desc: 'Программы под твой уровень и цель', path: '/pl/teach/courses' },
-  { title: 'Нутрициология', desc: 'Питание, дефицит, масса — всё по науке', path: '/pl/teach/courses' },
-  { title: 'Восстановление и сон', desc: 'Протоколы восстановления', path: '/pl/teach/courses' },
-  { title: 'Ментальная подготовка', desc: 'Фокус, дисциплина, мотивация', path: '/pl/teach/courses' },
-  { title: 'Записи эфиров', desc: 'Прошедшие прямые эфиры с экспертами', path: '/pl/teach/courses' },
-]
 
 function BackButton({ onBack }) {
   return (
     <button className="club-back" onClick={onBack}>‹ КЛУБ</button>
-  )
-}
-
-function LockedBlock({ title, sub, desc, isPlusUser }) {
-  return (
-    <div className="locked-page">
-      <h2 className="locked-title">{title}</h2>
-      <p className="locked-sub">{sub}</p>
-      <p className="locked-desc">{desc}</p>
-      <button
-        className="btn btn-accent"
-        style={{ textAlign: 'center' }}
-        onClick={() => { trackUpgradeIntent(); openPaymentLink(PAYMENT_URLS.pro1m) }}
-      >
-        {isPlusUser ? 'УЛУЧШИТЬ ДО PRO →' : 'УЛУЧШИТЬ ДО PRO →'}
-      </button>
-    </div>
-  )
-}
-
-function KnowledgeView({ subscriptionType, onBack }) {
-  return (
-    <div className="page club-page">
-      <BackButton onBack={onBack} />
-      {!subscriptionType || subscriptionType === 'plus' ? (
-        <LockedBlock
-          title="БАЗА ЗНАНИЙ"
-          sub="Доступно на тарифе Pro"
-          desc="Тренировочные программы, записи эфиров, нутрициология и протоколы восстановления."
-          isPlusUser={subscriptionType === 'plus'}
-        />
-      ) : (
-        <>
-          <div className="club-block-header">
-            <h1 className="page-title page-title--lime">БАЗА ЗНАНИЙ</h1>
-            <p className="page-subtitle">МАТЕРИАЛЫ НА GETCOURSE</p>
-          </div>
-          <div className="knowledge-list">
-            {MATERIALS.map((item) => (
-              <a
-                key={item.title}
-                href={`${GC_BASE}${item.path}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="knowledge-item"
-              >
-                <div className="knowledge-item__text">
-                  <span className="knowledge-item__title">{item.title}</span>
-                  <span className="knowledge-item__desc">{item.desc}</span>
-                </div>
-                <span className="knowledge-item__arrow">›</span>
-              </a>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
   )
 }
 
@@ -147,9 +82,6 @@ export default function ClubPage() {
   const { subscriptionType } = useProfile()
   const [view, setView] = useState('hub')
 
-  if (view === 'knowledge') {
-    return <KnowledgeView subscriptionType={subscriptionType} onBack={() => setView('hub')} />
-  }
   if (view === 'community') {
     return <CommunityView subscriptionType={subscriptionType} onBack={() => setView('hub')} />
   }
@@ -163,11 +95,16 @@ export default function ClubPage() {
         <span className="title-mid-mask"><span className="title-mid-text" aria-hidden="true">КЛУБ</span></span>
       </h1>
 
-      <button className="club-card" onClick={() => setView('knowledge')}>
+      <a
+        className="club-card"
+        href={KNOWLEDGE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         <span className="club-card__title">БАЗА ЗНАНИЙ</span>
         <span className="club-card__sub">ПОЛЕЗНЫЕ МАТЕРИАЛЫ</span>
         <span className="club-card__art" />
-      </button>
+      </a>
 
       <button className="club-card" onClick={() => setView('community')}>
         <span className="club-card__title">КОМЬЮНИТИ</span>

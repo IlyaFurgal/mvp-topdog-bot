@@ -3434,11 +3434,13 @@ select optgroup {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  min-width: 76px;
   margin: -10px 0;
   transform: none;
   background: linear-gradient(100deg, #4a4a4a 0%, #222222 100%);
   border-radius: 2px;
   padding: 0 14px;
+  box-sizing: border-box;
 }
 
 .data-row__value > * {
@@ -3593,6 +3595,7 @@ select optgroup {
 }
 
 .my-data-grid .data-row__value {
+  min-width: 56px;
   margin: -8px 0;
   padding: 0 10px;
 }

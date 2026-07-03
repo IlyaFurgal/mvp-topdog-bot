@@ -7,8 +7,6 @@ import CheckinFlow from '../components/CheckinFlow'
 import MvpRibbon from '../components/MvpRibbon'
 import MyDataCard from '../components/MyDataCard'
 import ProgressSection from '../components/ProgressSection'
-import SavedProgramsBlock from '../components/SavedProgramsBlock'
-import WorkoutBlock from '../components/WorkoutBlock'
 import { useProfile } from '../context/ProfileContext'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
@@ -748,12 +746,6 @@ export default function ProfilePage() {
               />
             ))}
           </div>
-
-          <p className="section-label">ТРЕНИРОВКИ</p>
-          <WorkoutBlock />
-
-          <p className="section-label">СОХРАНЁННЫЕ ПРОГРАММЫ</p>
-          <SavedProgramsBlock />
         </>
       )}
     </div>

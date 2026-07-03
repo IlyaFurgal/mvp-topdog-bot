@@ -32,7 +32,7 @@ function formatBmi(weightKg, heightCm) {
   if (!weightKg || !heightCm) return null
   const heightM = heightCm / 100
   const bmi = weightKg / (heightM * heightM)
-  return bmi.toFixed(1)
+  return fmtNum(bmi, 1)
 }
 
 function resizeAvatar(file) {
