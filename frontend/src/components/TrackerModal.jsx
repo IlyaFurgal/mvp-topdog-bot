@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { saveTracker } from '../api/trackers'
+import ScrollPicker from './ScrollPicker'
 
 const GOAL_WATER = 2000
 
@@ -130,100 +131,40 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
 }
 
 function WeightInput({ value, onChange }) {
-  const [draft, setDraft] = useState(() => value.toFixed(1))
-
-  // Sync draft when value changes via adjust buttons
-  useEffect(() => { setDraft(value.toFixed(1)) }, [value])
-
-  function adjust(delta) {
-    onChange((v) => parseFloat(Math.max(30, Math.min(300, v + delta)).toFixed(1)))
-  }
-
-  function handleBlur() {
-    const parsed = parseFloat(draft)
-    if (!isNaN(parsed) && parsed >= 30 && parsed <= 300) {
-      onChange(parseFloat(parsed.toFixed(1)))
-    } else {
-      setDraft(value.toFixed(1))  // revert on invalid
-    }
-  }
-
   return (
     <div className="tracker-input">
-      <div className="weight-display">
-        <span className="weight-value">{value.toFixed(1)}</span>
-        <span className="weight-unit">кг</span>
-      </div>
-      <div className="weight-controls">
-        <button className="weight-btn" onClick={() => adjust(-0.5)}>−0.5</button>
-        <button className="weight-btn" onClick={() => adjust(-0.1)}>−0.1</button>
-        <input
-          type="number"
-          inputMode="decimal"
-          className="weight-num-input"
-          value={draft}
-          step="0.1"
-          min="30"
-          max="300"
-          placeholder="кг"
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={handleBlur}
-        />
-        <button className="weight-btn" onClick={() => adjust(0.1)}>+0.1</button>
-        <button className="weight-btn" onClick={() => adjust(0.5)}>+0.5</button>
-      </div>
+      <ScrollPicker
+        value={value}
+        onChange={onChange}
+        min={30}
+        max={300}
+        step={0.1}
+        decimals={1}
+        unit="кг"
+      />
     </div>
   )
 }
 
 function PulseInput({ value, onChange }) {
-  const [draft, setDraft] = useState(() => String(Math.round(value)))
-
-  useEffect(() => { setDraft(String(Math.round(value))) }, [value])
-
-  function adjust(delta) {
-    onChange((v) => Math.max(30, Math.min(220, Math.round(v) + delta)))
-  }
-
-  function handleBlur() {
-    const parsed = parseInt(draft, 10)
-    if (!isNaN(parsed) && parsed >= 30 && parsed <= 220) {
-      onChange(parsed)
-    } else {
-      setDraft(String(Math.round(value)))  // revert on invalid
-    }
-  }
-
   return (
     <div className="tracker-input">
-      <div className="weight-display">
-        <span className="weight-value">{Math.round(value)}</span>
-        <span className="weight-unit">уд/мин</span>
-      </div>
-      <div className="weight-controls">
-        <button className="weight-btn" onClick={() => adjust(-5)}>−5</button>
-        <button className="weight-btn" onClick={() => adjust(-1)}>−1</button>
-        <input
-          type="number"
-          inputMode="numeric"
-          className="weight-num-input"
-          value={draft}
-          step="1"
-          min="30"
-          max="220"
-          placeholder="уд/мин"
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={handleBlur}
-        />
-        <button className="weight-btn" onClick={() => adjust(1)}>+1</button>
-        <button className="weight-btn" onClick={() => adjust(5)}>+5</button>
-      </div>
+      <ScrollPicker
+        value={value}
+        onChange={onChange}
+        min={30}
+        max={220}
+        step={1}
+        decimals={0}
+        unit="уд/мин"
+      />
     </div>
   )
 }
 
 function WaterInput({ amount, onChange, total }) {
   const [draft, setDraft] = useState('')
+  const [unit, setUnit] = useState('ml')  // 'ml' | 'l'
   // Live preview: bar reflects saved + current draft
   const displayTotal = total + amount
   const pct = Math.min((displayTotal / GOAL_WATER) * 100, 100)
@@ -236,9 +177,9 @@ function WaterInput({ amount, onChange, total }) {
   }
 
   function handleBlur() {
-    const n = parseInt(draft, 10)
-    if (!isNaN(n) && n >= 0) onChange(n)
-    else setDraft(amount > 0 ? String(amount) : '')
+    const n = parseFloat(draft)
+    if (!isNaN(n) && n >= 0) onChange(Math.round(unit === 'l' ? n * 1000 : n))
+    else setDraft('')
   }
 
   return (
@@ -266,15 +207,25 @@ function WaterInput({ amount, onChange, total }) {
       <div className="water-custom">
         <input
           type="number"
-          inputMode="numeric"
+          inputMode="decimal"
           className="weight-num-input"
           value={draft}
           min="0"
-          placeholder="или введи, мл"
+          step={unit === 'l' ? '0.1' : '1'}
+          placeholder={unit === 'l' ? 'или введи, л' : 'или введи, мл'}
           onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
           onBlur={handleBlur}
         />
-        <span className="weight-unit">мл</span>
+        <div className="water-unit-toggle">
+          <button
+            className={`water-unit-btn${unit === 'ml' ? ' water-unit-btn--active' : ''}`}
+            onClick={() => setUnit('ml')}
+          >МЛ</button>
+          <button
+            className={`water-unit-btn${unit === 'l' ? ' water-unit-btn--active' : ''}`}
+            onClick={() => setUnit('l')}
+          >Л</button>
+        </div>
       </div>
     </div>
   )

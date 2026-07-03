@@ -46,6 +46,7 @@ async def get_my_profile(
         "height":                profile.height if profile else None,
         "notifications_enabled": profile.notifications_enabled if profile else True,
         "additional_info":       profile.additional_info if profile else None,
+        "avatar_url":            profile.avatar_path if profile else None,
         # Subscription
         "subscription_type":    user.subscription_type,
         "subscription_active":  user.subscription_active,
@@ -166,6 +167,32 @@ async def update_my_profile(
 
     await session.commit()
     return {"status": "ok"}
+
+
+class AvatarUpload(BaseModel):
+    image_base64: str
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    body: AvatarUpload,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    from api.routers.suvvy import _save_image_from_dataurl
+
+    profile = (await session.execute(
+        select(Profile).where(Profile.user_id == user.id)
+    )).scalar_one_or_none()
+    if not profile:
+        profile = Profile(user_id=user.id)
+        session.add(profile)
+        await session.flush()
+
+    avatar_path, _mime, _b64 = _save_image_from_dataurl(body.image_base64, "avatar")
+    profile.avatar_path = avatar_path
+    await session.commit()
+    return {"avatar_url": avatar_path}
 
 
 @router.post("/upgrade-intent")

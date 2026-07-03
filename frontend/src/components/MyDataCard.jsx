@@ -1,14 +1,53 @@
 import { useEffect, useRef, useState } from 'react'
+import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
 import mvpLogo from '../assets/mvp-logo.png'
 import { useProfile } from '../context/ProfileContext'
 import { useTelegram } from '../hooks/useTelegram'
 import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
+import ScrollPicker from './ScrollPicker'
 import TrackerModal from './TrackerModal'
 
-const AVATAR_STORAGE_KEY = 'topdog_custom_avatar'
 const AVATAR_MAX_DIMENSION = 300
+
+function HeightModal({ initialHeight, onClose, onSaved }) {
+  const [height, setHeight] = useState(initialHeight ?? 170)
+  const [saving, setSaving] = useState(false)
+  const overlayRef = useRef(null)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await client.patch('/profile/me', { height })
+      onSaved(height)
+    } catch (_) {
+      setSaving(false)
+    }
+  }
+
+  function handleOverlay(e) {
+    if (saving) return
+    if (e.target === overlayRef.current) onClose()
+  }
+
+  return (
+    <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
+      <div className="modal-sheet">
+        <div className="modal-header">
+          <span className="modal-title">РОСТ (ДЛЯ ИМТ)</span>
+          <button className="modal-close" onClick={onClose} disabled={saving}>✕</button>
+        </div>
+        <div className="tracker-input">
+          <ScrollPicker value={height} onChange={setHeight} min={100} max={230} step={1} decimals={0} unit="см" />
+        </div>
+        <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
+          {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function fmtNum(value, decimals) {
   return Math.abs(value % 1) < 0.001 ? value.toFixed(0) : value.toFixed(decimals)
@@ -56,17 +95,19 @@ function resizeAvatar(file) {
   })
 }
 
-export default function MyDataCard({ onEditClick }) {
+export default function MyDataCard({ onEditClick, onDataChanged }) {
   const { user } = useTelegram()
-  const { profile, subscriptionType } = useProfile()
+  const { profile, subscriptionType, refreshProfile } = useProfile()
 
-  const [customAvatar, setCustomAvatar] = useState(() => localStorage.getItem(AVATAR_STORAGE_KEY))
+  const [customAvatar, setCustomAvatar] = useState(null)  // optimistic preview while the upload is in flight
   const [imgFailed, setImgFailed] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef(null)
 
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
   const [checkinPulse, setCheckinPulse] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
+  const [heightModalOpen, setHeightModalOpen] = useState(false)
 
   async function load() {
     try {
@@ -99,12 +140,17 @@ export default function MyDataCard({ onEditClick }) {
     if (!file) return
     try {
       const dataUrl = await resizeAvatar(file)
-      localStorage.setItem(AVATAR_STORAGE_KEY, dataUrl)
-      setCustomAvatar(dataUrl)
-    } catch (_) {}
+      setCustomAvatar(dataUrl)  // instant local preview
+      setUploadingAvatar(true)
+      await client.post('/profile/avatar', { image_base64: dataUrl })
+      await refreshProfile()   // pulls the new avatar_url so it's there on every device from now on
+    } catch (_) {
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
-  const photoSrc = customAvatar || (!imgFailed ? user?.photo_url : null)
+  const photoSrc = customAvatar || profile?.avatar_url || (!imgFailed ? user?.photo_url : null)
 
   const chipRef = useUniformChipWidth([
     tierLabel, formatValue('weight', trackers.weight), bmi,
@@ -121,7 +167,11 @@ export default function MyDataCard({ onEditClick }) {
           <div className="my-data-notch">
             <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
           </div>
-          <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
+          <div
+            className="my-data-avatar-wrap"
+            style={uploadingAvatar ? { opacity: 0.6 } : undefined}
+            onClick={() => fileInputRef.current?.click()}
+          >
             <div className="my-data-avatar-inner">
               {photoSrc ? (
                 <img
@@ -153,7 +203,7 @@ export default function MyDataCard({ onEditClick }) {
             <span className="data-row__label">ВЕС</span>
             <span className="data-row__value"><span>{formatValue('weight', trackers.weight) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={onEditClick}>
+          <div className="data-row skew-chip" onClick={() => setHeightModalOpen(true)}>
             <span className="data-row__label">ИМТ</span>
             <span className="data-row__value"><span>{bmi ?? '—'}</span></span>
           </div>
@@ -181,7 +231,15 @@ export default function MyDataCard({ onEditClick }) {
           type={activeTracker}
           todayData={trackers[activeTracker]}
           onClose={() => setActiveTracker(null)}
-          onSaved={() => { setActiveTracker(null); load() }}
+          onSaved={() => { setActiveTracker(null); load(); onDataChanged?.() }}
+        />
+      )}
+
+      {heightModalOpen && (
+        <HeightModal
+          initialHeight={profile?.height}
+          onClose={() => setHeightModalOpen(false)}
+          onSaved={() => { setHeightModalOpen(false); refreshProfile(); onDataChanged?.() }}
         />
       )}
     </div>

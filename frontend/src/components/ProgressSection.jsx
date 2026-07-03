@@ -28,7 +28,7 @@ const TOOLTIP_STYLE = {
 const CHART_GREEN = '#B0F326'
 const AXIS_TICK = { fill: CHART_GREEN, fontSize: 10 }
 
-function SquareDot({ cx, cy, r = 4, fill = CHART_GREEN }) {
+function SquareDot({ cx, cy, r = 7, fill = CHART_GREEN }) {
   if (cx == null || cy == null) return null
   const s = r * 2
   return <rect x={cx - r} y={cy - r} width={s} height={s} fill={fill} />
@@ -109,7 +109,7 @@ function calcRecoveryPct(checkins) {
   return Math.max(0, base - pulsePenalty)
 }
 
-export default function ProgressSection() {
+export default function ProgressSection({ refreshKey }) {
   const [view, setView]           = useState('state')  // 'state' | 'workouts'
   const [periodIdx, setPeriodIdx] = useState(0)
 
@@ -146,7 +146,7 @@ export default function ProgressSection() {
         if (ins.status === 'fulfilled') setInsight(ins.value)
       })
       .finally(() => setLoading(false))
-  }, [periodIdx])
+  }, [periodIdx, refreshKey])
 
   const postWorkouts = checkins.filter((c) => c.type === 'post_workout')
   const discipline =
@@ -263,15 +263,15 @@ export default function ProgressSection() {
                     dataKey="created_at"
                     tickFormatter={fmtDate}
                     tick={AXIS_TICK}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
                     domain={['auto', 'auto']}
                     tick={AXIS_TICK}
                     width={36}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <Tooltip
                     formatter={(v) => [`${v} кг`, 'Вес']}
@@ -284,7 +284,7 @@ export default function ProgressSection() {
                     stroke={CHART_GREEN}
                     strokeWidth={2}
                     dot={<SquareDot />}
-                    activeDot={<SquareDot r={5} />}
+                    activeDot={<SquareDot r={9} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -317,14 +317,14 @@ export default function ProgressSection() {
                     dataKey="created_at"
                     tickFormatter={fmtDate}
                     tick={AXIS_TICK}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
                     tick={AXIS_TICK}
                     width={44}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <Tooltip
                     formatter={(v) => [`${Math.round(v)} мл`, 'Вода']}
@@ -364,15 +364,15 @@ export default function ProgressSection() {
                     dataKey="created_at"
                     tickFormatter={fmtDate}
                     tick={AXIS_TICK}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
                     domain={['auto', 'auto']}
                     tick={AXIS_TICK}
                     width={44}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <Tooltip
                     formatter={(v) => [`${Math.round(v)} ккал`, 'Калории']}
@@ -385,7 +385,7 @@ export default function ProgressSection() {
                     stroke={CHART_GREEN}
                     strokeWidth={2}
                     dot={<SquareDot />}
-                    activeDot={<SquareDot r={5} />}
+                    activeDot={<SquareDot r={9} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -418,15 +418,15 @@ export default function ProgressSection() {
                     dataKey="created_at"
                     tickFormatter={fmtDate}
                     tick={AXIS_TICK}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
                     domain={[0, 12]}
                     tick={AXIS_TICK}
                     width={30}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
                   />
                   <Tooltip
                     formatter={(v) => [`${v}ч`, 'Сон']}
@@ -440,7 +440,7 @@ export default function ProgressSection() {
                     stroke={CHART_GREEN}
                     strokeWidth={2}
                     dot={<SquareDot />}
-                    activeDot={<SquareDot r={5} />}
+                    activeDot={<SquareDot r={9} />}
                   />
                 </LineChart>
               </ResponsiveContainer>

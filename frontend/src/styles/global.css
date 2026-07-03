@@ -220,17 +220,18 @@ html, body {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 12px 4px;
+  padding: 12px 2px;
   background: none;
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 900;
   font-style: italic;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
   text-align: center;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
@@ -1066,6 +1067,65 @@ html, body {
   font-weight: 700;
 }
 
+.scroll-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 220px;
+}
+
+.scroll-picker__list {
+  height: 100%;
+  width: 140px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-picker__list::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-picker__item {
+  scroll-snap-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: color 0.1s, font-size 0.1s;
+}
+
+.scroll-picker__item--active {
+  font-size: 2.2rem;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent-club);
+}
+
+.scroll-picker__highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  height: 44px;
+  border-top: 2px solid #333;
+  border-bottom: 2px solid #333;
+  pointer-events: none;
+}
+
+.scroll-picker__unit {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  align-self: center;
+}
+
 .weight-controls {
   display: flex;
   align-items: center;
@@ -1212,6 +1272,30 @@ html, body {
   flex: 1;
 }
 
+.water-unit-toggle {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.water-unit-btn {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: var(--text-muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.water-unit-btn--active {
+  background: var(--accent-club);
+  border-color: var(--accent-club);
+  color: #111;
+}
+
 .sleep-quick {
   display: flex;
   gap: 8px;
@@ -1262,6 +1346,10 @@ html, body {
 
 .chart-card {
   margin-bottom: 16px;
+  background: transparent;
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .chart-header {
@@ -1286,10 +1374,11 @@ html, body {
 }
 
 .chart-current {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent-club);
+  letter-spacing: 0.02em;
 }
 
 .chart-empty {
@@ -3093,12 +3182,13 @@ html, body {
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 900;
   font-style: italic;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
   text-align: center;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
@@ -3653,7 +3743,7 @@ select optgroup {
 }
 
 .my-data-grid .data-row__label {
-  font-size: 0.66rem;
+  font-size: 0.9rem;
 }
 
 .my-data-grid .data-row__value {
@@ -3664,10 +3754,6 @@ select optgroup {
 
 .my-data-grid .data-row__value > * {
   font-size: 0.92rem;
-}
-
-.my-data-grid .data-row--name .data-row__label {
-  font-size: 0.82rem;
 }
 
 .tab-skew {

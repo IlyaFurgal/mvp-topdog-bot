@@ -595,6 +595,7 @@ export default function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false)
   const [editFocusField, setEditFocusField] = useState(null)
   const [myDataOpen, setMyDataOpen] = useState(false)
+  const [dataVersion, setDataVersion] = useState(0)
 
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [checkinsLoading, setCheckinsLoading] = useState(true)
@@ -659,7 +660,7 @@ export default function ProfilePage() {
     <div className="page club-page" style={{ position: 'relative' }}>
       <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img" />
 
-      <MyDataCard onEditClick={() => setMyDataOpen(true)} />
+      <MyDataCard onEditClick={() => setMyDataOpen(true)} onDataChanged={() => setDataVersion((v) => v + 1)} />
 
       {subscriptionType === 'plus' && (
         <a
@@ -675,7 +676,7 @@ export default function ProfilePage() {
       )}
 
       <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
-      <ProgressSection />
+      <ProgressSection refreshKey={dataVersion} />
 
       {checkinsLoading ? (
         <div className="card"><p className="card-muted">Загрузка...</p></div>
