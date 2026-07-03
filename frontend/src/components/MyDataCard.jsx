@@ -110,18 +110,22 @@ export default function MyDataCard({ onEditClick }) {
 
       <div className="my-data-body">
         <div className="my-data-avatar-col">
-          <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
+          <div className="my-data-notch">
+            <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
+          </div>
           <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
-            {photoSrc ? (
-              <img
-                src={photoSrc}
-                alt=""
-                className="my-data-avatar-img"
-                onError={() => setImgFailed(true)}
-              />
-            ) : (
-              <div className="my-data-avatar-fallback">{initials}</div>
-            )}
+            <div className="my-data-avatar-inner">
+              {photoSrc ? (
+                <img
+                  src={photoSrc}
+                  alt=""
+                  className="my-data-avatar-img"
+                  onError={() => setImgFailed(true)}
+                />
+              ) : (
+                <div className="my-data-avatar-fallback">{initials}</div>
+              )}
+            </div>
             <input
               ref={fileInputRef}
               type="file"

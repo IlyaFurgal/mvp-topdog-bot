@@ -29,6 +29,12 @@ const FITNESS_OPTIONS = [
   ['advanced',     '🔥 Продвинутый'],
 ]
 
+const FITNESS_LABELS_PLAIN = {
+  beginner: 'Новичок',
+  intermediate: 'Средний',
+  advanced: 'Продвинутый',
+}
+
 const TIMEZONE_OPTIONS = [
   ['UTC-12', 'UTC-12 — Бейкер'],
   ['UTC-11', 'UTC-11 — Самоа'],
@@ -105,7 +111,7 @@ function MyDataView({ profile, onBack, onEdit }) {
     ? goalsList.map((g) => GOAL_OPTIONS.find(([k]) => k === g)?.[1] ?? g).join(', ')
     : '—'
   const fitnessLabel = profile?.fitness_level
-    ? (FITNESS_OPTIONS.find(([k]) => k === profile.fitness_level)?.[1] ?? profile.fitness_level)
+    ? (FITNESS_LABELS_PLAIN[profile.fitness_level] ?? profile.fitness_level)
     : '—'
   const additionalPreview = profile?.additional_info?.trim()
     ? profile.additional_info.trim().split('\n')[0]
@@ -129,7 +135,7 @@ function MyDataView({ profile, onBack, onEdit }) {
       <div className="data-row skew-chip" onClick={() => onEdit('tone')}>
         <span className="data-row__label">СТИЛЬ ОБЩЕНИЯ</span>
         <span className="data-row__value">
-          <span>{profile?.tone === 'aggressive' ? 'ЖЁСТКИЙ' : profile?.tone === 'soft' ? 'МЯГКИЙ' : '—'}</span>
+          <span>{profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}</span>
         </span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('goals')}>
@@ -159,19 +165,19 @@ function MyDataView({ profile, onBack, onEdit }) {
       <div className="data-row skew-chip" onClick={() => onEdit('notifications')}>
         <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
         <span className="data-row__value">
-          <span>{profile?.notifications_enabled === false ? 'ВЫКЛ.' : 'ВКЛ.'}</span>
+          <span>{profile?.notifications_enabled === false ? 'Выкл.' : 'Вкл.'}</span>
         </span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('weight')}>
         <span className="data-row__label">ВЕС</span>
         <span className="data-row__value">
-          <span>{profile?.weight != null ? `${profile.weight} КГ` : '—'}</span>
+          <span>{profile?.weight != null ? `${profile.weight} кг` : '—'}</span>
         </span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('height')}>
         <span className="data-row__label">РОСТ</span>
         <span className="data-row__value">
-          <span>{profile?.height != null ? `${profile.height} СМ` : '—'}</span>
+          <span>{profile?.height != null ? `${profile.height} см` : '—'}</span>
         </span>
       </div>
       <div className="data-row skew-chip" onClick={() => onEdit('additional')}>

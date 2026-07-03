@@ -236,8 +236,8 @@ html, body {
 
 .period-tab.active {
   background: linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
-  border-left: 2px solid var(--accent-club);
-  border-bottom: 2px solid var(--accent-club);
+  border-left: 2px solid #555;
+  border-bottom: 2px solid #555;
   transform: skewX(-10deg);
   transform-origin: 0 100%;
 }
@@ -245,7 +245,7 @@ html, body {
 .period-tab.active span {
   display: inline-block;
   transform: skewX(10deg);
-  color: var(--accent-club);
+  color: #cccccc;
 }
 
 .chart-placeholder {
@@ -3108,8 +3108,8 @@ html, body {
 
 .progress-view.active {
   background: linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
-  border-left: 2px solid var(--accent-club);
-  border-bottom: 2px solid var(--accent-club);
+  border-left: 2px solid #555;
+  border-bottom: 2px solid #555;
   transform: skewX(-10deg);
   transform-origin: 0 100%;
 }
@@ -3117,7 +3117,7 @@ html, body {
 .progress-view.active span {
   display: inline-block;
   transform: skewX(10deg);
-  color: var(--accent-club);
+  color: #cccccc;
 }
 
 /* ── Workout Calendar ─────────────────────────────────── */
@@ -3514,16 +3514,44 @@ select optgroup {
   display: flex;
 }
 
+/* Square notch cut out of the top-left corner, with a border that
+   traces the cut too: an outer layer painted in the accent color and
+   clipped to the notched outline, holding an inset inner layer (the
+   actual photo) clipped to the same outline — the accent color
+   peeking out of that gap is the "border". The notch itself is left
+   empty so the page background shows through behind the logo. */
 .my-data-avatar-wrap {
   position: relative;
   width: 100%;
   flex: 1;
-  border: 2px solid var(--accent-club);
+  padding: 2px;
+  background: var(--accent-club);
+  clip-path: polygon(54px 0, 100% 0, 100% 100%, 0 100%, 0 18px, 54px 18px);
   border-radius: 8px;
-  clip-path: polygon(46px 0, 100% 0, 100% 100%, 0 100%, 0 46px, 46px 46px);
-  overflow: hidden;
+  box-sizing: border-box;
   cursor: pointer;
+}
+
+.my-data-avatar-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
   background: #111;
+  clip-path: polygon(54px 0, 100% 0, 100% 100%, 0 100%, 0 18px, 54px 18px);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.my-data-notch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 54px;
+  height: 18px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .my-data-avatar-img {
@@ -3546,11 +3574,7 @@ select optgroup {
 }
 
 .my-data-tag {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  z-index: 2;
-  width: 38px;
+  width: 42px;
   height: auto;
   object-fit: contain;
   display: block;
