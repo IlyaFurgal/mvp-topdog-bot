@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
+import mvpLogo from '../assets/mvp-logo.png'
 import { useProfile } from '../context/ProfileContext'
 import { useTelegram } from '../hooks/useTelegram'
 import TrackerModal from './TrackerModal'
@@ -110,7 +111,7 @@ export default function MyDataCard({ onEditClick }) {
       <div className="my-data-body">
         <div className="my-data-avatar-col">
           <div className="my-data-avatar-wrap" onClick={() => fileInputRef.current?.click()}>
-            <span className="my-data-tag"><b>MVP</b><i>BY TOP DOG</i></span>
+            <img src={mvpLogo} alt="MVP by Top Dog" className="my-data-tag" />
             {photoSrc ? (
               <img
                 src={photoSrc}

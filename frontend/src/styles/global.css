@@ -3549,30 +3549,10 @@ select optgroup {
   top: 5px;
   left: 5px;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-
-.my-data-tag b {
-  font-style: italic;
-  font-weight: 900;
-  font-size: 0.64rem;
-  color: var(--accent-club);
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-}
-
-.my-data-tag i {
-  font-style: italic;
-  font-weight: 800;
-  font-size: 0.32rem;
-  color: var(--accent-club);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  line-height: 1;
+  width: 38px;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .my-data-grid {
