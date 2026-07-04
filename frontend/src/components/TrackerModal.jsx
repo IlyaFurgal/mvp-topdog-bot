@@ -311,6 +311,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
 
       <div className="macro-row">
         <div className="macro-field">
+          <span className="macro-field__label">БЕЛКИ, Г</span>
           <input
             type="number"
             inputMode="decimal"
@@ -320,9 +321,9 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
             placeholder="0"
             onChange={(e) => onProtein(e.target.value)}
           />
-          <span className="macro-field__label">БЕЛКИ, Г</span>
         </div>
         <div className="macro-field">
+          <span className="macro-field__label">ЖИРЫ, Г</span>
           <input
             type="number"
             inputMode="decimal"
@@ -332,9 +333,9 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
             placeholder="0"
             onChange={(e) => onFat(e.target.value)}
           />
-          <span className="macro-field__label">ЖИРЫ, Г</span>
         </div>
         <div className="macro-field">
+          <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
           <input
             type="number"
             inputMode="decimal"
@@ -344,7 +345,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
             placeholder="0"
             onChange={(e) => onCarbs(e.target.value)}
           />
-          <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
         </div>
       </div>
     </div>
