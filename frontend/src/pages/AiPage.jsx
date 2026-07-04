@@ -476,6 +476,17 @@ export default function AiPage() {
                   </button>
                 </div>
               )}
+              {msg.from === 'user' && msg.text && (
+                <div className="ai-msg__actions">
+                  <button
+                    className="ai-msg__copy"
+                    onClick={() => handleCopy(msg.id, msg.text)}
+                    title="Копировать"
+                  >
+                    {copiedId === msg.id ? '✓' : '⎘'}
+                  </button>
+                </div>
+              )}
             </div>
             {msg.status === 'failed' && (
               <div className="ai-msg__failed">
