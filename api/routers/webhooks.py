@@ -16,25 +16,100 @@ from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
 from core.utils.phone import normalize_phone
-from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User, Workout, WorkoutCategory
+from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User, Workout
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-_MEAL_MARKER_RE = re.compile(r'\[\[MEAL:(\{.*?\})\]\]', re.DOTALL)
 _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
-_WEIGHT_MARKER_RE = re.compile(r'\[\[WEIGHT:(\{.*?\})\]\]', re.DOTALL)
-_WATER_MARKER_RE = re.compile(r'\[\[WATER:(\{.*?\})\]\]', re.DOTALL)
-_SLEEP_MARKER_RE = re.compile(r'\[\[SLEEP:(\{.*?\})\]\]', re.DOTALL)
-_PULSE_MARKER_RE = re.compile(r'\[\[PULSE:(\{.*?\})\]\]', re.DOTALL)
-_HEALTH_METRICS_MARKER_RE = re.compile(r'\[\[HEALTH_METRICS:(\{.*?\})\]\]', re.DOTALL)
 _HEALTH_METRICS_FIELDS = frozenset({
     "bmr", "bmi", "muscle_mass_kg", "fat_mass_kg",
     "visceral_fat", "metabolic_age", "body_fat_pct",
 })
-_WORKOUT_PLANNED_MARKER_RE = re.compile(r'\[\[WORKOUT_PLANNED:(\{.*?\})\]\]', re.DOTALL)
-_DEFAULT_WORKOUT_CATEGORY_CODE = "gym"
+
+
+def _extract_json_markers(text: str, name: str) -> list[tuple[str, int, int]]:
+    """
+    Find every occurrence of [[NAME:{...}]] in text, tolerant of malformed
+    closing brackets. mini frequently mis-terminates long markers (e.g.
+    "}}]" or "}]" instead of the correct "}]]") — rather than requiring an
+    exact "]]" tail, the JSON object is located by brace-balance counting
+    from the first "{", and whatever junk brackets/whitespace follow the
+    real closing "}" are swallowed as part of the match.
+
+    Returns a list of (json_str, start, end) in text order; start/end span
+    the whole marker occurrence (prefix + object + any bracket noise) so
+    callers can cut it out of the visible text.
+    """
+    start_re = re.compile(r'\[\[' + re.escape(name) + r':\s*(\{)')
+    spans: list[tuple[str, int, int]] = []
+    pos = 0
+    while True:
+        m = start_re.search(text, pos)
+        if not m:
+            break
+        obj_start = m.start(1)
+        depth = 0
+        in_str = False
+        escape = False
+        end = None
+        for i in range(obj_start, len(text)):
+            ch = text[i]
+            if in_str:
+                if escape:
+                    escape = False
+                elif ch == '\\':
+                    escape = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        if end is None:
+            # Unbalanced braces, no closing found at all — skip past this
+            # start so we don't loop forever, try the next occurrence.
+            pos = m.end()
+            continue
+        tail_end = end
+        while tail_end < len(text) and text[tail_end] in ']} \t':
+            tail_end += 1
+        spans.append((text[obj_start:end], m.start(), tail_end))
+        pos = tail_end
+    return spans
+
+
+def _parse_marker(text: str, name: str, handle) -> str:
+    """
+    Generic marker-stripping driver built on _extract_json_markers: for
+    every occurrence of [[NAME:{...}]] (however it was mis-closed), call
+    handle(payload_dict) and remove the whole occurrence from the visible
+    text — regardless of whether the JSON parsed/validated, so a broken
+    marker never leaks into what the user sees. Catches multiple markers
+    of the same type, including several on one line.
+    """
+    spans = _extract_json_markers(text, name)
+    if not spans:
+        return text
+    parts = []
+    last = 0
+    for json_str, start, end in spans:
+        parts.append(text[last:start])
+        try:
+            payload = json.loads(json_str)
+            handle(payload)
+        except Exception as exc:
+            logger.warning("Suvvy %s marker parse error: %s | raw=%r", name, exc, json_str)
+        last = end
+    parts.append(text[last:])
+    return ''.join(parts)
 
 # ── RISK marker protocol ──────────────────────────────────────────────────────
 _RISK_MARKER_RE = re.compile(r'\[\[RISK\]\]', re.IGNORECASE)
@@ -72,29 +147,24 @@ def _parse_meal_markers(text: str) -> tuple[str, list[dict]]:
         v = payload.get(key)
         return float(v) if isinstance(v, (int, float)) and 0 <= v <= 1000 else None
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            food = payload.get("food", "")
-            calories = payload.get("calories")
+    def _handle(payload: dict) -> None:
+        food = payload.get("food", "")
+        calories = payload.get("calories")
 
-            if not food or not isinstance(food, str):
-                raise ValueError("missing or invalid food field")
-            if not isinstance(calories, (int, float)) or not (1 <= float(calories) <= 5000):
-                raise ValueError(f"invalid calories: {calories!r}")
+        if not food or not isinstance(food, str):
+            raise ValueError("missing or invalid food field")
+        if not isinstance(calories, (int, float)) or not (1 <= float(calories) <= 5000):
+            raise ValueError(f"invalid calories: {calories!r}")
 
-            meals.append({
-                "food": food.strip(),
-                "calories": int(calories),
-                "protein_g": _macro(payload, "protein_g"),
-                "fat_g": _macro(payload, "fat_g"),
-                "carbs_g": _macro(payload, "carbs_g"),
-            })
-        except Exception as exc:
-            logger.warning("Suvvy meal marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""  # always strip marker from visible text
+        meals.append({
+            "food": food.strip(),
+            "calories": int(calories),
+            "protein_g": _macro(payload, "protein_g"),
+            "fat_g": _macro(payload, "fat_g"),
+            "carbs_g": _macro(payload, "carbs_g"),
+        })
 
-    cleaned = _MEAL_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "MEAL", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, meals
 
@@ -107,22 +177,17 @@ def _parse_weight_marker(text: str) -> tuple[str, float | None]:
     """
     weight: list[float] = []  # list so inner func can mutate
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            val = payload.get("value")
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"non-numeric value: {val!r}")
-            val_f = float(val)
-            if not (30 <= val_f <= 300):
-                raise ValueError(f"out of range: {val_f}")
-            if not weight:
-                weight.append(round(val_f, 1))
-        except Exception as exc:
-            logger.warning("Suvvy weight marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""  # always strip marker from visible text
+    def _handle(payload: dict) -> None:
+        val = payload.get("value")
+        if not isinstance(val, (int, float)):
+            raise ValueError(f"non-numeric value: {val!r}")
+        val_f = float(val)
+        if not (30 <= val_f <= 300):
+            raise ValueError(f"out of range: {val_f}")
+        if not weight:
+            weight.append(round(val_f, 1))
 
-    cleaned = _WEIGHT_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "WEIGHT", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, weight[0] if weight else None
 
@@ -134,22 +199,17 @@ def _parse_water_marker(text: str) -> tuple[str, float | None]:
     """
     water: list[float] = []
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            val = payload.get("value_ml")
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"non-numeric value_ml: {val!r}")
-            val_f = float(val)
-            if not (50 <= val_f <= 5000):
-                raise ValueError(f"out of range: {val_f}")
-            if not water:
-                water.append(round(val_f, 0))
-        except Exception as exc:
-            logger.warning("Suvvy water marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""
+    def _handle(payload: dict) -> None:
+        val = payload.get("value_ml")
+        if not isinstance(val, (int, float)):
+            raise ValueError(f"non-numeric value_ml: {val!r}")
+        val_f = float(val)
+        if not (50 <= val_f <= 5000):
+            raise ValueError(f"out of range: {val_f}")
+        if not water:
+            water.append(round(val_f, 0))
 
-    cleaned = _WATER_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "WATER", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, water[0] if water else None
 
@@ -161,22 +221,17 @@ def _parse_sleep_marker(text: str) -> tuple[str, float | None]:
     """
     sleep: list[float] = []
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            val = payload.get("hours")
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"non-numeric hours: {val!r}")
-            val_f = float(val)
-            if not (0 <= val_f <= 24):
-                raise ValueError(f"out of range: {val_f}")
-            if not sleep:
-                sleep.append(round(val_f, 1))
-        except Exception as exc:
-            logger.warning("Suvvy sleep marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""
+    def _handle(payload: dict) -> None:
+        val = payload.get("hours")
+        if not isinstance(val, (int, float)):
+            raise ValueError(f"non-numeric hours: {val!r}")
+        val_f = float(val)
+        if not (0 <= val_f <= 24):
+            raise ValueError(f"out of range: {val_f}")
+        if not sleep:
+            sleep.append(round(val_f, 1))
 
-    cleaned = _SLEEP_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "SLEEP", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, sleep[0] if sleep else None
 
@@ -188,22 +243,17 @@ def _parse_pulse_marker(text: str) -> tuple[str, int | None]:
     """
     pulse: list[int] = []
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            val = payload.get("bpm")
-            if not isinstance(val, (int, float)):
-                raise ValueError(f"non-numeric bpm: {val!r}")
-            val_i = round(float(val))
-            if not (30 <= val_i <= 220):
-                raise ValueError(f"out of range: {val_i}")
-            if not pulse:
-                pulse.append(val_i)
-        except Exception as exc:
-            logger.warning("Suvvy pulse marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""
+    def _handle(payload: dict) -> None:
+        val = payload.get("bpm")
+        if not isinstance(val, (int, float)):
+            raise ValueError(f"non-numeric bpm: {val!r}")
+        val_i = round(float(val))
+        if not (30 <= val_i <= 220):
+            raise ValueError(f"out of range: {val_i}")
+        if not pulse:
+            pulse.append(val_i)
 
-    cleaned = _PULSE_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "PULSE", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, pulse[0] if pulse else None
 
@@ -217,62 +267,50 @@ def _parse_health_metrics_marker(text: str) -> tuple[str, dict | None]:
     """
     hm: list[dict] = []
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            result: dict[str, float] = {}
-            for field in _HEALTH_METRICS_FIELDS:
-                val = payload.get(field)
-                if val is not None:
-                    if not isinstance(val, (int, float)):
-                        raise ValueError(f"non-numeric {field}: {val!r}")
-                    result[field] = float(val)
-            if result and not hm:
-                hm.append(result)
-        except Exception as exc:
-            logger.warning("Suvvy health_metrics marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""
+    def _handle(payload: dict) -> None:
+        result: dict[str, float] = {}
+        for field in _HEALTH_METRICS_FIELDS:
+            val = payload.get(field)
+            if val is not None:
+                if not isinstance(val, (int, float)):
+                    raise ValueError(f"non-numeric {field}: {val!r}")
+                result[field] = float(val)
+        if result and not hm:
+            hm.append(result)
 
-    cleaned = _HEALTH_METRICS_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "HEALTH_METRICS", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, hm[0] if hm else None
 
 
 def _parse_workout_planned_markers(text: str) -> tuple[str, list[dict]]:
     """
-    Extract [[WORKOUT_PLANNED:{"date","category","note"}]] markers from text.
-    All three fields are optional here — date/category are resolved against
-    the DB later (missing/invalid date -> today, missing/unknown category ->
-    _DEFAULT_WORKOUT_CATEGORY_CODE), same "never fail the webhook, fall back
-    to a sane default" approach as _meal_type_by_time(). Marker is always
-    removed from visible text; the full program stays in the reply text —
-    this only creates the calendar day entry, not exercise-level detail.
+    Extract [[WORKOUT_PLANNED:{"date","note"}]] markers from text. There is
+    no category field anymore — plans are written as a plain Workout row
+    with category_id=NULL (see database/migrations/0023) and the full
+    day's exercise list (with its own \n / bullet formatting) lives in
+    note verbatim. Missing/invalid date -> today, resolved at write time.
+    Marker is always removed from visible text regardless of whether the
+    payload parses; a response may contain multiple markers (one per day),
+    and _parse_marker strips + collects every occurrence, not just the
+    first — including mis-closed ones (mini often ends long notes with
+    "}}]" or "}]" instead of "}]]"; see _extract_json_markers).
 
     Returns:
         (cleaned_text, list_of_plan_dicts)
-        Each plan_dict: {"date": str|None, "category": str|None, "note": str|None}
+        Each plan_dict: {"date": str|None, "note": str|None}
     """
     planned: list[dict] = []
 
-    def _handle_match(m: re.Match) -> str:
-        try:
-            payload = json.loads(m.group(1))
-            date_raw = payload.get("date")
-            category_raw = payload.get("category")
-            note_raw = payload.get("note")
-            planned.append({
-                "date": date_raw.strip() if isinstance(date_raw, str) and date_raw.strip() else None,
-                "category": (
-                    category_raw.strip().lower()
-                    if isinstance(category_raw, str) and category_raw.strip() else None
-                ),
-                "note": note_raw.strip()[:2048] if isinstance(note_raw, str) and note_raw.strip() else None,
-            })
-        except Exception as exc:
-            logger.warning("Suvvy workout_planned marker parse error: %s | raw=%r", exc, m.group(0))
-        return ""
+    def _handle(payload: dict) -> None:
+        date_raw = payload.get("date")
+        note_raw = payload.get("note")
+        planned.append({
+            "date": date_raw.strip() if isinstance(date_raw, str) and date_raw.strip() else None,
+            "note": note_raw.strip()[:2048] if isinstance(note_raw, str) and note_raw.strip() else None,
+        })
 
-    cleaned = _WORKOUT_PLANNED_MARKER_RE.sub(_handle_match, text)
+    cleaned = _parse_marker(text, "WORKOUT_PLANNED", _handle)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, planned
 
@@ -817,11 +855,9 @@ async def suvvy_webhook(
                     )
 
             # Calendar entries from [[WORKOUT_PLANNED:]] marker(s) — Workout row only,
-            # no WorkoutEntry (exercise detail stays in the reply text).
+            # no category (category_id=NULL, see migration 0023) and no WorkoutEntry;
+            # the full day's exercise list is written verbatim into note.
             if all_workout_plans:
-                categories = (await session.execute(select(WorkoutCategory))).scalars().all()
-                cat_by_code = {c.code: c for c in categories}
-                default_category = cat_by_code.get(_DEFAULT_WORKOUT_CATEGORY_CODE)
                 today = datetime.now(timezone.utc).date()
 
                 for plan in all_workout_plans:
@@ -835,27 +871,15 @@ async def suvvy_webhook(
                                 plan["date"], chat_id,
                             )
 
-                    category = cat_by_code.get(plan["category"]) if plan["category"] else None
-                    if category is None:
-                        category = default_category
-                    if category is None:
-                        # _DEFAULT_WORKOUT_CATEGORY_CODE itself missing from the table — skip
-                        # rather than violate the NOT NULL category_id constraint.
-                        logger.error(
-                            "WORKOUT_PLANNED: no '%s' category seeded, skipping plan for user=%s",
-                            _DEFAULT_WORKOUT_CATEGORY_CODE, chat_id,
-                        )
-                        continue
-
                     session.add(Workout(
                         user_id=user.id,
                         date=plan_date,
-                        category_id=category.id,
+                        category_id=None,
                         note=plan["note"],
                     ))
                     logger.info(
-                        "Workout planned via marker: user=%s date=%s category=%s note=%r",
-                        chat_id, plan_date, category.code, plan["note"],
+                        "Workout planned via marker: user=%s date=%s note=%r",
+                        chat_id, plan_date, plan["note"],
                     )
 
             # Upsert weight tracker from [[WEIGHT:]] marker

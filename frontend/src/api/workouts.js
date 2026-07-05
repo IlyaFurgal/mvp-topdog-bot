@@ -6,7 +6,8 @@ export async function getWorkoutCategories() {
 }
 
 export async function getWorkoutItems(category_id) {
-  const { data } = await client.get('/workouts/items', { params: { category_id } })
+  const params = category_id != null ? { category_id } : {}
+  const { data } = await client.get('/workouts/items', { params })
   return data
 }
 

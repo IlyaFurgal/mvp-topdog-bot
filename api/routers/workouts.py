@@ -28,7 +28,7 @@ class EntryIn(BaseModel):
 
 class WorkoutCreate(BaseModel):
     date: date
-    category_id: int
+    category_id: Optional[int] = None
     duration_min: Optional[int] = None
     note: Optional[str] = None
     entries: list[EntryIn] = []
@@ -116,19 +116,18 @@ async def list_categories(session: AsyncSession = Depends(get_session)):
 
 @router.get("/items")
 async def list_items(
-    category_id: int = Query(...),
+    category_id: Optional[int] = Query(None),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    filters = [
+        WorkoutItem.is_custom.is_(False) | (WorkoutItem.user_id == user.id),
+    ]
+    if category_id is not None:
+        filters.append(WorkoutItem.category_id == category_id)
     result = await session.execute(
         select(WorkoutItem)
-        .where(
-            and_(
-                WorkoutItem.category_id == category_id,
-                WorkoutItem.is_custom.is_(False)
-                | (WorkoutItem.user_id == user.id),
-            )
-        )
+        .where(and_(*filters))
         .order_by(WorkoutItem.sort_order, WorkoutItem.id)
     )
     return [
@@ -172,9 +171,10 @@ async def create_workout(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    cat = await session.get(WorkoutCategory, body.category_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="Category not found")
+    if body.category_id is not None:
+        cat = await session.get(WorkoutCategory, body.category_id)
+        if not cat:
+            raise HTTPException(status_code=404, detail="Category not found")
 
     workout = Workout(
         user_id=user.id,

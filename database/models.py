@@ -250,12 +250,12 @@ class Workout(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
-    category_id: Mapped[int] = mapped_column(ForeignKey("workout_categories.id"), nullable=False)
+    category_id: Mapped[int | None] = mapped_column(ForeignKey("workout_categories.id"), nullable=True)
     duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     note: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    category: Mapped["WorkoutCategory"] = relationship(back_populates="workouts")
+    category: Mapped["WorkoutCategory | None"] = relationship(back_populates="workouts")
     entries: Mapped[list["WorkoutEntry"]] = relationship(back_populates="workout", cascade="all, delete-orphan")
 
 
