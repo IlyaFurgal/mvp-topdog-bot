@@ -3,7 +3,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, Form, Request
@@ -16,7 +16,7 @@ from api.services.history import schedule_fold
 from api.suvvy_queue import push
 from core.config import settings
 from core.utils.phone import normalize_phone
-from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User
+from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User, Workout, WorkoutCategory
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -27,11 +27,14 @@ _VALID_MEAL_TYPES = {"breakfast", "lunch", "dinner", "snack"}
 _WEIGHT_MARKER_RE = re.compile(r'\[\[WEIGHT:(\{.*?\})\]\]', re.DOTALL)
 _WATER_MARKER_RE = re.compile(r'\[\[WATER:(\{.*?\})\]\]', re.DOTALL)
 _SLEEP_MARKER_RE = re.compile(r'\[\[SLEEP:(\{.*?\})\]\]', re.DOTALL)
+_PULSE_MARKER_RE = re.compile(r'\[\[PULSE:(\{.*?\})\]\]', re.DOTALL)
 _HEALTH_METRICS_MARKER_RE = re.compile(r'\[\[HEALTH_METRICS:(\{.*?\})\]\]', re.DOTALL)
 _HEALTH_METRICS_FIELDS = frozenset({
     "bmr", "bmi", "muscle_mass_kg", "fat_mass_kg",
     "visceral_fat", "metabolic_age", "body_fat_pct",
 })
+_WORKOUT_PLANNED_MARKER_RE = re.compile(r'\[\[WORKOUT_PLANNED:(\{.*?\})\]\]', re.DOTALL)
+_DEFAULT_WORKOUT_CATEGORY_CODE = "gym"
 
 # ── RISK marker protocol ──────────────────────────────────────────────────────
 _RISK_MARKER_RE = re.compile(r'\[\[RISK\]\]', re.IGNORECASE)
@@ -178,6 +181,33 @@ def _parse_sleep_marker(text: str) -> tuple[str, float | None]:
     return cleaned, sleep[0] if sleep else None
 
 
+def _parse_pulse_marker(text: str) -> tuple[str, int | None]:
+    """
+    Extract first valid [[PULSE:{"bpm": N}]] marker from text.
+    Valid range: 30–220 bpm. Marker is always removed from visible text.
+    """
+    pulse: list[int] = []
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            val = payload.get("bpm")
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"non-numeric bpm: {val!r}")
+            val_i = round(float(val))
+            if not (30 <= val_i <= 220):
+                raise ValueError(f"out of range: {val_i}")
+            if not pulse:
+                pulse.append(val_i)
+        except Exception as exc:
+            logger.warning("Suvvy pulse marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""
+
+    cleaned = _PULSE_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, pulse[0] if pulse else None
+
+
 def _parse_health_metrics_marker(text: str) -> tuple[str, dict | None]:
     """
     Extract first [[HEALTH_METRICS:{...}]] marker from text.
@@ -206,6 +236,45 @@ def _parse_health_metrics_marker(text: str) -> tuple[str, dict | None]:
     cleaned = _HEALTH_METRICS_MARKER_RE.sub(_handle_match, text)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     return cleaned, hm[0] if hm else None
+
+
+def _parse_workout_planned_markers(text: str) -> tuple[str, list[dict]]:
+    """
+    Extract [[WORKOUT_PLANNED:{"date","category","note"}]] markers from text.
+    All three fields are optional here — date/category are resolved against
+    the DB later (missing/invalid date -> today, missing/unknown category ->
+    _DEFAULT_WORKOUT_CATEGORY_CODE), same "never fail the webhook, fall back
+    to a sane default" approach as _meal_type_by_time(). Marker is always
+    removed from visible text; the full program stays in the reply text —
+    this only creates the calendar day entry, not exercise-level detail.
+
+    Returns:
+        (cleaned_text, list_of_plan_dicts)
+        Each plan_dict: {"date": str|None, "category": str|None, "note": str|None}
+    """
+    planned: list[dict] = []
+
+    def _handle_match(m: re.Match) -> str:
+        try:
+            payload = json.loads(m.group(1))
+            date_raw = payload.get("date")
+            category_raw = payload.get("category")
+            note_raw = payload.get("note")
+            planned.append({
+                "date": date_raw.strip() if isinstance(date_raw, str) and date_raw.strip() else None,
+                "category": (
+                    category_raw.strip().lower()
+                    if isinstance(category_raw, str) and category_raw.strip() else None
+                ),
+                "note": note_raw.strip()[:2048] if isinstance(note_raw, str) and note_raw.strip() else None,
+            })
+        except Exception as exc:
+            logger.warning("Suvvy workout_planned marker parse error: %s | raw=%r", exc, m.group(0))
+        return ""
+
+    cleaned = _WORKOUT_PLANNED_MARKER_RE.sub(_handle_match, text)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, planned
 
 
 def _meal_type_by_time(profile) -> str:
@@ -660,24 +729,31 @@ async def suvvy_webhook(
     # ── Parse all AI markers ──────────────────────────────────────────────────
     cleaned_texts: list[str] = []
     all_meals: list[dict] = []
+    all_workout_plans: list[dict] = []
     weight_kg: float | None = None
     water_ml: float | None = None
     sleep_h: float | None = None
+    pulse_bpm: int | None = None
     health_metrics_data: dict | None = None
     for raw_text in texts:
         cleaned, meals = _parse_meal_markers(raw_text)
         cleaned, w = _parse_weight_marker(cleaned)
         cleaned, wm = _parse_water_marker(cleaned)
         cleaned, sl = _parse_sleep_marker(cleaned)
+        cleaned, pl = _parse_pulse_marker(cleaned)
         cleaned, hm = _parse_health_metrics_marker(cleaned)
+        cleaned, plans = _parse_workout_planned_markers(cleaned)
         cleaned_texts.append(cleaned)   # may be empty string if text was only a marker
         all_meals.extend(meals)
+        all_workout_plans.extend(plans)
         if w is not None and weight_kg is None:
             weight_kg = w
         if wm is not None and water_ml is None:
             water_ml = wm
         if sl is not None and sleep_h is None:
             sleep_h = sl
+        if pl is not None and pulse_bpm is None:
+            pulse_bpm = pl
         if hm is not None and health_metrics_data is None:
             health_metrics_data = hm
 
@@ -696,120 +772,197 @@ async def suvvy_webhook(
         push(chat_id, texts_to_send)
         logger.info("Suvvy webhook: %d message(s) queued for chat_id=%s", len(texts_to_send), chat_id)
 
-    result = await session.execute(
-        select(User).where(User.telegram_id == int(chat_id))
-    )
-    user = result.scalar_one_or_none()
+    try:
+        chat_id_int = int(chat_id)
+    except ValueError:
+        logger.warning("Suvvy webhook: non-numeric chat_id=%r", chat_id)
+        return {"status": "ok"}
 
-    if user:
-        # Save safe (non-RISK) AI messages
-        for text_body in safe_texts:
-            if text_body.strip():
-                session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
+    try:
+        result = await session.execute(
+            select(User).where(User.telegram_id == chat_id_int)
+        )
+        user = result.scalar_one_or_none()
 
-        # Auto-create calorie trackers from photo recognition
-        if all_meals:
-            profile_result = await session.execute(
-                select(Profile).where(Profile.user_id == user.id)
-            )
-            profile = profile_result.scalar_one_or_none()
-            meal_type = _meal_type_by_time(profile)
+        if user:
+            # Save safe (non-RISK) AI messages
+            for text_body in safe_texts:
+                if text_body.strip():
+                    session.add(AiMessage(user_id=user.id, role="ai", text=text_body))
 
-            for meal in all_meals:
+            # Auto-create calorie trackers from photo recognition
+            if all_meals:
+                profile_result = await session.execute(
+                    select(Profile).where(Profile.user_id == user.id)
+                )
+                profile = profile_result.scalar_one_or_none()
+                meal_type = _meal_type_by_time(profile)
+
+                for meal in all_meals:
+                    session.add(Tracker(
+                        user_id=user.id,
+                        type=TrackerType.calories,
+                        value=meal["calories"],
+                        unit="kcal",
+                        meal_type=meal_type,
+                        label=meal["food"],
+                        source="photo",
+                        protein_g=meal.get("protein_g"),
+                        fat_g=meal.get("fat_g"),
+                        carbs_g=meal.get("carbs_g"),
+                    ))
+                    logger.info(
+                        "Photo calories logged: user=%s food=%r kcal=%s meal=%s",
+                        chat_id, meal["food"], meal["calories"], meal_type,
+                    )
+
+            # Calendar entries from [[WORKOUT_PLANNED:]] marker(s) — Workout row only,
+            # no WorkoutEntry (exercise detail stays in the reply text).
+            if all_workout_plans:
+                categories = (await session.execute(select(WorkoutCategory))).scalars().all()
+                cat_by_code = {c.code: c for c in categories}
+                default_category = cat_by_code.get(_DEFAULT_WORKOUT_CATEGORY_CODE)
+                today = datetime.now(timezone.utc).date()
+
+                for plan in all_workout_plans:
+                    plan_date = today
+                    if plan["date"]:
+                        try:
+                            plan_date = date.fromisoformat(plan["date"])
+                        except ValueError:
+                            logger.warning(
+                                "WORKOUT_PLANNED: invalid date=%r, defaulting to today (user=%s)",
+                                plan["date"], chat_id,
+                            )
+
+                    category = cat_by_code.get(plan["category"]) if plan["category"] else None
+                    if category is None:
+                        category = default_category
+                    if category is None:
+                        # _DEFAULT_WORKOUT_CATEGORY_CODE itself missing from the table — skip
+                        # rather than violate the NOT NULL category_id constraint.
+                        logger.error(
+                            "WORKOUT_PLANNED: no '%s' category seeded, skipping plan for user=%s",
+                            _DEFAULT_WORKOUT_CATEGORY_CODE, chat_id,
+                        )
+                        continue
+
+                    session.add(Workout(
+                        user_id=user.id,
+                        date=plan_date,
+                        category_id=category.id,
+                        note=plan["note"],
+                    ))
+                    logger.info(
+                        "Workout planned via marker: user=%s date=%s category=%s note=%r",
+                        chat_id, plan_date, category.code, plan["note"],
+                    )
+
+            # Upsert weight tracker from [[WEIGHT:]] marker
+            if weight_kg is not None:
+                today = datetime.now(timezone.utc).date()
+                existing = (await session.execute(
+                    select(Tracker).where(
+                        and_(
+                            Tracker.user_id == user.id,
+                            Tracker.type == TrackerType.weight,
+                            func.date(Tracker.created_at) == today,
+                        )
+                    ).limit(1)
+                )).scalar_one_or_none()
+                if existing:
+                    existing.value = weight_kg
+                    logger.info("Weight updated via marker: user=%s weight=%.1f", chat_id, weight_kg)
+                else:
+                    session.add(Tracker(
+                        user_id=user.id,
+                        type=TrackerType.weight,
+                        value=weight_kg,
+                        unit="kg",
+                    ))
+                    logger.info("Weight logged via marker: user=%s weight=%.1f", chat_id, weight_kg)
+
+            # Water tracker from [[WATER:]] marker (additive — sum over the day)
+            if water_ml is not None:
                 session.add(Tracker(
                     user_id=user.id,
-                    type=TrackerType.calories,
-                    value=meal["calories"],
-                    unit="kcal",
-                    meal_type=meal_type,
-                    label=meal["food"],
-                    source="photo",
-                    protein_g=meal.get("protein_g"),
-                    fat_g=meal.get("fat_g"),
-                    carbs_g=meal.get("carbs_g"),
+                    type=TrackerType.water,
+                    value=water_ml,
+                    unit="ml",
                 ))
+                logger.info("Water logged via marker: user=%s ml=%.0f", chat_id, water_ml)
+
+            # Sleep tracker from [[SLEEP:]] marker (upsert today's entry)
+            if sleep_h is not None:
+                today = datetime.now(timezone.utc).date()
+                existing_sleep = (await session.execute(
+                    select(Tracker).where(
+                        and_(
+                            Tracker.user_id == user.id,
+                            Tracker.type == TrackerType.sleep,
+                            func.date(Tracker.created_at) == today,
+                        )
+                    ).limit(1)
+                )).scalar_one_or_none()
+                if existing_sleep:
+                    existing_sleep.value = sleep_h
+                    logger.info("Sleep updated via marker: user=%s hours=%.1f", chat_id, sleep_h)
+                else:
+                    session.add(Tracker(
+                        user_id=user.id,
+                        type=TrackerType.sleep,
+                        value=sleep_h,
+                        unit="h",
+                    ))
+                    logger.info("Sleep logged via marker: user=%s hours=%.1f", chat_id, sleep_h)
+
+            # Pulse tracker from [[PULSE:]] marker (upsert today's entry)
+            if pulse_bpm is not None:
+                today = datetime.now(timezone.utc).date()
+                existing_pulse = (await session.execute(
+                    select(Tracker).where(
+                        and_(
+                            Tracker.user_id == user.id,
+                            Tracker.type == TrackerType.pulse,
+                            func.date(Tracker.created_at) == today,
+                        )
+                    ).limit(1)
+                )).scalar_one_or_none()
+                if existing_pulse:
+                    existing_pulse.value = pulse_bpm
+                    logger.info("Pulse updated via marker: user=%s bpm=%d", chat_id, pulse_bpm)
+                else:
+                    session.add(Tracker(
+                        user_id=user.id,
+                        type=TrackerType.pulse,
+                        value=pulse_bpm,
+                        unit="bpm",
+                    ))
+                    logger.info("Pulse logged via marker: user=%s bpm=%d", chat_id, pulse_bpm)
+
+            # HealthMetrics snapshot from [[HEALTH_METRICS:]] marker
+            if health_metrics_data is not None:
+                session.add(HealthMetrics(user_id=user.id, **health_metrics_data))
                 logger.info(
-                    "Photo calories logged: user=%s food=%r kcal=%s meal=%s",
-                    chat_id, meal["food"], meal["calories"], meal_type,
+                    "HealthMetrics logged via marker: user=%s fields=%s",
+                    chat_id, sorted(health_metrics_data.keys()),
                 )
 
-        # Upsert weight tracker from [[WEIGHT:]] marker
-        if weight_kg is not None:
-            today = datetime.now(timezone.utc).date()
-            existing = (await session.execute(
-                select(Tracker).where(
-                    and_(
-                        Tracker.user_id == user.id,
-                        Tracker.type == TrackerType.weight,
-                        func.date(Tracker.created_at) == today,
-                    )
-                ).limit(1)
-            )).scalar_one_or_none()
-            if existing:
-                existing.value = weight_kg
-                logger.info("Weight updated via marker: user=%s weight=%.1f", chat_id, weight_kg)
-            else:
-                session.add(Tracker(
-                    user_id=user.id,
-                    type=TrackerType.weight,
-                    value=weight_kg,
-                    unit="kg",
-                ))
-                logger.info("Weight logged via marker: user=%s weight=%.1f", chat_id, weight_kg)
+            await session.commit()
+            schedule_fold(user.id)
 
-        # Water tracker from [[WATER:]] marker (additive — sum over the day)
-        if water_ml is not None:
-            session.add(Tracker(
-                user_id=user.id,
-                type=TrackerType.water,
-                value=water_ml,
-                unit="ml",
-            ))
-            logger.info("Water logged via marker: user=%s ml=%.0f", chat_id, water_ml)
+            # Launch RISK validation in background (max 1 round, then safe default)
+            for risk_text in risk_texts:
+                logger.info("RISK: launching validation for chat_id=%s", chat_id)
+                task = asyncio.create_task(_handle_risk_async(chat_id, risk_text, user.id))
+                _RISK_TASKS.add(task)
+                task.add_done_callback(_RISK_TASKS.discard)
 
-        # Sleep tracker from [[SLEEP:]] marker (upsert today's entry)
-        if sleep_h is not None:
-            today = datetime.now(timezone.utc).date()
-            existing_sleep = (await session.execute(
-                select(Tracker).where(
-                    and_(
-                        Tracker.user_id == user.id,
-                        Tracker.type == TrackerType.sleep,
-                        func.date(Tracker.created_at) == today,
-                    )
-                ).limit(1)
-            )).scalar_one_or_none()
-            if existing_sleep:
-                existing_sleep.value = sleep_h
-                logger.info("Sleep updated via marker: user=%s hours=%.1f", chat_id, sleep_h)
-            else:
-                session.add(Tracker(
-                    user_id=user.id,
-                    type=TrackerType.sleep,
-                    value=sleep_h,
-                    unit="h",
-                ))
-                logger.info("Sleep logged via marker: user=%s hours=%.1f", chat_id, sleep_h)
-
-        # HealthMetrics snapshot from [[HEALTH_METRICS:]] marker
-        if health_metrics_data is not None:
-            session.add(HealthMetrics(user_id=user.id, **health_metrics_data))
-            logger.info(
-                "HealthMetrics logged via marker: user=%s fields=%s",
-                chat_id, sorted(health_metrics_data.keys()),
-            )
-
-        await session.commit()
-        schedule_fold(user.id)
-
-        # Launch RISK validation in background (max 1 round, then safe default)
-        for risk_text in risk_texts:
-            logger.info("RISK: launching validation for chat_id=%s", chat_id)
-            task = asyncio.create_task(_handle_risk_async(chat_id, risk_text, user.id))
-            _RISK_TASKS.add(task)
-            task.add_done_callback(_RISK_TASKS.discard)
-
-    else:
-        logger.warning("Suvvy webhook: user not found for chat_id=%s", chat_id)
+        else:
+            logger.warning("Suvvy webhook: user not found for chat_id=%s", chat_id)
+    except Exception:
+        await session.rollback()
+        logger.exception("Suvvy webhook: unhandled error persisting reply for chat_id=%s", chat_id)
+        return {"status": "ok"}
 
     return {"status": "ok"}

@@ -47,6 +47,7 @@ async def get_my_profile(
         "notifications_enabled": profile.notifications_enabled if profile else True,
         "additional_info":       profile.additional_info if profile else None,
         "avatar_url":            profile.avatar_path if profile else None,
+        "workout_days_per_week": profile.workout_days_per_week if profile else None,
         # Subscription
         "subscription_type":    user.subscription_type,
         "subscription_active":  user.subscription_active,
@@ -71,6 +72,7 @@ class ProfileUpdate(BaseModel):
     height:                 Optional[float]     = None   # см
     notifications_enabled:  Optional[bool]      = None
     additional_info:        Optional[str]       = None   # max 1000 chars
+    workout_days_per_week:  Optional[int]       = None   # 1-7, target from resident
     timezone_auto:          Optional[str]       = None   # browser-detected, applied only when not set by user
 
 
@@ -164,6 +166,11 @@ async def update_my_profile(
     if body.additional_info is not None:
         trimmed = body.additional_info.strip()
         profile.additional_info = trimmed[:1000] if trimmed else None
+
+    if body.workout_days_per_week is not None:
+        if not (1 <= body.workout_days_per_week <= 7):
+            raise HTTPException(status_code=422, detail="workout_days_per_week must be 1-7")
+        profile.workout_days_per_week = body.workout_days_per_week
 
     await session.commit()
     return {"status": "ok"}

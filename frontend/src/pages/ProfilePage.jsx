@@ -99,7 +99,7 @@ function MyDataView({ profile, onBack, onEdit }) {
   const chipRef = useUniformChipWidth([
     profile?.tone, fitnessLabel, profile?.morning_reminder_time,
     profile?.evening_reminder_time, profile?.notifications_enabled,
-    profile?.weight, profile?.height,
+    profile?.weight, profile?.height, profile?.workout_days_per_week,
   ])
 
   return (
@@ -153,6 +153,12 @@ function MyDataView({ profile, onBack, onEdit }) {
           <span>{profile?.height != null ? `${profile.height} см` : '—'}</span>
         </span>
       </div>
+      <div className="data-row skew-chip" onClick={() => onEdit('workoutDaysPerWeek')}>
+        <span className="data-row__label">ТРЕНИРОВОК В НЕДЕЛЮ</span>
+        <span className="data-row__value">
+          <span>{profile?.workout_days_per_week != null ? profile.workout_days_per_week : '—'}</span>
+        </span>
+      </div>
       <div className="data-row skew-chip" onClick={() => onEdit('additional')}>
         <span className="data-row__label">ДОП. ИНФОРМАЦИЯ</span>
         <span className="data-row__value"><span>Подроб.</span></span>
@@ -198,6 +204,11 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
 
+  // Target training frequency
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(
+    profile?.workout_days_per_week != null ? String(profile.workout_days_per_week) : ''
+  )
+
   // Additional info (free-form notes for AI)
   const [additionalInfo, setAdditionalInfo] = useState(profile?.additional_info ?? '')
 
@@ -215,6 +226,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     setNotifEnabled(profile.notifications_enabled ?? true)
     setWeight(profile.weight != null ? String(profile.weight) : '')
     setHeight(profile.height != null ? String(profile.height) : '')
+    setWorkoutDaysPerWeek(profile.workout_days_per_week != null ? String(profile.workout_days_per_week) : '')
     setAdditionalInfo(profile.additional_info ?? '')
   }, [profile])
 
@@ -240,6 +252,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     try {
       const weightNum = weight !== '' ? parseFloat(weight.replace(',', '.')) : undefined
       const heightNum = height !== '' ? parseInt(height, 10) : undefined
+      const workoutDaysNum = workoutDaysPerWeek !== '' ? parseInt(workoutDaysPerWeek, 10) : undefined
       await client.patch('/profile/me', {
         preferred_name:        preferredName || undefined,
         tone:                  tone || undefined,
@@ -251,6 +264,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
         evening_reminder_time: eveningTime || undefined,
         weight:                (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
         height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
+        workout_days_per_week: (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
         notifications_enabled: notifEnabled,
         additional_info:       additionalInfo.trim() || null,
       })
@@ -537,6 +551,23 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
           max="250"
           style={{ marginBottom: 16 }}
         />
+
+        {/* Target workouts per week */}
+        <p id="field-workoutDaysPerWeek" className="section-label" style={{ marginBottom: 8 }}>ТРЕНИРОВОК В НЕДЕЛЮ</p>
+        <input
+          className="field-input"
+          type="number"
+          inputMode="numeric"
+          value={workoutDaysPerWeek}
+          onChange={(e) => setWorkoutDaysPerWeek(e.target.value)}
+          placeholder="Например: 4"
+          min="1"
+          max="7"
+          style={{ marginBottom: 4 }}
+        />
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+          Сколько тренировок в неделю планируешь — тренер будет строить программу под это количество.
+        </p>
 
         {/* Additional info */}
         <p id="field-additional" className="section-label" style={{ marginBottom: 4 }}>ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</p>

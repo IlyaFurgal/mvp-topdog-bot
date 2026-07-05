@@ -4,15 +4,16 @@ AI context builder — produces Suvvy placeholder dict for a user.
 Placeholders returned by build_ai_context():
   Profile:
     name, username, subscription_type, age, sport_type, health_restrictions, additional_info,
-    goal, fitness_level, activity_level, tone, gender,
+    goal, fitness_level, activity_level, tone, gender, workouts_per_week,
     goal_display, fitness_level_display, activity_level_display,
     tone_display, gender_display
 
   Trackers (last known or today's aggregate):
-    tracker_weight         — "82.5 кг"   | ""
-    tracker_sleep          — "7 ч"        | ""
-    tracker_water_today    — "1.5 л"      | ""   (today's sum)
-    tracker_calories_today — "1800 ккал"  | ""   (today's sum)
+    tracker_weight         — "82.5 кг"      | ""
+    tracker_pulse_today    — "62 уд/мин"    | ""   (last known reading)
+    tracker_sleep          — "7 ч"          | ""
+    tracker_water_today    — "1.5 л"        | ""   (today's sum)
+    tracker_calories_today — "1800 ккал"    | ""   (today's sum)
 
   Weekly progress:
     progress_week  — "дисциплина 75%, 6 тренировок за неделю" | ""
@@ -29,7 +30,7 @@ Placeholders returned by build_ai_context():
   Body composition (latest [[HEALTH_METRICS:]] snapshot):
     health_metrics   — "БОМ: 1650 ккал, ИМТ: 23.4, мышечная масса: 58.2 кг, ..." | ""
 
-Methodologist: add {{tracker_weight}}, {{tracker_sleep}},
+Methodologist: add {{tracker_weight}}, {{tracker_pulse_today}}, {{tracker_sleep}},
 {{tracker_water_today}}, {{tracker_calories_today}}, {{progress_week}},
 {{dialog_summary}}, {{workouts_month}}, {{strength_trends}},
 {{cardio_trends}}, {{weight_trend}}, {{health_metrics}} to Suvvy specialist system prompts.
@@ -215,6 +216,15 @@ async def _tracker_placeholders(session: AsyncSession, user_id: int) -> dict[str
     )
     weight_rec = weight_row.scalar_one_or_none()
 
+    # Pulse — last record (same pattern as weight)
+    pulse_row = await session.execute(
+        select(Tracker)
+        .where(and_(Tracker.user_id == user_id, Tracker.type == TrackerType.pulse))
+        .order_by(Tracker.created_at.desc())
+        .limit(1)
+    )
+    pulse_rec = pulse_row.scalar_one_or_none()
+
     # Sleep — morning checkin first, trackers.sleep fallback
     sleep_s = await _sleep_str(session, user_id)
 
@@ -242,6 +252,7 @@ async def _tracker_placeholders(session: AsyncSession, user_id: int) -> dict[str
 
     return {
         "tracker_weight":         f"{weight_rec.value:g} кг" if weight_rec else "",
+        "tracker_pulse_today":    f"{pulse_rec.value:g} уд/мин" if pulse_rec else "",
         "tracker_sleep":          sleep_s,
         "tracker_water_today":    water_s,
         "tracker_calories_today": cal_s,
@@ -473,6 +484,10 @@ async def build_ai_context(session: AsyncSession, user: User) -> dict:
         "activity_level":    _activity_raw,
         "tone":              _tone_raw,
         "gender":            _gender_raw,
+        "workouts_per_week": (
+            str(profile.workout_days_per_week)
+            if profile and profile.workout_days_per_week else ""
+        ),
         "goal_display":            _goals_display(_goal_raw),
         "fitness_level_display":   FITNESS_LEVEL_DISPLAY.get(_fitness_raw,  _fitness_raw),
         "activity_level_display":  ACTIVITY_LEVEL_DISPLAY.get(_activity_raw, _activity_raw),
