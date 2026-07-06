@@ -26,12 +26,39 @@ const TOOLTIP_STYLE = {
 }
 
 const CHART_GREEN = '#B0F326'
+const CHART_RED = '#ff3b3b'
 const AXIS_TICK = { fill: CHART_GREEN, fontSize: 10 }
 
 function SquareDot({ cx, cy, r = 7, fill = CHART_GREEN }) {
   if (cx == null || cy == null) return null
   const s = r * 2
   return <rect x={cx - r} y={cy - r} width={s} height={s} fill={fill} />
+}
+
+// Threshold dot: turns red when this point's value exceeds `goal`.
+function thresholdDot(goal) {
+  return (props) => {
+    const { cx, cy, r, payload } = props
+    const over = goal != null && payload?.value > goal
+    return <SquareDot cx={cx} cy={cy} r={r} fill={over ? CHART_RED : CHART_GREEN} />
+  }
+}
+
+// Gradient stops so the line itself reads green below the goal and red
+// above it, with a smooth transition between neighboring points rather
+// than a hard per-segment cut.
+function thresholdGradientStops(data, goal, dataKey = 'value') {
+  if (goal == null || data.length === 0) {
+    return [{ offset: '0%', color: CHART_GREEN }, { offset: '100%', color: CHART_GREEN }]
+  }
+  if (data.length === 1) {
+    const color = data[0][dataKey] > goal ? CHART_RED : CHART_GREEN
+    return [{ offset: '0%', color }, { offset: '100%', color }]
+  }
+  return data.map((d, i) => ({
+    offset: `${(i / (data.length - 1)) * 100}%`,
+    color: d[dataKey] > goal ? CHART_RED : CHART_GREEN,
+  }))
 }
 
 function fmtDate(str) {
@@ -279,7 +306,7 @@ export default function ProgressSection({ refreshKey }) {
                     labelFormatter={fmtDate}
                   />
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="value"
                     stroke={CHART_GREEN}
                     strokeWidth={2}
@@ -313,6 +340,13 @@ export default function ProgressSection({ refreshKey }) {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={waterData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="waterLineGrad" x1="0" y1="0" x2="1" y2="0">
+                      {thresholdGradientStops(waterData, stats?.water?.goal).map((s, i) => (
+                        <stop key={i} offset={s.offset} stopColor={s.color} />
+                      ))}
+                    </linearGradient>
+                  </defs>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -331,13 +365,13 @@ export default function ProgressSection({ refreshKey }) {
                     contentStyle={TOOLTIP_STYLE}
                     labelFormatter={fmtDate}
                   />
-                  <ReferenceLine y={2000} stroke="#444" strokeDasharray="4 4" />
+                  <ReferenceLine y={stats?.water?.goal ?? 2000} stroke="#444" strokeDasharray="4 4" />
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke="url(#waterLineGrad)"
                     strokeWidth={2}
-                    dot={<SquareDot />}
+                    dot={thresholdDot(stats?.water?.goal)}
                     activeDot={<SquareDot r={9} />}
                   />
                 </LineChart>
@@ -367,6 +401,13 @@ export default function ProgressSection({ refreshKey }) {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={caloriesData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="caloriesLineGrad" x1="0" y1="0" x2="1" y2="0">
+                      {thresholdGradientStops(caloriesData, stats?.calories?.goal).map((s, i) => (
+                        <stop key={i} offset={s.offset} stopColor={s.color} />
+                      ))}
+                    </linearGradient>
+                  </defs>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -386,12 +427,15 @@ export default function ProgressSection({ refreshKey }) {
                     contentStyle={TOOLTIP_STYLE}
                     labelFormatter={fmtDate}
                   />
+                  {stats?.calories?.goal && (
+                    <ReferenceLine y={stats.calories.goal} stroke="#444" strokeDasharray="4 4" />
+                  )}
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke="url(#caloriesLineGrad)"
                     strokeWidth={2}
-                    dot={<SquareDot />}
+                    dot={thresholdDot(stats?.calories?.goal)}
                     activeDot={<SquareDot r={9} />}
                   />
                 </LineChart>
@@ -442,7 +486,7 @@ export default function ProgressSection({ refreshKey }) {
                   />
                   <ReferenceLine y={8} stroke="#444" strokeDasharray="4 4" />
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="value"
                     stroke={CHART_GREEN}
                     strokeWidth={2}
