@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { patchCheckin, saveCheckin } from '../api/checkins'
+import stripesImg from '../assets/5.png'
+import { CHECKIN_TYPE_INFO } from './CheckinCard'
 import { useProfile } from '../context/ProfileContext'
 
 const STEPS = {
@@ -173,93 +175,10 @@ const STEPS = {
   ],
 }
 
-const COMPLETION_MESSAGES = {
-  soft: {
-    morning:      'Отличное начало дня! Держись, всё получится.',
-    post_workout: 'Тренировка засчитана! Ты молодец.',
-    evening:      'Хороший день позади. Отдыхай!',
-  },
-  aggressive: {
-    morning:      'Подъём принят. В работу!',
-    post_workout: 'Чекин закрыт. Результат внесён.',
-    evening:      'День закрыт. Восстанавливайся.',
-  },
-}
-
-const MESSAGES = {
-  soft: {
-    morning: {
-      care:    'Вижу, тебе сейчас непросто. Сегодня главное — поберечь себя и восстановиться, без геройства 💛',
-      neutral: 'Принято! День только начинается — двигайся в своём темпе.',
-      praise:  'Отличный настрой с утра! Используй эту энергию по полной 💪',
-    },
-    post_workout: {
-      skipped: 'Понял, сегодня без тренировки. Отметил — учту в рекомендациях.',
-      care:    'Ты прислушался к телу — это правильно. Если что-то беспокоит, не игнорируй и дай себе восстановиться.',
-      neutral: 'Тренировка засчитана. Каждый шаг важен, даже если сегодня было тяжело.',
-      praise:  'Сильная работа! Ты выложился и довёл до конца — так и растёт результат 🔥',
-    },
-    evening: {
-      care:    'День выдался тяжёлым. Дай себе отдых и восстановись — завтра будет легче 💛',
-      neutral: 'День позади. Отдохни как следует.',
-      praise:  'Отличный день! Хорошее восстановление — залог завтрашнего прогресса.',
-    },
-  },
-  aggressive: {
-    morning: {
-      care:    'Тело просит паузы — услышь это. Сегодня восстановление, не нагрузка.',
-      neutral: 'Подъём принят. В работу.',
-      praise:  'Готов к бою. Используй этот настрой.',
-    },
-    post_workout: {
-      skipped: 'Принято. Сегодня без тренировки — зафиксировал.',
-      care:    'Боль — сигнал, не игнорируй. Восстановись прежде чем грузить дальше.',
-      neutral: 'Чекин закрыт. Результат внесён.',
-      praise:  'План выполнен. Так держать — без поблажек.',
-    },
-    evening: {
-      care:    'Тяжёлый день. Восстановление обязательно — это часть работы.',
-      neutral: 'День закрыт. Восстанавливайся.',
-      praise:  'День отработан чисто. Восстановление — и завтра снова в бой.',
-    },
-  },
-}
-
-function getCheckinMood(type, data) {
-  if (type === 'morning') {
-    if (data.feeling === 'broken' || (data.feeling === 'okay' && data.sleep_quality === 'bad')) return 'care'
-    if (data.feeling === 'excellent' && (data.sleep_quality === 'great' || data.sleep_quality === 'normal')) return 'praise'
-    return 'neutral'
-  }
-
-  if (type === 'post_workout') {
-    if (data.plan_completed === 'skipped') return 'skipped'
-    if (data.pain === 'bad' || data.pain === 'joint') return 'care'
-    if (data.plan_completed === 'full' && data.satisfaction === 'yes' && data.pain === 'none') return 'praise'
-    return 'neutral'
-  }
-
-  if (type === 'evening') {
-    if (data.productivity === 'low') return 'care'
-    if (data.productivity === 'high') return 'praise'
-    return 'neutral'
-  }
-
-  return 'neutral'
-}
-
-function getCompletionMessage(type, data, tone) {
-  const safeTone = tone === 'aggressive' ? 'aggressive' : 'soft'
-  const mood = getCheckinMood(type, data) ?? 'neutral'
-  return (
-    MESSAGES[safeTone]?.[type]?.[mood] ??
-    COMPLETION_MESSAGES[safeTone]?.[type] ??
-    COMPLETION_MESSAGES.soft[type]
-  )
-}
+const COMPLETION_MESSAGE = 'Результат внесён'
 
 export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false, checkinId = null, initialData = {} }) {
-  const { tone, profile } = useProfile()
+  const { profile } = useProfile()
   const isFemale = profile?.gender === 'female'
   const allSteps = STEPS[type]
   const [stepIndex, setStepIndex] = useState(0)
@@ -389,19 +308,14 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
   }
 
   if (done) {
-    const msg = editMode ? 'Изменения сохранены' : getCompletionMessage(type, data, tone)
     return (
       <div className="checkin-flow checkin-flow--done">
         <div className="checkin-flow__completion">
           <div className="checkin-flow__completion-row">
-            <p className="checkin-flow__msg">{msg}</p>
+            <p className="checkin-flow__msg">{COMPLETION_MESSAGE}</p>
             <span className="checkin-flow__check">✓</span>
           </div>
-          <div className="checkin-flow__stripes">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <span key={i} className="checkin-flow__stripe" />
-            ))}
-          </div>
+          <img src={stripesImg} alt="" className="checkin-flow__stripes-img" />
         </div>
       </div>
     )
@@ -409,8 +323,15 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
 
   if (!currentStep) return null
 
+  const typeInfo = CHECKIN_TYPE_INFO[type]
+
   return (
     <div className="checkin-flow">
+      <div className="checkin-card skew-chip checkin-flow__type-banner">
+        <div className="checkin-card__title">{typeInfo.title}</div>
+        <div className="checkin-card__subtitle">{typeInfo.subtitle}</div>
+      </div>
+
       <div className="checkin-flow__header">
         <button className="checkin-flow__back" onClick={handleBack}>‹</button>
         <div className="checkin-flow__progress">

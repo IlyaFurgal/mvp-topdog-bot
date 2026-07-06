@@ -1,5 +1,5 @@
 
-const CONFIG = {
+export const CHECKIN_TYPE_INFO = {
   morning: {
     title: 'УТРО',
     subtitle: 'ТВОЁ ВОССТАНОВЛЕНИЕ',
@@ -15,7 +15,7 @@ const CONFIG = {
 }
 
 export default function CheckinCard({ type, checkin, onClick, onEdit }) {
-  const cfg = CONFIG[type]
+  const cfg = CHECKIN_TYPE_INFO[type]
   const done = Boolean(checkin)
 
   return (
