@@ -706,22 +706,12 @@ export default function ProfilePage() {
         </a>
       )}
 
-      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
-      <ProgressSection refreshKey={dataVersion} />
-
       {checkinsLoading ? (
         <div className="card"><p className="card-muted">Загрузка...</p></div>
       ) : (
         <>
-          <div className="card tracker-tip" style={{ marginTop: 24 }}>
-            <p className="tracker-tip__text">
-              💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
-              Чекины и трекеры можно заполнить в любое время дня.
-            </p>
-          </div>
-
-          <div className="page-header">
-            <p className="section-label">ЧЕКИНЫ</p>
+          <div className="page-header" style={{ marginTop: 28 }}>
+            <p className="tracker-cta-title">ЗАПОЛНИ ТРЕКЕР</p>
             {status.cls !== 'status--open' && (
               <span className={`checkin-status ${status.cls}`}>{status.label}</span>
             )}
@@ -741,8 +731,18 @@ export default function ProfilePage() {
               />
             ))}
           </div>
+
+          <div className="card tracker-tip">
+            <p className="tracker-tip__text">
+              💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
+              Чекины и трекеры можно заполнить в любое время дня.
+            </p>
+          </div>
         </>
       )}
+
+      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
+      <ProgressSection refreshKey={dataVersion} />
     </div>
   )
 }

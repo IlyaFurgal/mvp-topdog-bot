@@ -828,6 +828,16 @@ html, body {
   margin: 20px 0 10px;
 }
 
+.tracker-cta-title {
+  font-size: clamp(1.1rem, 4.5vw, 1.4rem);
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent-club);
+  margin: 0 0 10px;
+}
+
 .tracker-card {
   background: linear-gradient(100deg, #232323 0%, #131313 100%);
   padding: 0;

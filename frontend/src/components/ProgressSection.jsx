@@ -35,30 +35,12 @@ function SquareDot({ cx, cy, r = 7, fill = CHART_GREEN }) {
   return <rect x={cx - r} y={cy - r} width={s} height={s} fill={fill} />
 }
 
-// Threshold dot: turns red when this point's value exceeds `goal`.
-function thresholdDot(goal) {
-  return (props) => {
-    const { cx, cy, r, payload } = props
-    const over = goal != null && payload?.value > goal
-    return <SquareDot cx={cx} cy={cy} r={r} fill={over ? CHART_RED : CHART_GREEN} />
-  }
-}
-
-// Gradient stops so the line itself reads green below the goal and red
-// above it, with a smooth transition between neighboring points rather
-// than a hard per-segment cut.
-function thresholdGradientStops(data, goal, dataKey = 'value') {
-  if (goal == null || data.length === 0) {
-    return [{ offset: '0%', color: CHART_GREEN }, { offset: '100%', color: CHART_GREEN }]
-  }
-  if (data.length === 1) {
-    const color = data[0][dataKey] > goal ? CHART_RED : CHART_GREEN
-    return [{ offset: '0%', color }, { offset: '100%', color }]
-  }
-  return data.map((d, i) => ({
-    offset: `${(i / (data.length - 1)) * 100}%`,
-    color: d[dataKey] > goal ? CHART_RED : CHART_GREEN,
-  }))
+// The whole chart turns red when TODAY's live total exceeds the goal
+// (stats.<metric>.today vs stats.<metric>.goal) — not per historical point,
+// since only today's status is actionable.
+function todayColor(statBlock) {
+  const over = statBlock?.today != null && statBlock?.goal != null && statBlock.today > statBlock.goal
+  return over ? CHART_RED : CHART_GREEN
 }
 
 function fmtDate(str) {
@@ -340,13 +322,6 @@ export default function ProgressSection({ refreshKey }) {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={waterData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="waterLineGrad" x1="0" y1="0" x2="1" y2="0">
-                      {thresholdGradientStops(waterData, stats?.water?.goal).map((s, i) => (
-                        <stop key={i} offset={s.offset} stopColor={s.color} />
-                      ))}
-                    </linearGradient>
-                  </defs>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -369,10 +344,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke="url(#waterLineGrad)"
+                    stroke={todayColor(stats?.water)}
                     strokeWidth={2}
-                    dot={thresholdDot(stats?.water?.goal)}
-                    activeDot={<SquareDot r={9} />}
+                    dot={<SquareDot fill={todayColor(stats?.water)} />}
+                    activeDot={<SquareDot r={9} fill={todayColor(stats?.water)} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -401,13 +376,6 @@ export default function ProgressSection({ refreshKey }) {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={caloriesData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="caloriesLineGrad" x1="0" y1="0" x2="1" y2="0">
-                      {thresholdGradientStops(caloriesData, stats?.calories?.goal).map((s, i) => (
-                        <stop key={i} offset={s.offset} stopColor={s.color} />
-                      ))}
-                    </linearGradient>
-                  </defs>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -433,10 +401,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke="url(#caloriesLineGrad)"
+                    stroke={todayColor(stats?.calories)}
                     strokeWidth={2}
-                    dot={thresholdDot(stats?.calories?.goal)}
-                    activeDot={<SquareDot r={9} />}
+                    dot={<SquareDot fill={todayColor(stats?.calories)} />}
+                    activeDot={<SquareDot r={9} fill={todayColor(stats?.calories)} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
