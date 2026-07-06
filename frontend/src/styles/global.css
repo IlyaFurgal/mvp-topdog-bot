@@ -420,7 +420,7 @@ html, body {
    when the combined text happens to be long enough, as inline boxes. */
 .checkin-card .checkin-card__title {
   display: block;
-  font-size: clamp(1.6rem, 8vw, 2.1rem);
+  font-size: clamp(1.25rem, 6vw, 1.6rem);
   font-weight: 700;
   font-style: italic;
   letter-spacing: 0.01em;
@@ -432,7 +432,7 @@ html, body {
 
 .checkin-card .checkin-card__subtitle {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   font-style: italic;
   letter-spacing: 0.03em;
@@ -547,6 +547,22 @@ html, body {
   color: var(--accent);
 }
 
+/* Sentiment coloring for questions with a good/neutral/bad answer spread
+   (feeling, sleep quality, plan completion, pain, satisfaction, etc). */
+.checkin-flow__option--positive {
+  background: linear-gradient(100deg, #d8d8d8 0%, #8a8a8a 100%);
+  border-color: transparent;
+  color: #111;
+}
+
+.checkin-flow__option--neutral {
+  color: var(--warning);
+}
+
+.checkin-flow__option--negative {
+  color: var(--danger);
+}
+
 .checkin-flow__rpe-btn--selected {
   border-color: var(--accent);
   color: var(--accent);
@@ -556,11 +572,12 @@ html, body {
 .checkin-flow__keep-btn {
   width: 100%;
   padding: 12px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--surface);
+  border: none;
+  border-radius: 14px;
   color: var(--text-muted);
   font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -639,15 +656,21 @@ html, body {
 
 .checkin-flow__numfield {
   width: 100%;
-  background: var(--surface);
+  background: #1a1a1a;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 2rem;
+  font-size: 1.3rem;
   font-weight: 700;
+  font-style: italic;
   text-align: center;
-  padding: 16px;
+  padding: 16px 20px;
+}
+
+.checkin-flow__numfield::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .checkin-flow__numfield:focus {
@@ -657,6 +680,17 @@ html, body {
 
 .checkin-flow__number-submit {
   width: 100%;
+}
+
+/* Dark rounded-rect pill in place of the shared solid-fill .btn-accent —
+   matches the reference (dark bg, colored italic text) instead of the
+   filled-green CTA style used for primary actions elsewhere in the app. */
+.checkin-flow__number-submit.btn-accent,
+.checkin-flow__text-submit.btn-accent {
+  background: var(--surface);
+  color: var(--accent-club);
+  border-radius: 14px;
+  font-style: italic;
 }
 
 /* ── CheckinFlow: optional text step ─────────────────── */
@@ -669,15 +703,21 @@ html, body {
 
 .checkin-flow__textfield {
   width: 100%;
-  background: var(--surface);
+  background: #1a1a1a;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 20px;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic;
   font-size: 1rem;
-  padding: 12px 14px;
+  padding: 14px 18px;
   resize: none;
   line-height: 1.5;
+}
+
+.checkin-flow__textfield::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .checkin-flow__textfield:focus {
@@ -692,11 +732,12 @@ html, body {
 
 .checkin-flow__text-skip {
   flex: 1;
-  background: none;
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: var(--text-muted);
+  background: var(--surface);
+  border: none;
+  border-radius: 14px;
+  color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic;
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -744,37 +785,51 @@ html, body {
 }
 
 .checkin-flow--done {
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .checkin-flow__completion {
   display: flex;
   flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.checkin-flow__completion-row {
+  display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
 .checkin-flow__check {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #000;
-  font-size: 2.5rem;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--text-muted);
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .checkin-flow__msg {
-  font-size: 1.4rem;
+  font-size: clamp(1.3rem, 6.5vw, 1.7rem);
   font-weight: 700;
+  font-style: italic;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  text-align: center;
-  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: var(--accent-club);
+  line-height: 1.15;
+}
+
+.checkin-flow__stripes {
+  display: flex;
+  gap: 6px;
+}
+
+.checkin-flow__stripe {
+  flex: 1;
+  max-width: 40px;
+  height: 44px;
+  background: var(--accent-club);
+  transform: skewX(-18deg);
 }
 
 /* ── Tracker tip ─────────────────────────────────────── */

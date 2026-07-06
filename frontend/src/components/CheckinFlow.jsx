@@ -17,9 +17,9 @@ const STEPS = {
       key: 'feeling',
       question: 'Как твоё самочувствие?',
       options: [
-        { value: 'excellent', label: 'Отличное' },
-        { value: 'okay',      label: 'Удовлетворительное' },
-        { value: 'broken',    label: 'Разбитое' },
+        { value: 'excellent', label: 'Отличное', sentiment: 'positive' },
+        { value: 'okay',      label: 'Удовлетворительное', sentiment: 'neutral' },
+        { value: 'broken',    label: 'Разбитое', sentiment: 'negative' },
         { value: 'custom',    label: 'Свой вариант', custom: true },
       ],
     },
@@ -27,9 +27,9 @@ const STEPS = {
       key: 'sleep_quality',
       question: 'Качество сна?',
       options: [
-        { value: 'great',  label: 'Выспался', labelF: 'Выспалась' },
-        { value: 'normal', label: 'Среднее' },
-        { value: 'bad',    label: 'Плохое' },
+        { value: 'great',  label: 'Выспался', labelF: 'Выспалась', sentiment: 'positive' },
+        { value: 'normal', label: 'Среднее', sentiment: 'neutral' },
+        { value: 'bad',    label: 'Плохое', sentiment: 'negative' },
       ],
     },
     {
@@ -71,9 +71,9 @@ const STEPS = {
       key: 'plan_completed',
       question: 'Выполнил(а) план тренировки?',
       options: [
-        { value: 'full',    label: 'Выполнил полностью',  labelF: 'Выполнила полностью' },
-        { value: 'partial', label: 'Выполнил частично',    labelF: 'Выполнила частично' },
-        { value: 'skipped', label: 'Не тренировался',      labelF: 'Не тренировалась' },
+        { value: 'full',    label: 'Выполнил полностью',  labelF: 'Выполнила полностью', sentiment: 'positive' },
+        { value: 'partial', label: 'Выполнил частично',    labelF: 'Выполнила частично', sentiment: 'neutral' },
+        { value: 'skipped', label: 'Не тренировался',      labelF: 'Не тренировалась', sentiment: 'negative' },
         { value: 'custom',  label: 'Свой вариант', custom: true },
       ],
     },
@@ -123,10 +123,10 @@ const STEPS = {
       question: 'Болело что-то во время тренировки?',
       condition: (data) => data.plan_completed !== 'skipped',
       options: [
-        { value: 'muscle', label: 'Мышечная боль' },
-        { value: 'joint',  label: 'Суставная боль' },
-        { value: 'bad',    label: 'Стало плохо' },
-        { value: 'none',   label: 'Ничего не болело' },
+        { value: 'muscle', label: 'Мышечная боль', sentiment: 'negative' },
+        { value: 'joint',  label: 'Суставная боль', sentiment: 'negative' },
+        { value: 'bad',    label: 'Стало плохо', sentiment: 'negative' },
+        { value: 'none',   label: 'Ничего не болело', sentiment: 'positive' },
         { value: 'custom', label: 'Свой вариант', custom: true },
       ],
     },
@@ -136,9 +136,9 @@ const STEPS = {
       questionF: 'Довольна своей результативностью?',
       condition: (data) => data.plan_completed !== 'skipped',
       options: [
-        { value: 'yes',    label: 'Да' },
-        { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше' },
-        { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя' },
+        { value: 'yes',    label: 'Да', sentiment: 'positive' },
+        { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше', sentiment: 'neutral' },
+        { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя', sentiment: 'negative' },
         { value: 'custom', label: 'Свой вариант', custom: true },
       ],
     },
@@ -149,9 +149,9 @@ const STEPS = {
       key: 'productivity',
       question: 'Оцени продуктивность в течение дня',
       options: [
-        { value: 'high',   label: 'Бодрый весь день',     labelF: 'Бодрая весь день' },
-        { value: 'medium', label: 'Средний уровень энергии' },
-        { value: 'low',    label: 'Разбит весь день',      labelF: 'Разбита весь день' },
+        { value: 'high',   label: 'Бодрый весь день',     labelF: 'Бодрая весь день', sentiment: 'positive' },
+        { value: 'medium', label: 'Средний уровень энергии', sentiment: 'neutral' },
+        { value: 'low',    label: 'Разбит весь день',      labelF: 'Разбита весь день', sentiment: 'negative' },
       ],
     },
     {
@@ -393,8 +393,15 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
     return (
       <div className="checkin-flow checkin-flow--done">
         <div className="checkin-flow__completion">
-          <div className="checkin-flow__check">✓</div>
-          <p className="checkin-flow__msg">{msg}</p>
+          <div className="checkin-flow__completion-row">
+            <p className="checkin-flow__msg">{msg}</p>
+            <span className="checkin-flow__check">✓</span>
+          </div>
+          <div className="checkin-flow__stripes">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span key={i} className="checkin-flow__stripe" />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -565,7 +572,7 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             {currentStep.options.map((opt) => (
               <button
                 key={opt.value}
-                className={`checkin-flow__option${editMode && data[currentStep.key] === opt.value ? ' checkin-flow__option--selected' : ''}`}
+                className={`checkin-flow__option${opt.sentiment ? ` checkin-flow__option--${opt.sentiment}` : ''}${editMode && data[currentStep.key] === opt.value ? ' checkin-flow__option--selected' : ''}`}
                 onClick={() => {
                   if (opt.custom) {
                     setCustomMode(true)
