@@ -108,12 +108,14 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
   const [checkinPulse, setCheckinPulse] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
   const [heightModalOpen, setHeightModalOpen] = useState(false)
+  const [calorieLimit, setCalorieLimit] = useState(null)
 
   async function load() {
     try {
       const [trackData, checkData] = await Promise.all([getTodayTrackers(), getTodayCheckins()])
       const { calorie_limit, calories_meals, ...rest } = trackData
       setTrackers(rest)
+      setCalorieLimit(calorie_limit ?? null)
       setCheckinPulse(checkData?.morning?.data?.resting_pulse ?? null)
     } catch (_) {}
   }
@@ -230,6 +232,7 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
         <TrackerModal
           type={activeTracker}
           todayData={trackers[activeTracker]}
+          calorieLimit={calorieLimit}
           onClose={() => setActiveTracker(null)}
           onSaved={() => { setActiveTracker(null); load(); onDataChanged?.() }}
         />

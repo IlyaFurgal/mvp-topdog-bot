@@ -626,6 +626,7 @@ export default function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false)
   const [editFocusField, setEditFocusField] = useState(null)
   const [myDataOpen, setMyDataOpen] = useState(false)
+  const [trackerViewOpen, setTrackerViewOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
 
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
@@ -687,6 +688,39 @@ export default function ProfilePage() {
 
   const status = getOverallStatus(checkins)
 
+  if (trackerViewOpen) {
+    return (
+      <div className="page club-page">
+        <button className="club-back" onClick={() => setTrackerViewOpen(false)}>‹ НАЗАД</button>
+
+        <p className="tracker-cta-title" style={{ marginTop: 12 }}>ЗАПОЛНИ ТРЕКЕР</p>
+
+        <div className="checkin-cards">
+          {CHECKIN_TYPES.map((type) => (
+            <CheckinCard
+              key={type}
+              type={type}
+              checkin={checkins[type]}
+              onClick={() => setActiveFlow(type)}
+              onEdit={checkins[type] ? () => setEditCheckin({
+                type,
+                id: checkins[type].id,
+                data: checkins[type].data,
+              }) : undefined}
+            />
+          ))}
+        </div>
+
+        <div className="card tracker-tip">
+          <p className="tracker-tip__text">
+            💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
+            Чекины и трекеры можно заполнить в любое время дня.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="page club-page" style={{ position: 'relative' }}>
       <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img" />
@@ -706,39 +740,17 @@ export default function ProfilePage() {
         </a>
       )}
 
-      {checkinsLoading ? (
-        <div className="card"><p className="card-muted">Загрузка...</p></div>
-      ) : (
-        <>
-          <div className="page-header" style={{ marginTop: 28 }}>
-            <p className="tracker-cta-title">ЗАПОЛНИ ТРЕКЕР</p>
-            {status.cls !== 'status--open' && (
-              <span className={`checkin-status ${status.cls}`}>{status.label}</span>
-            )}
-          </div>
-          <div className="checkin-cards">
-            {CHECKIN_TYPES.map((type) => (
-              <CheckinCard
-                key={type}
-                type={type}
-                checkin={checkins[type]}
-                onClick={() => setActiveFlow(type)}
-                onEdit={checkins[type] ? () => setEditCheckin({
-                  type,
-                  id: checkins[type].id,
-                  data: checkins[type].data,
-                }) : undefined}
-              />
-            ))}
-          </div>
-
-          <div className="card tracker-tip">
-            <p className="tracker-tip__text">
-              💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
-              Чекины и трекеры можно заполнить в любое время дня.
-            </p>
-          </div>
-        </>
+      {!checkinsLoading && (
+        <button
+          className="tracker-cta-btn skew-chip"
+          style={{ marginTop: 28 }}
+          onClick={() => setTrackerViewOpen(true)}
+        >
+          <span className="tracker-cta-btn__title">ЗАПОЛНИ ТРЕКЕР</span>
+          {status.cls !== 'status--open' && (
+            <span className={`checkin-status ${status.cls}`}>{status.label}</span>
+          )}
+        </button>
       )}
 
       <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
