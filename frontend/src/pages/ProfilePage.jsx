@@ -693,9 +693,7 @@ export default function ProfilePage() {
       <div className="page club-page">
         <button className="club-back" onClick={() => setTrackerViewOpen(false)}>‹ НАЗАД</button>
 
-        <p className="tracker-cta-title" style={{ marginTop: 12 }}>ЗАПОЛНИ ТРЕКЕР</p>
-
-        <div className="checkin-cards">
+        <div className="checkin-cards" style={{ marginTop: 12 }}>
           {CHECKIN_TYPES.map((type) => (
             <CheckinCard
               key={type}
@@ -709,13 +707,6 @@ export default function ProfilePage() {
               }) : undefined}
             />
           ))}
-        </div>
-
-        <div className="card tracker-tip">
-          <p className="tracker-tip__text">
-            💡 Чем качественнее заполняешь метрики — тем точнее ассистент подбирает рекомендации.
-            Чекины и трекеры можно заполнить в любое время дня.
-          </p>
         </div>
       </div>
     )

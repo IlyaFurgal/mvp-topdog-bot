@@ -27,7 +27,11 @@ textarea::placeholder {
 }
 
 html, body {
-  background: var(--bg);
+  /* Fixed to the viewport (not the page box) so it stays put while the
+     page scrolls, and is declared once here so every tab (chat/profile/
+     club) shows the exact same backdrop instead of each page re-painting
+     its own copy at a different size/position. */
+  background: url('../assets/4.png') center / cover no-repeat fixed, var(--bg);
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -385,11 +389,9 @@ html, body {
 /* ── CheckinCard ──────────────────────────────────────── */
 
 .checkin-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
+  padding: 20px 18px;
   border: 1px solid transparent;
+  cursor: pointer;
 }
 
 /* Combined selector beats plain .skew-chip's background on specificity
@@ -400,77 +402,42 @@ html, body {
   background: url('../assets/4.png') center / cover no-repeat, linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
 }
 
-.checkin-card--empty {
-  cursor: pointer;
-  border-color: var(--border);
+.checkin-card:active {
+  opacity: 0.85;
 }
 
-.checkin-card--empty:active {
-  opacity: 0.8;
+.checkin-card--empty {
+  border-color: var(--border);
 }
 
 .checkin-card--done {
   border-color: #2d3d00;
 }
 
-.checkin-card__left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.checkin-card__emoji {
-  font-size: 1.6rem;
-  line-height: 1;
-}
-
-.checkin-card__title {
-  font-size: 0.85rem;
+/* Descendant-combinator selector (.checkin-card .checkin-card__title) so
+   its specificity beats .skew-chip > * (which forces inline-block on all
+   direct children) — otherwise title+subtitle only wrap to separate lines
+   when the combined text happens to be long enough, as inline boxes. */
+.checkin-card .checkin-card__title {
+  display: block;
+  font-size: clamp(1.6rem, 8vw, 2.1rem);
   font-weight: 700;
   font-style: italic;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--accent-club);
   line-height: 1;
   margin-bottom: 4px;
 }
 
-.checkin-card__arrow {
-  color: var(--accent-club);
-}
-
-.checkin-card__status {
-  font-size: 1rem;
+.checkin-card .checkin-card__subtitle {
+  display: block;
+  font-size: 0.8rem;
   font-weight: 700;
   font-style: italic;
-  color: var(--text);
   letter-spacing: 0.03em;
-}
-
-.checkin-card--done .checkin-card__status {
-  color: var(--accent-club);
-}
-
-.checkin-card__caret {
-  font-size: 1.8rem;
-  color: var(--text-muted);
-  line-height: 1;
-}
-
-.checkin-card__edit-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 4px 6px;
-  opacity: 0.7;
-  line-height: 1;
-}
-
-.checkin-card__edit-btn:active {
-  opacity: 1;
-  color: var(--accent);
+  text-transform: uppercase;
+  color: var(--text);
 }
 
 /* ── CheckinFlow ──────────────────────────────────────── */
@@ -1863,7 +1830,6 @@ html, body {
   flex-direction: column;
   height: calc(100vh - var(--nav-height));
   overflow: hidden;
-  background: url('../assets/4.png') center / cover no-repeat, #090909;
 }
 
 .ai-header {
@@ -2424,7 +2390,6 @@ html, body {
 
 .club-page {
   min-height: calc(100vh - var(--nav-height));
-  background: url('../assets/4.png') center / cover no-repeat, #090909;
 }
 
 .club-back {
