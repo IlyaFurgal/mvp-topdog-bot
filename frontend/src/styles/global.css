@@ -442,14 +442,17 @@ html, body {
 
 /* ── CheckinFlow ──────────────────────────────────────── */
 
+/* Relative (not fixed/inset:0) so it renders as normal page content below
+   TopNav + MvpRibbon instead of covering the whole viewport and hiding
+   them; .checkin-flow__saving-overlay below anchors to this via
+   position:relative. */
 .checkin-flow {
-  position: fixed;
-  inset: 0;
+  position: relative;
+  min-height: calc(100vh - var(--nav-height));
   background: var(--bg);
   display: flex;
   flex-direction: column;
   padding: 16px;
-  z-index: 200;
 }
 
 /* Bleeds to the screen edges (cancels .checkin-flow's own 16px padding)
@@ -562,9 +565,7 @@ html, body {
 /* Sentiment coloring for questions with a good/neutral/bad answer spread
    (feeling, sleep quality, plan completion, pain, satisfaction, etc). */
 .checkin-flow__option--positive {
-  background: linear-gradient(100deg, #d8d8d8 0%, #8a8a8a 100%);
-  border-color: transparent;
-  color: #3d4d00;
+  color: var(--accent-club);
 }
 
 .checkin-flow__option--neutral {
@@ -882,10 +883,10 @@ html, body {
 .tracker-cta-btn.skew-chip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
   border: none;
-  padding: 20px 18px;
+  padding: 18px;
   cursor: pointer;
   background: url('../assets/4.png') center / cover no-repeat, linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
 }
@@ -895,11 +896,13 @@ html, body {
 }
 
 .tracker-cta-btn__title {
-  font-size: clamp(1.3rem, 6.5vw, 1.8rem);
+  font-size: clamp(0.95rem, 4.2vw, 1.2rem);
   font-weight: 700;
   font-style: italic;
   letter-spacing: 0.01em;
   text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
   color: var(--accent-club);
 }
 

@@ -82,13 +82,6 @@ for (let h = 18; h <= 23; h++) {
 
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
-function getOverallStatus(checkins) {
-  const done = CHECKIN_TYPES.filter((t) => checkins[t]).length
-  if (done === 3) return { label: 'LOCKED IN 🔒', cls: 'status--locked' }
-  if (done > 0) return { label: 'IN PROGRESS ⚡', cls: 'status--progress' }
-  return { label: 'OPEN 📋', cls: 'status--open' }
-}
-
 // ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
 
 function MyDataView({ profile, onBack, onEdit }) {
@@ -686,8 +679,6 @@ export default function ProfilePage() {
     )
   }
 
-  const status = getOverallStatus(checkins)
-
   if (trackerViewOpen) {
     return (
       <div className="page club-page">
@@ -738,9 +729,6 @@ export default function ProfilePage() {
           onClick={() => setTrackerViewOpen(true)}
         >
           <span className="tracker-cta-btn__title">ЗАПОЛНИ ТРЕКЕР</span>
-          {status.cls !== 'status--open' && (
-            <span className={`checkin-status ${status.cls}`}>{status.label}</span>
-          )}
         </button>
       )}
 
