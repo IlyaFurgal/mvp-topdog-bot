@@ -1525,35 +1525,40 @@ html, body {
   margin: 8px 0 20px;
 }
 
+/* Baked green-outline parallelogram asset for the frame, over an opaque
+   dark fill so a front card occludes the border of the one behind it in
+   the staircase. clip-path trims the box to the same right-lean so the
+   dark fill follows the slant; its vertices sit just outside the neon
+   line (~8% inset in the PNG) so the outline itself is never clipped —
+   only tiny dark-on-dark slivers remain at the corners. */
 .metric-card {
-  background: linear-gradient(105deg, #333333 0%, #1a1a1a 60%, #121212 100%);
-  border: 2px solid var(--accent-neon);
-  border-radius: 5px;
-  transform: skewX(-12deg);
-  transform-origin: 0 100%;
-  padding: 13px 16px;
+  background:
+    url('../assets/parallelogram-green-outline.png') center / 100% 100% no-repeat,
+    linear-gradient(105deg, #262626 0%, #171717 60%, #101010 100%);
+  border: none;
+  clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
+  padding: 11px 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   text-align: left;
-  width: 56%;
+  width: 60%;
   box-sizing: border-box;
 }
 
 .metric-card > * {
   display: block;
-  transform: skewX(12deg);
 }
 
 .metric-card:nth-child(2) {
-  margin-left: 22%;
-  margin-top: -12px;
+  margin-left: 20%;
+  margin-top: -28px;
   z-index: 2;
 }
 
 .metric-card:nth-child(3) {
-  margin-left: 44%;
-  margin-top: -12px;
+  margin-left: 40%;
+  margin-top: -28px;
   z-index: 3;
 }
 
@@ -1570,7 +1575,7 @@ html, body {
 }
 
 .metric-value {
-  font-size: 2.5rem;
+  font-size: 2.1rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.01em;
@@ -3677,38 +3682,47 @@ select optgroup {
   white-space: nowrap;
 }
 
-/* Grey rectangle badge for every row's value (incl. the tariff value on
-   the name row). It's a direct child of the row's .skew-chip, so it
-   inherits the row's own skew visually — override the row's generic
-   counter-skew here (transform: none) so the badge itself stays skewed
-   like the row, then counter-skew only its inner text so it reads
-   upright. Stretched to the row's full height via negative margin
-   canceling the row's own vertical padding; width hugs its text via
-   flex sizing so content always fits with no clipping. */
+/* Value plate = the baked grey-metallic parallelogram asset (diagonal
+   left edge, transparent outside the shape so the dark row shows through
+   for the cut). The row itself is no longer CSS-skewed — the slant lives
+   in the PNG — so nothing here is counter-skewed. Stretched to the row's
+   full height via negative margin; extra left padding biases the value
+   rightward, clear of the diagonal. */
 .data-row__value {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  min-width: 76px;
+  min-width: 90px;
   width: var(--chip-w, auto);
   margin: -10px 0;
   transform: none;
-  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
-  border-radius: 2px 4px 4px 2px;
-  padding: 0 14px;
+  background: url('../assets/parallelogram-grey-metallic.png') right center / 100% 100% no-repeat;
+  border-radius: 0;
+  padding: 0 14px 0 24px;
   box-sizing: border-box;
 }
 
 .data-row__value > * {
   display: inline-block;
-  transform: skewX(10deg);
-  color: var(--accent-club);
+  transform: none;
+  color: var(--accent-neon);
   font-style: italic;
-  font-weight: 500;
+  font-weight: 800;
   font-size: 1.05rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+/* Rows are straight dark rounded rectangles now; kill the shared
+   .skew-chip skew (and its child counter-skew) for data rows only. */
+.data-row.skew-chip {
+  transform: none;
+}
+
+.data-row.skew-chip > * {
+  transform: none;
 }
 
 .stripe-divider {
@@ -3842,40 +3856,29 @@ select optgroup {
   min-width: 0;
 }
 
-/* Diagonal dark→lighter gradient (top-left lighter) so each parallelogram
-   reads as its own raised card rather than a flat grey plate. Skew bumped
-   to 12° (from the shared .skew-chip 10°) for a more pronounced slant;
-   direct children counter-skewed by the same amount to stay upright. */
+/* Straight dark rounded card; the slant now lives in the value-plate PNG,
+   so no skew here. */
 .my-data-grid .data-row {
   padding: 9px 0 9px 14px;
   margin-bottom: 0;
   cursor: pointer;
-  background: linear-gradient(105deg, #3a3a3a 0%, #202020 55%, #141414 100%);
-  transform: skewX(-12deg);
+  background: linear-gradient(105deg, #2c2c2c 0%, #1a1a1a 55%, #121212 100%);
 }
 
 .my-data-grid .data-row__label {
   font-size: 1rem;
   font-weight: 800;
   font-style: italic;
-  transform: skewX(12deg);
 }
 
-/* Stronger metallic sheen (bright top-left → dark) so the value plate
-   reads as a raised chrome chip, not a flat grey block. */
 .my-data-grid .data-row__value {
-  min-width: 56px;
+  min-width: 96px;
   margin: -9px 0;
-  padding: 0 12px;
-  background: linear-gradient(115deg, #bcbcbc 0%, #7a7a7a 44%, #3a3a3a 100%);
+  padding: 0 14px 0 26px;
 }
 
 .my-data-grid .data-row__value > * {
   font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--accent-neon);
-  transform: skewX(12deg);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .tab-skew {
