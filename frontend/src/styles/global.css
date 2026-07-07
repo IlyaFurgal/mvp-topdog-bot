@@ -1552,20 +1552,21 @@ html, body {
   margin: 8px 0 20px;
 }
 
-/* Baked green-outline parallelogram asset for the frame, over an opaque
-   dark fill so a front card occludes the one behind it in the staircase.
-   The clip-path polygon traces the neon line's exact corners (measured
-   from the PNG at 724×224: TL 13.1%/4.5%, TR 94.8%, BR 86.6%, BL 5.4% at
-   95.5%), so the dark fill lands precisely inside the outline instead of
-   overshooting to the right/bottom. Tight vertical padding keeps the text
-   filling the height. */
+/* Three layers so nothing clips the wrong thing:
+   ::before = dark fill, clip-path traced to the neon line's measured
+     corners (PNG 724×224: TL 13.1%/4.5%, TR 94.8%, BR 86.6%, BL 5.4% at
+     95.5%) so it never overshoots the outline;
+   ::after  = the green-outline PNG on top, UNCLIPPED, so the border stays
+     whole on every side;
+   content  = label + value on top of both, with left padding that clears
+     the top-left slant so the first letter isn't cut.
+   isolation keeps each card's internal z-order from leaking into the
+   staircase (cards still stack by their own z-index). */
 .metric-card {
-  background:
-    url('../assets/parallelogram-green-outline.png') center / 100% 100% no-repeat,
-    linear-gradient(105deg, #262626 0%, #171717 60%, #101010 100%);
+  position: relative;
+  isolation: isolate;
   border: none;
-  clip-path: polygon(13.1% 4.5%, 94.8% 4.5%, 86.6% 95.5%, 5.4% 95.5%);
-  padding: 7px 26px 8px;
+  padding: 8px 20px 9px 34px;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -1574,8 +1575,28 @@ html, body {
   box-sizing: border-box;
 }
 
+.metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, #262626 0%, #171717 60%, #101010 100%);
+  clip-path: polygon(13.1% 4.5%, 94.8% 4.5%, 86.6% 95.5%, 5.4% 95.5%);
+  z-index: 0;
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../assets/parallelogram-green-outline.png') center / 100% 100% no-repeat;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .metric-card > * {
   display: block;
+  position: relative;
+  z-index: 2;
 }
 
 .metric-card:nth-child(2) {
@@ -3634,7 +3655,7 @@ select optgroup {
    fake the italic slant the reference wants with a skew, since the source
    glyphs are upright. */
 .screen-title-img--hero {
-  height: clamp(40px, 11vw, 56px);
+  height: clamp(20px, 5.5vw, 28px);
   transform: skewX(-9deg);
   transform-origin: bottom left;
   margin-left: 4px;
