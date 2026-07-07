@@ -5,6 +5,7 @@
   --surface-2: #252525;
   --accent: #C8FF00;
   --accent-club: #B0F326;
+  --accent-neon: #B4FF00;   /* profile screen accent — values, PRO, active tabs */
   --accent-text: #000000;
   --text: #FFFFFF;
   --text-muted: #888888;
@@ -216,8 +217,8 @@ html, body {
 
 .period-tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .period-tab {
@@ -229,10 +230,10 @@ html, body {
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.98rem;
+  font-size: 1.12rem;
   font-weight: 900;
   font-style: italic;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-transform: uppercase;
   text-align: center;
   white-space: nowrap;
@@ -241,15 +242,15 @@ html, body {
 }
 
 .period-tab.active {
-  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
-  transform: skewX(-10deg);
+  background: linear-gradient(100deg, #8a8a8a 0%, #454545 100%);
+  transform: skewX(-12deg);
   transform-origin: 0 100%;
 }
 
 .period-tab.active span {
   display: inline-block;
-  transform: skewX(10deg);
-  color: var(--accent-club);
+  transform: skewX(12deg);
+  color: var(--accent-neon);
 }
 
 .chart-placeholder {
@@ -886,9 +887,9 @@ html, body {
   justify-content: flex-start;
   width: 100%;
   border: none;
-  padding: 18px;
+  padding: 22px 20px;
   cursor: pointer;
-  background: url('../assets/4.png') center / cover no-repeat, linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
+  background: url('../assets/4.png') center / cover no-repeat, linear-gradient(105deg, #343434 0%, #1c1c1c 55%, #121212 100%);
 }
 
 .tracker-cta-btn:active {
@@ -896,14 +897,14 @@ html, body {
 }
 
 .tracker-cta-btn__title {
-  font-size: clamp(0.95rem, 4.2vw, 1.2rem);
-  font-weight: 700;
+  font-size: clamp(1.15rem, 5.5vw, 1.5rem);
+  font-weight: 800;
   font-style: italic;
   letter-spacing: 0.01em;
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
-  color: var(--accent-club);
+  color: var(--accent-neon);
 }
 
 .tracker-card {
@@ -3262,15 +3263,15 @@ html, body {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 12px 4px;
+  padding: 13px 4px;
   background: none;
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 900;
   font-style: italic;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-transform: uppercase;
   text-align: center;
   white-space: nowrap;
@@ -3279,15 +3280,15 @@ html, body {
 }
 
 .progress-view.active {
-  background: linear-gradient(100deg, #8a8a8a 0%, #4a4a4a 100%);
-  transform: skewX(-10deg);
+  background: linear-gradient(100deg, #8a8a8a 0%, #454545 100%);
+  transform: skewX(-12deg);
   transform-origin: 0 100%;
 }
 
 .progress-view.active span {
   display: inline-block;
-  transform: skewX(10deg);
-  color: var(--accent-club);
+  transform: skewX(12deg);
+  color: var(--accent-neon);
 }
 
 /* ── Workout Calendar ─────────────────────────────────── */
@@ -3587,6 +3588,15 @@ select optgroup {
   margin-bottom: 16px;
 }
 
+/* Big white profile-screen titles (ПРОФИЛЬ / ПРОГРЕСС). The source PNGs
+   are baked in a light-grey gradient; `brightness(0) invert(1)` forces
+   every opaque pixel to pure white while preserving the transparent
+   background, so both titles read as solid white without new assets. */
+.screen-title-img--hero {
+  height: clamp(40px, 11vw, 56px);
+  filter: brightness(0) invert(1);
+}
+
 .screen-title::before,
 .screen-title::after {
   content: attr(data-text);
@@ -3725,12 +3735,12 @@ select optgroup {
   border: none;
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   font-style: italic;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0 0 10px;
+  padding: 0 0 12px;
   cursor: pointer;
 }
 
@@ -3756,10 +3766,10 @@ select optgroup {
   position: relative;
   width: 100%;
   flex: 1;
-  padding: 2px;
-  background: var(--accent-club);
-  clip-path: polygon(54px 0, 100% 0, 100% 100%, 0 100%, 0 18px, 54px 18px);
-  border-radius: 8px;
+  padding: 3px;
+  background: var(--accent-neon);
+  clip-path: polygon(74px 0, 100% 0, 100% 100%, 0 100%, 0 26px, 74px 26px);
+  border-radius: 3px;
   box-sizing: border-box;
   cursor: pointer;
 }
@@ -3769,8 +3779,8 @@ select optgroup {
   width: 100%;
   height: 100%;
   background: #111;
-  clip-path: polygon(54px 0, 100% 0, 100% 100%, 0 100%, 0 18px, 54px 18px);
-  border-radius: 8px;
+  clip-path: polygon(74px 0, 100% 0, 100% 100%, 0 100%, 0 26px, 74px 26px);
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -3778,8 +3788,8 @@ select optgroup {
   position: absolute;
   top: 0;
   left: 0;
-  width: 54px;
-  height: 18px;
+  width: 74px;
+  height: 26px;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -3806,7 +3816,7 @@ select optgroup {
 }
 
 .my-data-tag {
-  width: 42px;
+  width: 64px;
   height: auto;
   object-fit: contain;
   display: block;
@@ -3817,28 +3827,35 @@ select optgroup {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 4px;
+  gap: 9px;
   min-width: 0;
 }
 
+/* Diagonal dark→lighter gradient (top-left lighter) so each parallelogram
+   reads as its own raised card rather than a flat grey plate. */
 .my-data-grid .data-row {
-  padding: 8px 0 8px 12px;
+  padding: 9px 0 9px 13px;
   margin-bottom: 0;
   cursor: pointer;
+  background: linear-gradient(105deg, #3a3a3a 0%, #202020 55%, #141414 100%);
 }
 
 .my-data-grid .data-row__label {
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 800;
+  font-style: italic;
 }
 
 .my-data-grid .data-row__value {
   min-width: 56px;
-  margin: -8px 0;
-  padding: 0 10px;
+  margin: -9px 0;
+  padding: 0 12px;
 }
 
 .my-data-grid .data-row__value > * {
-  font-size: 0.92rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--accent-neon);
 }
 
 .tab-skew {

@@ -705,7 +705,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page club-page" style={{ position: 'relative' }}>
-      <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img" />
+      <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img screen-title-img--hero" />
 
       <MyDataCard onEditClick={() => setMyDataOpen(true)} onDataChanged={() => setDataVersion((v) => v + 1)} />
 
@@ -732,7 +732,7 @@ export default function ProfilePage() {
         </button>
       )}
 
-      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img" style={{ height: 'clamp(20px, 5.5vw, 28px)', marginTop: 28, marginBottom: 12 }} />
+      <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img screen-title-img--hero" style={{ marginTop: 32, marginBottom: 14 }} />
       <ProgressSection refreshKey={dataVersion} />
     </div>
   )
