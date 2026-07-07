@@ -251,7 +251,7 @@ export default function ProgressSection({ refreshKey }) {
           {insight && (
             <div className="insight-block">
               <span className="insight-label">ИНСАЙТ НЕДЕЛИ</span>
-              <p className="insight-text">"{insight.text}"</p>
+              <p className="insight-text">«{insight.text}»</p>
             </div>
           )}
 
