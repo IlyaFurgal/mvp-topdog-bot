@@ -45,6 +45,10 @@ services:
     environment:
       # Override DATABASE_URL: bot uses host network so db resolves as 127.0.0.1
       DATABASE_URL: postgresql+asyncpg://topdog:topdog123@127.0.0.1:5432/topdog
+    volumes:
+      # Push videos (bot/media_registry.py) — mounted so they survive a
+      # --no-cache rebuild instead of only living in the image layer.
+      - ./bot/media:/app/bot/media
     network_mode: host
     depends_on:
       db:

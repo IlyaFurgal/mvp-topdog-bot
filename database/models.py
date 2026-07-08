@@ -360,3 +360,18 @@ class GcSubscription(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class PushMediaCache(Base):
+    """Telegram file_id cache for push videos, keyed by bot.media_registry
+    key (e.g. "welcome_before_payment"). First send uploads the local file
+    and stores the file_id Telegram returns; every send after that reuses
+    the cached id instead of re-uploading."""
+    __tablename__ = "push_media_cache"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    telegram_file_id: Mapped[str] = mapped_column(String, nullable=False)
+    media_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "video" | "video_note"
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

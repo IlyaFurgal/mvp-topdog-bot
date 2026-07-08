@@ -32,6 +32,10 @@ frontend/.env.local
 postgres_data/
 pgdata/
 
+# Push video files (large binaries, provisioned directly on the server —
+# not committed; docker-compose mounts ./bot/media into the bot container)
+bot/media/
+
 # IDE
 .idea/
 .vscode/

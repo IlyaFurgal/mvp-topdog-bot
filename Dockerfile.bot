@@ -1,5 +1,11 @@
 FROM python:3.12-slim
 
+# ffmpeg (incl. ffprobe) — used to verify/crop push video_notes to square
+# before the first upload (Telegram requires 1:1 for video_note).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .
