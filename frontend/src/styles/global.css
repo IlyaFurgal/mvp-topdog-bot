@@ -366,32 +366,6 @@ html, body {
   color: var(--text-muted);
 }
 
-.profile-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.profile-row:last-child {
-  border-bottom: none;
-}
-
-.profile-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.profile-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.04em;
-}
-
 /* ── CheckPage ────────────────────────────────────────── */
 
 .page-header {
@@ -2572,6 +2546,18 @@ html, body {
   font-style: italic;
 }
 
+/* Descriptive line above the "ПОДКЛЮЧИ БОТ" / "ПЕРЕЙТИ В КОММЬЮНИТИ"
+   banners on the community screen. */
+.club-community-hint {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  margin: 6px 0 20px;
+}
+
 .club-card {
   display: block;
   width: 100%;
@@ -2619,35 +2605,6 @@ html, body {
     linear-gradient(160deg, #2c2c2c 0%, #141414 100%);
 }
 
-/* ── Locked pages ─────────────────────────────────────── */
-
-.locked-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 16px;
-  padding: 40px 0 20px;
-}
-
-.locked-icon {
-  font-size: 3rem;
-}
-
-.locked-title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.locked-sub {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #f59e0b;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 
 .locked-desc {
   font-size: 0.95rem;
