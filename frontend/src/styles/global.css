@@ -12,6 +12,18 @@
   font-display: swap;
 }
 
+/* Free Montserrat 700 Italic as the working fallback until (if) Gramatika
+   is licensed — real cyrillic glyphs and a real oblique, so no synthetic
+   skew is needed on top (that would double the slant). */
+@font-face {
+  font-family: 'Montserrat Accent';
+  src: url('/fonts/Montserrat-BoldItalic.cyr-lat.woff2') format('woff2'),
+       url('/fonts/Montserrat-BoldItalic.cyr-lat.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   /* Brand palette */
   --bg: #111111;
@@ -28,7 +40,7 @@
   --warning: #f59e0b;
   --nav-height: 68px;
   /* Accent display font with graceful fallback to the loaded Barlow. */
-  --font-accent: 'Gramatika', 'Barlow Condensed', sans-serif;
+  --font-accent: 'Gramatika', 'Montserrat Accent', 'Barlow Condensed', sans-serif;
 }
 
 * {
