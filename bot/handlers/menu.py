@@ -2,9 +2,14 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
+from bot.funnel_content import (
+    ABOUT_CLUB_TEXT, FAQ_TEXT, SUPPORT_TEXT, TARIFFS_TEXT,
+    about_club_kb, faq_kb, support_kb, tariffs_kb,
+)
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
+from bot.services.push_media import send_push_video
 from bot.states import RegistrationForm
 from core.config import settings
 from database.crud import get_user_by_telegram_id
@@ -25,26 +30,14 @@ def _webapp_kb() -> InlineKeyboardMarkup:
 
 
 def _plans_kb(tg_id: int | None = None) -> InlineKeyboardMarkup:
-    """Inline keyboard with payment links for the two plans.
+    """Payment-link keyboard for the two plans.
 
-    If tg_id is provided, appends ?tg_id=<id> to payment URLs so GetCourse
-    can pass it back in the webhook and we can link the user immediately.
-    Requires GC to be configured to relay the tg_id field — see ТЗ Часть В.
+    Thin wrapper around funnel_content.tariffs_kb — single source of truth
+    for the URL-building logic (tg_id relay + UTM params), kept under this
+    name since registration.py and several handlers below already import
+    it as `_plans_kb`.
     """
-    def _url(base: str) -> str:
-        if not tg_id or not base:
-            return base
-        sep = "&" if "?" in base else "?"
-        return f"{base}{sep}tg_id={tg_id}"
-
-    buttons = []
-    if settings.GC_PAYMENT_URL_PLUS:
-        buttons.append([InlineKeyboardButton(text="💡 Тариф Plus — до 1 000 ₽/мес", url=_url(settings.GC_PAYMENT_URL_PLUS))])
-    if settings.GC_PAYMENT_URL_PRO:
-        buttons.append([InlineKeyboardButton(text="🏆 Тариф Pro — 2 990 ₽/мес", url=_url(settings.GC_PAYMENT_URL_PRO))])
-    if not buttons:
-        buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return tariffs_kb(tg_id)
 
 
 def _user_has_subscription(user) -> bool:
@@ -86,33 +79,19 @@ async def _has_subscription(telegram_id: int) -> bool:
 
 @router.message(F.text == "📋 О клубе")
 async def menu_about(message: Message) -> None:
-    await message.answer(
-        "🏆 *MVP by TopDog* — клуб для тех, кто работает над собой.\n\n"
-        "Внутри:\n"
-        "• ИИ-тренер и нутрициолог 24/7\n"
-        "• Ежедневные чекины и трекеры\n"
-        "• Сообщество резидентов\n"
-        "• База знаний и закрытые эфиры\n\n"
-        "Выбери тариф и начни 👇",
-        parse_mode="Markdown",
-        reply_markup=_plans_kb(message.from_user.id),
-    )
+    await send_push_video(message.bot, message.chat.id, "about_club")
+    await message.answer(ABOUT_CLUB_TEXT, reply_markup=about_club_kb())
+
+
+@router.callback_query(F.data == "show_tariffs")
+async def cb_show_tariffs(callback: CallbackQuery) -> None:
+    await callback.message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(callback.from_user.id))
+    await callback.answer()
 
 
 @router.message(F.text == "💳 Выбрать тариф")
 async def menu_plans(message: Message) -> None:
-    text = (
-        "📦 *Наши тарифы:*\n\n"
-        "💡 *Plus* — до 1 000 ₽/мес\n"
-        "  • ИИ-ассистент (тренер, нутрициолог, здоровье, фокус)\n"
-        "  • Чекины и трекеры\n\n"
-        "🏆 *Pro* — 2 990 ₽/мес\n"
-        "  • Всё из Plus\n"
-        "  • Доступ в Telegram-группу резидентов\n"
-        "  • База знаний и эфиры на GetCourse\n"
-        "  • Офлайн-активности и мероприятия\n"
-    )
-    await message.answer(text, parse_mode="Markdown", reply_markup=_plans_kb(message.from_user.id))
+    await message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(message.from_user.id))
 
 
 @router.message(F.text == "✅ Я оплатил / Проверить доступ")
@@ -127,10 +106,12 @@ async def menu_check_payment(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == "❓ Поддержка")
 async def menu_support(message: Message) -> None:
-    kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_URL)
-    ]])
-    await message.answer("Напиши нам — ответим в течение нескольких часов 👇", reply_markup=kb)
+    await message.answer(SUPPORT_TEXT, reply_markup=support_kb())
+
+
+@router.message(F.text == "📖 FAQ")
+async def menu_faq(message: Message) -> None:
+    await message.answer(FAQ_TEXT, reply_markup=faq_kb(message.from_user.id))
 
 
 # ── Main menu handlers (for subscribed users) ─────────────────────────────────

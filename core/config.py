@@ -81,7 +81,12 @@ class Settings(BaseSettings):
     SUBSCRIPTION_PRO_6M_PRICE: int = 14990
 
     # Support
-    SUPPORT_TG_URL: str = "https://t.me/topdog_support"
+    SUPPORT_TG_URL: str = "https://t.me/mvp_topdog_support"
+
+    # GetCourse personal cabinet (resident's "личный кабинет" link, used in
+    # the funnel step-3 message). Not configured anywhere yet — fill in via
+    # .env once the real cabinet URL is confirmed.
+    GC_CABINET_URL: str = ""
 
     # Admin dashboard Basic Auth
     ADMIN_LOGIN: str = "admin"

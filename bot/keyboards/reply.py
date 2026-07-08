@@ -38,6 +38,7 @@ def freemium_menu_kb() -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text="❓ Поддержка"),
+                KeyboardButton(text="📖 FAQ"),
             ],
             [
                 KeyboardButton(text="✅ Я оплатил / Проверить доступ"),
