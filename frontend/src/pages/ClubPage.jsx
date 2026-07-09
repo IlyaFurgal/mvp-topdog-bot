@@ -18,9 +18,17 @@ function CardArt({ img }) {
 }
 
 const CHAT_URL = 'https://t.me/+5_3U13qeveA3OWJi'
-const BOT_URL = 'tg://resolve?domain=topdogmvp_tech_bot&start=8b8301408bf74717bab73bc14327facd__s4'
+const BOT_LINK = 'https://t.me/topdogmvp_tech_bot?start=72c5c848698acb28ae772166e4b45dfd__s4'
 const KNOWLEDGE_URL = 'https://topdog-mvp.ru/teach/control/stream'
 const SUPPORT_URL = 'https://t.me/mvp_topdog_support'
+
+function handleConnectBot() {
+  if (window.Telegram?.WebApp?.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(BOT_LINK)
+  } else {
+    window.open(BOT_LINK, '_blank')
+  }
+}
 
 function BackButton({ onBack }) {
   return (
@@ -38,9 +46,9 @@ function CommunityView({ onBack }) {
         Чтобы попасть в чат MVP, проверь, что у тебя активирован бот чата
       </p>
 
-      <a href={BOT_URL} className="tracker-cta-btn skew-chip" style={{ textDecoration: 'none', marginBottom: 12 }}>
+      <button onClick={handleConnectBot} className="tracker-cta-btn skew-chip" style={{ marginBottom: 12 }}>
         <span className="tracker-cta-btn__title">ПОДКЛЮЧИ БОТ</span>
-      </a>
+      </button>
 
       <a
         href={CHAT_URL}

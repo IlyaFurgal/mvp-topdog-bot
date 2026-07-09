@@ -5,8 +5,7 @@
    Condensed (same italic/uppercase treatment, no layout change). */
 @font-face {
   font-family: 'Gramatika';
-  src: url('/fonts/Gramatika-BoldSlanted.woff2') format('woff2'),
-       url('/fonts/Gramatika-BoldSlanted.woff') format('woff');
+  src: url('/fonts/Gramatika-BoldSlanted.woff2') format('woff2');
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -50,8 +49,10 @@
 }
 
 /* Shared treatment for every neon accent label — one place to keep the
-   Gramatika Bold-Slanted / uppercase / lh-100 / ls-0 spec consistent. */
-.accent-type {
+   Gramatika Bold-Slanted / uppercase / lh-100 / ls-0 spec consistent.
+   Apply to screen headings and standalone numeric values only — never to
+   body text, buttons with text labels, chat, notes, or footer nav. */
+.font-accent {
   font-family: var(--font-accent);
   font-weight: 700;
   font-style: italic;
@@ -2241,6 +2242,12 @@ html, body {
 .ai-msg__copy:active,
 .ai-msg__save:active { opacity: 1; }
 
+.ai-msg__icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
 /* Image in chat bubble */
 .ai-msg__image {
   display: block;
@@ -4014,12 +4021,14 @@ select optgroup {
   background: rgba(255, 255, 255, 0.13);
 }
 
-/* ── Profile accent typography (Gramatika Bold Slanted) ──────────────────
+/* ── Accent typography sweep (Gramatika Bold Slanted) ─────────────────────
    Applied last so it wins by source order over each element's own rule.
-   Every neon accent label on the Profile screen — card titles/labels,
-   values, active tabs & periods, insight, tracker CTA — shares the exact
-   Gramatika spec: weight 700, italic (Bold Slanted), uppercase, line
-   height 100%, letter-spacing 0. Falls back to Barlow Condensed until the
+   Same spec as .font-accent above, shared here across every screen
+   heading and standalone numeric value app-wide: card titles/labels,
+   metric/chart values, RPE numbers, active tabs & periods, insight,
+   tracker CTA, section headings (onboarding, club hub, community).
+   Body text, buttons with text labels, chat, notes, and footer nav are
+   deliberately excluded. Falls back to Barlow Condensed until the
    Gramatika file is dropped in /public/fonts. */
 .my-data-grid .data-row__label,
 .my-data-grid .data-row__value > *,
@@ -4029,11 +4038,31 @@ select optgroup {
 .progress-view.active span,
 .period-tab.active span,
 .insight-text,
-.tracker-cta-btn__title {
+.tracker-cta-btn__title,
+.chart-current,
+.chart-stat-value,
+.checkin-flow__rpe-btn,
+.onboarding-title,
+.club-card__title,
+.page-title--lime,
+.recharts-text {
   font-family: var(--font-accent);
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
   line-height: 1;
   letter-spacing: 0;
+}
+
+/* Narrow screens: the Bold-Slanted cut can clip 3-4 digit numeric values
+   (calories, weight) at their italic edge — tighten tracking and step the
+   size down slightly so long values stay inside their card. */
+@media (max-width: 340px) {
+  .metric-value,
+  .chart-current,
+  .chart-stat-value,
+  .my-data-grid .data-row__value > * {
+    letter-spacing: -0.02em;
+    font-size: 0.92em;
+  }
 }

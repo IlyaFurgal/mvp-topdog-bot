@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown'
 import client from '../api/client'
 import { createSavedMessage } from '../api/savedMessages'
 import { useChat } from '../context/ChatContext'
+import iconCopy from '../assets/Копировать.png'
+import iconSave from '../assets/Сохранить.png'
 
 const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий лимит
 const RESIZE_THRESHOLD  =  5 * 1024 * 1024   // 5 МБ  — порог ресайза изображений
@@ -465,14 +467,14 @@ export default function AiPage() {
                     onClick={() => handleCopy(msg.id, msg.text)}
                     title="Копировать"
                   >
-                    {copiedId === msg.id ? '✓' : '⎘'}
+                    {copiedId === msg.id ? '✓' : <img src={iconCopy} alt="Копировать" className="ai-msg__icon" />}
                   </button>
                   <button
                     className="ai-msg__save"
                     onClick={() => handleSaveMessage(msg.id, msg.text)}
                     title="Сохранить в программы"
                   >
-                    {savedId === msg.id ? '✓' : '🔖'}
+                    {savedId === msg.id ? '✓' : <img src={iconSave} alt="Сохранить" className="ai-msg__icon" />}
                   </button>
                 </div>
               )}
@@ -483,7 +485,7 @@ export default function AiPage() {
                     onClick={() => handleCopy(msg.id, msg.text)}
                     title="Копировать"
                   >
-                    {copiedId === msg.id ? '✓' : '⎘'}
+                    {copiedId === msg.id ? '✓' : <img src={iconCopy} alt="Копировать" className="ai-msg__icon" />}
                   </button>
                 </div>
               )}
