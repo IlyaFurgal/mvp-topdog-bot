@@ -14,7 +14,7 @@ from api.routers.trackers import calculate_calorie_limit
 from api.services.getcourse import sync_progress_to_gc
 from core.config import settings
 from database.models import (
-    Checkin, CheckinType, Profile, Tracker, TrackerType, UpgradeIntent, User,
+    Checkin, CheckinType, Profile, Tracker, TrackerType, UpgradeIntent, User, Workout,
 )
 from database.session import AsyncSessionLocal
 
@@ -75,25 +75,28 @@ async def _has_post_workout_today(session, user_id: int) -> bool:
     return result.scalar_one_or_none() is not None
 
 
-async def _get_morning_training_time(session, user_id: int) -> tuple[bool, str | None]:
-    """Return (is_training_today, training_time_hhmm) from today's latest morning checkin."""
-    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+async def _get_planned_workout_time(session, user_id: int) -> tuple[bool, str | None]:
+    """Return (has_workout_today, planned_time_hhmm) from today's Workout row.
+
+    Replaces the old training_today/training_time morning-checkin fields
+    (removed — see ТЗ «переработка структуры чекинов»): "тренировка
+    сегодня?" is now read straight from the workout plan instead of asked
+    as a checkin question, and the time comes from the "перенести
+    тренировку" button on the plan card (Workout.planned_time), not the
+    checkin.
+    """
     result = await session.execute(
-        select(Checkin).where(
+        select(Workout).where(
             and_(
-                Checkin.user_id == user_id,
-                Checkin.type == CheckinType.morning,
-                Checkin.created_at >= today_start,
+                Workout.user_id == user_id,
+                Workout.date == date.today(),
             )
-        ).order_by(Checkin.created_at.desc()).limit(1)
+        ).order_by(Workout.id.desc()).limit(1)
     )
-    checkin = result.scalar_one_or_none()
-    if not checkin or not checkin.data:
+    workout = result.scalar_one_or_none()
+    if not workout:
         return False, None
-    data = checkin.data
-    if data.get("training_today") != "train":
-        return False, None
-    raw = data.get("training_time")
+    raw = workout.planned_time
     if isinstance(raw, str) and ":" in raw:
         return True, raw
     return True, None
@@ -344,7 +347,7 @@ async def check_reminders(bot: Bot) -> None:
                 cached = _training_notify_cache.get(user.id)
                 if cached is None or cached[1] != today:
                     async with AsyncSessionLocal() as s:
-                        is_training, raw_time = await _get_morning_training_time(s, user.id)
+                        is_training, raw_time = await _get_planned_workout_time(s, user.id)
                     target_hhmm = _compute_notify_hhmm(raw_time) if (is_training and raw_time) else None
                     _training_notify_cache[user.id] = (target_hhmm, today)
                     cached = (target_hhmm, today)

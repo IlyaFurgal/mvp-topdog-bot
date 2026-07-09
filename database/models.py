@@ -136,6 +136,10 @@ class Profile(Base):
     morning_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="08:00")
     evening_reminder_time: Mapped[str | None] = mapped_column(String(5), nullable=True, default="21:00")
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='true')
+    # Пульс покоя убран из утреннего чекина (ручной замер — высокий барьер,
+    # сомнительная точность); тумблер в Профиле, поле ввода показывается в
+    # UI только если включено — см. ТЗ «переработка структуры чекинов».
+    resting_pulse_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='false')
     additional_info: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_path: Mapped[str | None] = mapped_column(String(255), nullable=True)  # "/uploads/<uuid>.jpg"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -253,6 +257,11 @@ class Workout(Base):
     category_id: Mapped[int | None] = mapped_column(ForeignKey("workout_categories.id"), nullable=True)
     duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     note: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    # "HH:MM", set via the "перенести тренировку" button on the plan card —
+    # replaces the old training_time morning-checkin question (see ТЗ
+    # «переработка структуры чекинов»). Consumed by bot/scheduler.py's
+    # post-workout reminder instead of Checkin.data.
+    planned_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped["WorkoutCategory | None"] = relationship(back_populates="workouts")

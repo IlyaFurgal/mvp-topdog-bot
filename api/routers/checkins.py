@@ -12,8 +12,10 @@ from database.session import get_session
 
 router = APIRouter(prefix="/checkins", tags=["checkins"])
 
-# Keys that become orphaned when plan_completed flips to 'skipped'
-_PLAN_SKIPPED_ORPHANS = {"rpe", "prev_comparison", "pain", "satisfaction", "not_completed_reason"}
+# Keys that become orphaned when plan_completed flips to 'skipped' — kept in
+# sync with post_workout's STEPS in frontend/src/components/CheckinFlow.jsx
+# (rpe/feeling_after are gated on plan_completed !== 'skipped' there).
+_PLAN_SKIPPED_ORPHANS = {"rpe", "feeling_after", "not_completed_reason"}
 
 
 class CheckinCreate(BaseModel):

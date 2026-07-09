@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
-import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
 import mvpLogo from '../assets/mvp-logo-green.png'
 import { useProfile } from '../context/ProfileContext'
@@ -105,18 +104,16 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
   const fileInputRef = useRef(null)
 
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
-  const [checkinPulse, setCheckinPulse] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
   const [heightModalOpen, setHeightModalOpen] = useState(false)
   const [calorieLimit, setCalorieLimit] = useState(null)
 
   async function load() {
     try {
-      const [trackData, checkData] = await Promise.all([getTodayTrackers(), getTodayCheckins()])
+      const trackData = await getTodayTrackers()
       const { calorie_limit, calories_meals, ...rest } = trackData
       setTrackers(rest)
       setCalorieLimit(calorie_limit ?? null)
-      setCheckinPulse(checkData?.morning?.data?.resting_pulse ?? null)
     } catch (_) {}
   }
 
@@ -134,7 +131,7 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
 
   const tierLabel = subscriptionType === 'pro' ? 'PRO' : subscriptionType === 'plus' ? 'PLUS' : '—'
   const bmi = formatBmi(trackers.weight?.value ?? profile?.weight, profile?.height)
-  const pulseValue = trackers.pulse?.value ?? checkinPulse
+  const pulseValue = trackers.pulse?.value
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -217,10 +214,12 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
             <span className="data-row__label">СОН</span>
             <span className="data-row__value"><span>{formatValue('sleep', trackers.sleep) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
-            <span className="data-row__label">ПУЛЬС</span>
-            <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
-          </div>
+          {profile?.resting_pulse_enabled && (
+            <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
+              <span className="data-row__label">ПУЛЬС</span>
+              <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
+            </div>
+          )}
           <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
             <span className="data-row__label">ВОДА</span>
             <span className="data-row__value"><span>{formatValue('water', trackers.water) ?? '—'}</span></span>

@@ -39,6 +39,7 @@ class WorkoutUpdate(BaseModel):
     duration_min: Optional[int] = None
     note: Optional[str] = None
     entries: Optional[list[EntryIn]] = None
+    planned_time: Optional[str] = None   # "HH:MM" — set via "перенести тренировку"
 
 
 class CustomItemCreate(BaseModel):
@@ -71,6 +72,7 @@ def _workout_dict(w: Workout) -> dict:
         "category_name": w.category.name if w.category else None,
         "duration_min": w.duration_min,
         "note": w.note,
+        "planned_time": w.planned_time,
         "created_at": w.created_at.isoformat(),
         "entries": [_entry_dict(e) for e in (w.entries or [])],
     }
@@ -260,6 +262,11 @@ async def update_workout(
         w.duration_min = body.duration_min
     if body.note is not None:
         w.note = body.note
+    if body.planned_time is not None:
+        parts = body.planned_time.split(":")
+        if len(parts) != 2 or not (parts[0].isdigit() and parts[1].isdigit()):
+            raise HTTPException(status_code=422, detail="planned_time must be HH:MM")
+        w.planned_time = body.planned_time
 
     if body.entries is not None:
         # Replace all entries

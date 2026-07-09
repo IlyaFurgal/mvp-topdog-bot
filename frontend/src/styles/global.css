@@ -856,6 +856,14 @@ html, body {
   display: block;
 }
 
+/* Post-workout only: points to the AI chat as where to flag pain/discomfort
+   now that it's no longer a structured checkin question. */
+.checkin-flow__aftercare-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 16px;
+}
+
 /* ── Tracker tip ─────────────────────────────────────── */
 
 .tracker-tip {
@@ -3504,9 +3512,54 @@ html, body {
 
 .wo-cal-detail-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.wo-cal-reschedule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.wo-cal-reschedule-input {
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+}
+
+.wo-cal-reschedule-save,
+.wo-cal-reschedule-cancel {
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #2e2e2e;
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.wo-cal-reschedule-save {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wo-cal-reschedule-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wo-cal-reschedule-cancel {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .wo-cal-detail-item__text {

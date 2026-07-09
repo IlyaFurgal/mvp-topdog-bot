@@ -5,35 +5,10 @@ import { CHECKIN_TYPE_INFO } from './CheckinCard'
 import { useProfile } from '../context/ProfileContext'
 
 const STEPS = {
+  // Порядок и состав — ТЗ «переработка структуры чекинов» (2026-07-09).
+  // Убраны: resting_pulse (→ тумблер в Профиле), training_today/training_time
+  // (→ карточка плана тренировки, вне чекина), вопрос про цикл (убран без замены).
   morning: [
-    {
-      key: 'resting_pulse',
-      question: 'Пульс покоя (уд/мин)',
-      type: 'number',
-      hint: 'Измерь лёжа сразу после пробуждения: нащупай пульс, посчитай за 15 секунд количество ударов, умножь на 4. Это твой пульс покоя.',
-      placeholder: 'Введи пульс...',
-      min: 30,
-      max: 200,
-    },
-    {
-      key: 'feeling',
-      question: 'Как твоё самочувствие?',
-      options: [
-        { value: 'excellent', label: 'Отличное', sentiment: 'positive' },
-        { value: 'okay',      label: 'Удовлетворительное', sentiment: 'neutral' },
-        { value: 'broken',    label: 'Разбитое', sentiment: 'negative' },
-        { value: 'custom',    label: 'Свой вариант', custom: true },
-      ],
-    },
-    {
-      key: 'sleep_quality',
-      question: 'Качество сна?',
-      options: [
-        { value: 'great',  label: 'Выспался', labelF: 'Выспалась', sentiment: 'positive' },
-        { value: 'normal', label: 'Среднее', sentiment: 'neutral' },
-        { value: 'bad',    label: 'Плохое', sentiment: 'negative' },
-      ],
-    },
     {
       key: 'sleep_hours',
       question: 'Сколько часов спал?',
@@ -47,18 +22,38 @@ const STEPS = {
       placeholder: 'Часы сна...',
     },
     {
-      key: 'training_today',
-      question: 'У тебя сегодня тренировка, или день восстановления?',
+      key: 'sleep_quality',
+      question: 'Качество сна?',
       options: [
-        { value: 'train', label: 'Сегодня тренируюсь' },
-        { value: 'rest',  label: 'Сегодня восстанавливаюсь' },
+        { value: 'great',  label: 'Выспался', labelF: 'Выспалась', sentiment: 'positive' },
+        { value: 'normal', label: 'Средне', sentiment: 'neutral' },
+        { value: 'bad',    label: 'Плохо', sentiment: 'negative' },
       ],
     },
     {
-      key: 'training_time',
-      question: 'Во сколько тренировка?',
-      type: 'time',
-      condition: (data) => data.training_today === 'train',
+      // Раньше был options-вопрос (отличное/удовлетворительное/разбитое) —
+      // заменён на шкалу 1-10 по ТЗ, ключ data оставлен прежним ('feeling')
+      // ради непрерывности истории вместо переименования в data.
+      key: 'feeling',
+      question: 'Как твоё самочувствие?',
+      type: 'rpe',
+      scaleHint: '1 — очень плохо, 10 — отлично',
+    },
+    {
+      key: 'recovered',
+      question: 'Восстановился ли?',
+      questionF: 'Восстановилась ли?',
+      options: [
+        { value: 'yes',    label: 'Да', sentiment: 'positive' },
+        { value: 'medium', label: 'Средне', sentiment: 'neutral' },
+        { value: 'no',     label: 'Нет', sentiment: 'negative' },
+      ],
+    },
+    {
+      key: 'stress',
+      question: 'Уровень стресса',
+      type: 'rpe',
+      scaleHint: '1 — очень мало, 10 — максимальный',
     },
     {
       key: 'note',
@@ -68,6 +63,10 @@ const STEPS = {
     },
   ],
 
+  // Убраны: prev_comparison, satisfaction, pain (структурированный вопрос —
+  // источник теперь диалог с ИИ). При plan_completed==='skipped' чекин
+  // заканчивается сразу после not_trained_reason (rpe/feeling_after/note
+  // условны на !=='skipped', поэтому activeSteps естественно обрывается там).
   post_workout: [
     {
       key: 'plan_completed',
@@ -111,41 +110,27 @@ const STEPS = {
       condition: (data) => data.plan_completed !== 'skipped',
     },
     {
-      key: 'prev_comparison',
-      question: 'Сравнение с прошлой тренировкой',
+      key: 'feeling_after',
+      question: 'Самочувствие после',
       condition: (data) => data.plan_completed !== 'skipped',
       options: [
-        { value: 'easier', label: 'Легче' },
-        { value: 'same',   label: 'Так же' },
-        { value: 'harder', label: 'Тяжелее' },
+        { value: 'excellent', label: 'Отличное', sentiment: 'positive' },
+        { value: 'okay',      label: 'Удовлетворительное', sentiment: 'neutral' },
+        { value: 'broken',    label: 'Разбитое', sentiment: 'negative' },
       ],
     },
     {
-      key: 'pain',
-      question: 'Болело что-то во время тренировки?',
+      key: 'note',
+      question: 'Есть что добавить?',
+      type: 'text_optional',
+      placeholder: 'Напиши заметку (необязательно)...',
       condition: (data) => data.plan_completed !== 'skipped',
-      options: [
-        { value: 'muscle', label: 'Мышечная боль', sentiment: 'negative' },
-        { value: 'joint',  label: 'Суставная боль', sentiment: 'negative' },
-        { value: 'bad',    label: 'Стало плохо', sentiment: 'negative' },
-        { value: 'none',   label: 'Ничего не болело', sentiment: 'positive' },
-        { value: 'custom', label: 'Свой вариант', custom: true },
-      ],
-    },
-    {
-      key: 'satisfaction',
-      question: 'Доволен своей результативностью?',
-      questionF: 'Довольна своей результативностью?',
-      condition: (data) => data.plan_completed !== 'skipped',
-      options: [
-        { value: 'yes',    label: 'Да', sentiment: 'positive' },
-        { value: 'better', label: 'Мог лучше',         labelF: 'Могла лучше', sentiment: 'neutral' },
-        { value: 'no',     label: 'Нет, пожалел себя', labelF: 'Нет, пожалела себя', sentiment: 'negative' },
-        { value: 'custom', label: 'Свой вариант', custom: true },
-      ],
     },
   ],
 
+  // Убраны: recovery (пассивно/активно/пропустить), симптомы дня, вопрос
+  // про цикл (не возвращать — цикл ведётся резиденткой отдельно в блоке
+  // Здоровье, вне чекинов).
   evening: [
     {
       key: 'productivity',
@@ -163,14 +148,25 @@ const STEPS = {
       scaleHint: '1 — очень мало, 10 — максимальный',
     },
     {
-      key: 'recovery',
-      question: 'Как прошло восстановление?',
-      hint: '(Пропустить при наличии тренировки)',
+      key: 'appetite',
+      question: 'Аппетит',
       options: [
-        { value: 'passive', label: 'Восстанавливался пассивно (без нагрузки)', labelF: 'Восстанавливалась пассивно (без нагрузки)' },
-        { value: 'active',  label: 'Восстанавливался активно (кардио)',         labelF: 'Восстанавливалась активно (кардио)' },
-        { value: 'skip',    label: 'Пропустить' },
+        { value: 'low',    label: 'Низкий' },
+        { value: 'normal', label: 'Нормальный' },
+        { value: 'high',   label: 'Высокий' },
       ],
+    },
+    {
+      key: 'mood',
+      question: 'Настроение',
+      type: 'rpe',
+      scaleHint: '1 — очень плохое, 10 — отличное',
+    },
+    {
+      key: 'note',
+      question: 'Есть что добавить?',
+      type: 'text_optional',
+      placeholder: 'Напиши заметку (необязательно)...',
     },
   ],
 }
@@ -316,6 +312,11 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             <span className="checkin-flow__check">✓</span>
           </div>
           <img src={stripesImg} alt="" className="checkin-flow__stripes-img" />
+          {type === 'post_workout' && (
+            <p className="checkin-flow__aftercare-hint">
+              Если что-то беспокоит, просто напиши здесь
+            </p>
+          )}
         </div>
       </div>
     )

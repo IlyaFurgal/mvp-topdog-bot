@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { deleteWorkout, getWorkoutCategories, getWorkouts } from '../api/workouts'
+import { deleteWorkout, getWorkoutCategories, getWorkouts, updateWorkout } from '../api/workouts'
 import WorkoutModal from './WorkoutModal'
 
 const DAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -66,6 +66,8 @@ export default function WorkoutCalendar() {
   const [loading, setLoading]     = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editWorkout, setEditWorkout] = useState(null)
+  const [rescheduleFor, setRescheduleFor] = useState(null) // workout id
+  const [rescheduleTime, setRescheduleTime] = useState('')
 
   useEffect(() => {
     getWorkoutCategories().then(setCategories).catch(() => {})
@@ -115,6 +117,23 @@ export default function WorkoutCalendar() {
   async function handleDelete(id) {
     try {
       await deleteWorkout(id)
+      loadMonth()
+    } catch (_) {}
+  }
+
+  function openReschedule(w) {
+    setRescheduleFor(w.id)
+    setRescheduleTime(w.planned_time ?? '')
+  }
+  function closeReschedule() {
+    setRescheduleFor(null)
+    setRescheduleTime('')
+  }
+  async function handleReschedule() {
+    if (!rescheduleTime) return
+    try {
+      await updateWorkout(rescheduleFor, { planned_time: rescheduleTime })
+      closeReschedule()
       loadMonth()
     } catch (_) {}
   }
@@ -217,13 +236,28 @@ export default function WorkoutCalendar() {
               <div key={w.id} className="wo-cal-detail-item">
                 <div className="wo-cal-detail-item__text">
                   <span className="wo-cal-detail-cat" style={{ color }}>{cat?.name ?? '—'}</span>
+                  {w.planned_time && <span className="wo-cal-detail-summary">🕐 {w.planned_time}</span>}
                   {summary && <span className="wo-cal-detail-summary">{summary}</span>}
                   {w.note  && <span className="wo-cal-detail-note">{w.note}</span>}
                 </div>
                 <div className="wo-cal-detail-item__actions">
+                  <button className="tracker-row__edit" onClick={() => openReschedule(w)} title="Перенести тренировку">🕐</button>
                   <button className="tracker-row__edit" onClick={() => openEdit(w)} title="Редактировать">✏</button>
                   <button className="tracker-row__del" onClick={() => handleDelete(w.id)} title="Удалить">🗑</button>
                 </div>
+                {rescheduleFor === w.id && (
+                  <div className="wo-cal-reschedule">
+                    <input
+                      type="time"
+                      className="wo-cal-reschedule-input"
+                      value={rescheduleTime}
+                      onChange={(e) => setRescheduleTime(e.target.value)}
+                      autoFocus
+                    />
+                    <button className="wo-cal-reschedule-save" onClick={handleReschedule} disabled={!rescheduleTime}>Перенести</button>
+                    <button className="wo-cal-reschedule-cancel" onClick={closeReschedule}>Отмена</button>
+                  </div>
+                )}
               </div>
             )
           })}

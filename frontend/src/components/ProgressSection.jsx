@@ -65,57 +65,78 @@ function StatRow({ items }) {
   )
 }
 
-const SCORE_MAP = {
-  // body_feeling
-  fresh: 100, slightly_tired: 67, heavy: 33, sick: 10,
-  // sleep_quality / general quality
-  great: 100, good: 100, normal: 67, bad: 33, poor: 33,
-  // energy / mood level
-  high: 100, medium: 67, low: 33,
-  // mood (explicit)
-  neutral: 67,
-  // training_desire
-  want: 100, okay: 67, no_desire: 33, no_chance: 33,
-  // day ratings
-  hard: 33,
+// Формула восстановления (ТЗ «переработка структуры чекинов», 2026-07-09):
+// Сон 30% + Восстановился ли (утро) 20% + RPE (после тренировки, если была)
+// 20% + Продуктивность (вечер) 15% + Стресс (среднее утро/вечер) 15%.
+//
+// RPE отсутствует в дни без тренировки — вес перераспределяется
+// пропорционально между доступными компонентами того дня, а не штрафует
+// счёт (открытый вопрос ТЗ, ждёт подтверждения методолога).
+const RECOVERY_WEIGHTS = { sleep: 0.30, recovered: 0.20, rpe: 0.20, productivity: 0.15, stress: 0.15 }
+
+// 3-вариантные options-вопросы (sleep_quality/recovered/productivity) на
+// общей шкале 100/67/33 — общий средний вариант везде назван либо
+// "medium", либо "normal", поэтому один плоский словарь на все три поля.
+const OPTION_SCORE = { great: 100, normal: 67, bad: 33, yes: 100, medium: 67, no: 33, high: 100, low: 33 }
+
+function scaleScore(value) {
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 1 && n <= 10 ? ((n - 1) / 9) * 100 : null
+}
+
+function invertedScaleScore(value) {
+  const s = scaleScore(value)
+  return s == null ? null : 100 - s
+}
+
+function localDateKey(iso) {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function calcRecoveryPct(checkins) {
-  if (!Array.isArray(checkins)) return null
-  const scores = []
+  if (!Array.isArray(checkins) || checkins.length === 0) return null
 
+  // Группируем по календарному дню, чтобы усреднить утренний и вечерний
+  // стресс ОДНОГО дня и сопоставить RPE с днём тренировки.
+  const byDate = {}
   for (const c of checkins) {
-    if (c.type === 'morning') {
-      if (c.data?.sleep_quality != null)    scores.push(SCORE_MAP[c.data.sleep_quality]    ?? 67)
-      if (c.data?.body_feeling != null)     scores.push(SCORE_MAP[c.data.body_feeling]     ?? 67)
-      if (c.data?.motivation != null)       scores.push(SCORE_MAP[c.data.motivation]       ?? 67)
-      if (c.data?.mood != null)             scores.push(SCORE_MAP[c.data.mood]             ?? 67)
-      if (c.data?.training_desire != null)  scores.push(SCORE_MAP[c.data.training_desire]  ?? 67)
-    }
-    if (c.type === 'evening') {
-      if (c.data?.energy != null)    scores.push(SCORE_MAP[c.data.energy]    ?? 67)
-      if (c.data?.recovery != null)  scores.push(SCORE_MAP[c.data.recovery]  ?? 67)
-    }
+    const key = localDateKey(c.created_at)
+    if (!byDate[key]) byDate[key] = {}
+    byDate[key][c.type] = c
   }
 
-  if (scores.length === 0) return null
+  const dayScores = []
+  for (const day of Object.values(byDate)) {
+    const components = []
 
-  const base = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    const sleepScore = OPTION_SCORE[day.morning?.data?.sleep_quality]
+    if (sleepScore != null) components.push({ weight: RECOVERY_WEIGHTS.sleep, score: sleepScore })
 
-  // Resting pulse penalty: if latest pulse is 10+ bpm above personal min → -20
-  const pulseVals = checkins
-    .filter((c) => c.type === 'morning' && c.data?.resting_pulse != null)
-    .map((c) => Number(c.data.resting_pulse))
-    .filter((n) => !isNaN(n) && n > 0)
-  // checkins are returned newest-first from API
-  let pulsePenalty = 0
-  if (pulseVals.length >= 2) {
-    const minPulse = Math.min(...pulseVals)
-    const latestPulse = pulseVals[0]
-    if (latestPulse - minPulse >= 10) pulsePenalty = 20
+    const recoveredScore = OPTION_SCORE[day.morning?.data?.recovered]
+    if (recoveredScore != null) components.push({ weight: RECOVERY_WEIGHTS.recovered, score: recoveredScore })
+
+    const rpeScore = scaleScore(day.post_workout?.data?.rpe)
+    if (rpeScore != null) components.push({ weight: RECOVERY_WEIGHTS.rpe, score: rpeScore })
+
+    const productivityScore = OPTION_SCORE[day.evening?.data?.productivity]
+    if (productivityScore != null) components.push({ weight: RECOVERY_WEIGHTS.productivity, score: productivityScore })
+
+    const stressScores = [invertedScaleScore(day.morning?.data?.stress), invertedScaleScore(day.evening?.data?.stress)]
+      .filter((v) => v != null)
+    if (stressScores.length > 0) {
+      const avgStress = stressScores.reduce((a, b) => a + b, 0) / stressScores.length
+      components.push({ weight: RECOVERY_WEIGHTS.stress, score: avgStress })
+    }
+
+    if (components.length === 0) continue
+
+    const totalWeight = components.reduce((sum, c) => sum + c.weight, 0)
+    dayScores.push(components.reduce((sum, c) => sum + (c.score * c.weight) / totalWeight, 0))
   }
 
-  return Math.max(0, base - pulsePenalty)
+  if (dayScores.length === 0) return null
+  return Math.round(dayScores.reduce((a, b) => a + b, 0) / dayScores.length)
 }
 
 export default function ProgressSection({ refreshKey }) {
@@ -184,6 +205,18 @@ export default function ProgressSection({ refreshKey }) {
   const displayedDiscipline = insight?.discipline_pct != null ? insight.discipline_pct : discipline
 
   const hasMetrics = displayedDiscipline !== null || avgRpe !== null || recoveryPct !== null
+
+  // Самочувствие (утро, шкала 1-10) и Настроение (вечер, шкала 1-10) —
+  // отдельные графики, источник данных чекины, а не трекеры.
+  const feelingData = checkins
+    .filter((c) => c.type === 'morning' && Number.isFinite(Number(c.data?.feeling)))
+    .map((c) => ({ created_at: c.created_at, value: Number(c.data.feeling) }))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+
+  const moodData = checkins
+    .filter((c) => c.type === 'evening' && Number.isFinite(Number(c.data?.mood)))
+    .map((c) => ({ created_at: c.created_at, value: Number(c.data.mood) }))
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
   return (
     <>
@@ -472,6 +505,90 @@ export default function ProgressSection({ refreshKey }) {
                   { label: 'ЦЕЛЬ', value: `${stats.sleep.goal}ч` },
                 ]}
               />
+            )}
+          </div>
+
+          {/* ── Самочувствие (утренний чекин) ────────────── */}
+          <div className="card chart-card">
+            <div className="chart-header">
+              <span className="chart-title">САМОЧУВСТВИЕ</span>
+            </div>
+            {feelingData.length === 0 ? (
+              <EmptyChart />
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={feelingData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <XAxis
+                    dataKey="created_at"
+                    tickFormatter={fmtDate}
+                    tick={AXIS_TICK}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
+                  />
+                  <YAxis
+                    domain={[1, 10]}
+                    tick={AXIS_TICK}
+                    width={24}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
+                  />
+                  <Tooltip
+                    formatter={(v) => [v, 'Самочувствие']}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={fmtDate}
+                  />
+                  <Line
+                    type="linear"
+                    dataKey="value"
+                    stroke={CHART_GREEN}
+                    strokeWidth={2}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={9} />}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* ── Настроение (вечерний чекин) ──────────────── */}
+          <div className="card chart-card">
+            <div className="chart-header">
+              <span className="chart-title">НАСТРОЕНИЕ</span>
+            </div>
+            {moodData.length === 0 ? (
+              <EmptyChart />
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={moodData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <XAxis
+                    dataKey="created_at"
+                    tickFormatter={fmtDate}
+                    tick={AXIS_TICK}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
+                  />
+                  <YAxis
+                    domain={[1, 10]}
+                    tick={AXIS_TICK}
+                    width={24}
+                    axisLine={{ stroke: CHART_GREEN }}
+                    tickLine={{ stroke: CHART_GREEN }}
+                  />
+                  <Tooltip
+                    formatter={(v) => [v, 'Настроение']}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={fmtDate}
+                  />
+                  <Line
+                    type="linear"
+                    dataKey="value"
+                    stroke={CHART_GREEN}
+                    strokeWidth={2}
+                    dot={<SquareDot />}
+                    activeDot={<SquareDot r={9} />}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             )}
           </div>
         </>
