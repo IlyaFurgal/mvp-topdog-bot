@@ -374,7 +374,10 @@ async def get_today_trackers(
         }
     out["calories_meals"] = {k: round(v) for k, v in cal_meals.items()}
 
-    # Актуальный вес: сначала трекер сегодня, иначе последний из истории
+    # Актуальный вес: сначала трекер сегодня, иначе последний из истории —
+    # вес не обнуляется на следующий день, в отличие от суточных сумм
+    # (вода/калории/сон), т.к. он не "суточная" метрика, а последнее
+    # известное значение (ТЗ «пул правок» 2026-07-10).
     current_weight: float | None = None
     if out["weight"]:
         current_weight = out["weight"]["value"]
@@ -387,6 +390,7 @@ async def get_today_trackers(
         )).scalar_one_or_none()
         if latest_w:
             current_weight = latest_w.value
+            out["weight"] = {"value": latest_w.value, "unit": latest_w.unit, "id": latest_w.id}
 
     out["calorie_limit"] = calculate_calorie_limit(profile, current_weight=current_weight)
     return out
