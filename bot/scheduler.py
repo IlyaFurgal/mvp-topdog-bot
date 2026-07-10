@@ -30,10 +30,10 @@ _reminder_sent: dict[tuple[int, str], date] = {}
 _training_notify_cache: dict[int, tuple[str | None, date]] = {}
 
 
-def _webapp_kb() -> InlineKeyboardMarkup:
+def _webapp_kb(text: str = "Открыть приложение") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
-            text="Открыть приложение",
+            text=text,
             web_app=WebAppInfo(url=settings.mini_app_url_versioned),
         )
     ]])
@@ -133,10 +133,13 @@ async def _today_tracker_sum(session, user_id: int, tracker_type: TrackerType) -
     return float(result) if result is not None else 0.0
 
 
-async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
-    """Collect 7-day activity stats for the weekly praise push."""
-    week_start = datetime.combine(
-        ref_date - timedelta(days=7), datetime.min.time()
+async def _period_stats(session, user_id: int, ref_date: date, days: int) -> dict:
+    """Collect activity stats over the last `days` days for the subscription
+    period-summary push (was a fixed 7-day "weekly praise" window; now the
+    28-day subscription-period window — see ТЗ «обновление текстов
+    ежедневных пушей», 2026-07-10)."""
+    period_start = datetime.combine(
+        ref_date - timedelta(days=days), datetime.min.time()
     ).replace(tzinfo=timezone.utc)
 
     # Post-workout checkins = completed workouts
@@ -145,7 +148,7 @@ async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
             and_(
                 Checkin.user_id == user_id,
                 Checkin.type == CheckinType.post_workout,
-                Checkin.created_at >= week_start,
+                Checkin.created_at >= period_start,
             )
         )
     ) or 0
@@ -153,18 +156,18 @@ async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
     # Distinct UTC calendar dates with ANY checkin
     checkin_dts = (await session.execute(
         select(Checkin.created_at).where(
-            and_(Checkin.user_id == user_id, Checkin.created_at >= week_start)
+            and_(Checkin.user_id == user_id, Checkin.created_at >= period_start)
         )
     )).scalars().all()
     checkin_days: int = len({dt.date() for dt in checkin_dts if dt is not None})
 
-    # Weight delta: first vs last record this week
+    # Weight delta: first vs last record this period
     weight_rows = (await session.execute(
         select(Tracker.value, Tracker.created_at).where(
             and_(
                 Tracker.user_id == user_id,
                 Tracker.type == TrackerType.weight,
-                Tracker.created_at >= week_start,
+                Tracker.created_at >= period_start,
             )
         ).order_by(Tracker.created_at)
     )).all()
@@ -175,7 +178,7 @@ async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
     # Any tracker record (for minimum activity threshold)
     any_tracker: int = await session.scalar(
         select(func.count()).select_from(Tracker).where(
-            and_(Tracker.user_id == user_id, Tracker.created_at >= week_start)
+            and_(Tracker.user_id == user_id, Tracker.created_at >= period_start)
         )
     ) or 0
 
@@ -187,8 +190,10 @@ async def _weekly_stats(session, user_id: int, ref_date: date) -> dict:
     }
 
 
-def _build_weekly_praise(name: str, tone: str | None, stats: dict, goal: str | None) -> str:
-    """Build personalised weekly praise push text."""
+def _build_period_summary(name: str, tone: str | None, stats: dict) -> str:
+    """Build the "итоги периода подписки" push text (28-day window, sent
+    3 days before subscription_expires_at). Text says "месяц" even though
+    the window is 28 days, not a calendar month — confirmed with Илья."""
     wo = stats["workouts"]
     cd = stats["checkin_days"]
     wd = stats["weight_delta"]
@@ -211,12 +216,12 @@ def _build_weekly_praise(name: str, tone: str | None, stats: dict, goal: str | N
 
     if tone == "aggressive":
         return (
-            f"{name}. Итоги недели: {stats_line}. "
-            "Работаешь — вижу. Не сбавляй."
+            f"{name}. Итоги месяца: {stats_line}. "
+            "Работаешь — вижу. Не сбавляй темп."
         )
     return (
-        f"{name}, ты молодец! 🔥 За эту неделю: {stats_line}. "
-        "Так держать — следующая неделя будет ещё лучше 💪"
+        f"{name}, ты молодец! За этот месяц: {stats_line}. "
+        "Так держать!"
     )
 
 
@@ -283,10 +288,15 @@ async def check_reminders(bot: Bot) -> None:
                     async with AsyncSessionLocal() as s:
                         already = await _has_morning_checkin_today(s, user.id)
                     if not already:
+                        name = user.first_name or "друг"
                         await bot.send_message(
                             chat_id=user.telegram_id,
-                            text="Доброе утро! 🌅 Время утреннего чекина — как ты сегодня?",
-                            reply_markup=_webapp_kb(),
+                            text=(
+                                f"{name}, доброе утро!\n\n"
+                                "Как ты себя чувствуешь? Поделись своими ощущениями в приложении.\n\n"
+                                "AI-ассистент учтёт это при формировании плана на день."
+                            ),
+                            reply_markup=_webapp_kb("▸ ЗАПОЛНИТЬ"),
                         )
                     _reminder_sent[key] = today
 
@@ -294,48 +304,58 @@ async def check_reminders(bot: Bot) -> None:
             if hhmm == evening_time:
                 key = (user.id, "evening")
                 if _reminder_sent.get(key) != today:
+                    name = user.first_name or "друг"
                     await bot.send_message(
                         chat_id=user.telegram_id,
-                        text="Время вечернего чекина. Как прошёл день? 🌙",
-                        reply_markup=_webapp_kb(),
+                        text=(
+                            f"{name}, добрый вечер!\n\n"
+                            "Как прошёл твой день? Пройди вечерний чек-ап.\n\n"
+                            "Это поможет в планировании твоего следующего дня."
+                        ),
+                        reply_markup=_webapp_kb("▸ ЗАПОЛНИТЬ"),
                     )
                     _reminder_sent[key] = today
 
-            # ── Единый дневной пуш в 16:00: сон / еда / вода ──────────
+            # ── Дневной пуш в 16:00: вода / еда (раздельно, без soft/aggr) ──
             if hhmm == "16:00":
                 key = (user.id, "daily_16")
                 if _reminder_sent.get(key) != today:
                     async with AsyncSessionLocal() as s:
-                        sleep_today = await _today_tracker_sum(s, user.id, TrackerType.sleep)
                         water_today = await _today_tracker_sum(s, user.id, TrackerType.water)
                         cal_today   = await _today_tracker_sum(s, user.id, TrackerType.calories)
                     cal_limit = calculate_calorie_limit(profile)
+                    name = user.first_name or "друг"
 
-                    reasons: list[str] = []
-                    reasons_aggr: list[str] = []
-                    if sleep_today <= 0:
-                        reasons.append("укажи, сколько спал сегодня")
-                        reasons_aggr.append("отметь сон")
-                    if cal_limit > 0 and cal_today < cal_limit * 0.5:
-                        reasons.append("за день съедено меньше половины нормы — добери")
-                        reasons_aggr.append("еды меньше половины нормы — добери")
+                    # TODO(Илья, ТЗ «обновление текстов ежедневных пушей» 2026-07-10):
+                    # в новом макете (Miro «Пуши: кому и когда») карточки про сон на
+                    # пуше 16:00 нет — не решено, убрали её насовсем или она просто
+                    # не попала в редизайн. Условие оставлено закомментированным до
+                    # ответа; ничего за сон сейчас не отправляем.
+                    # sleep_today = await _today_tracker_sum(s, user.id, TrackerType.sleep)
+                    # if sleep_today <= 0:
+                    #     ...
+
                     if water_today < 1000:  # < 50 % от цели 2000 мл
-                        reasons.append("воды выпито меньше половины нормы 💧")
-                        reasons_aggr.append("воды мало — добери норму")
-
-                    if reasons:
-                        tone = (profile.tone if profile and profile.tone else "soft")
-                        if tone == "aggressive":
-                            body = "; ".join(reasons_aggr)
-                            text = f"Чек по дню: {body}. Подтяни — это базовая дисциплина."
-                        else:
-                            body = "; ".join(reasons)
-                            text = f"Загляни в трекеры 🙌 {body}."
                         await bot.send_message(
                             chat_id=user.telegram_id,
-                            text=text,
-                            reply_markup=_webapp_kb(),
+                            text=(
+                                f"{name}, время выпить воды.\n"
+                                "Она необходима для поддержания всех процессов в организме."
+                            ),
+                            reply_markup=_webapp_kb("▸ Открыть приложение"),
                         )
+
+                    if cal_limit > 0 and cal_today < cal_limit * 0.5:
+                        await bot.send_message(
+                            chat_id=user.telegram_id,
+                            text=(
+                                f"{name}, что ты сегодня ел(а)?\n\n"
+                                "Время заполнить трекер питания в приложении.\n\n"
+                                "Это поможет AI-ассистенту персонализировать советы для достижения твоих целей."
+                            ),
+                            reply_markup=_webapp_kb("▸ Открыть приложение"),
+                        )
+
                     _reminder_sent[key] = today
 
             # ── Post-workout reminder (training_time + 3h) ───────────────────────
@@ -372,28 +392,6 @@ async def check_reminders(bot: Bot) -> None:
                             )
                         _reminder_sent[key_tw] = today
 
-            # ── Weekly praise: Sunday 19:00 local time ───────────────────────────
-            # weekday() == 6 → Sunday; key encodes ISO-week so one send per week
-            # even if bot restarts during the same Sunday.
-            if now_local.weekday() == 6 and hhmm == "19:00":
-                week_tag = today.strftime("%Y-W%W")
-                key_wp = (user.id, f"weekly_praise_{week_tag}")
-                if _reminder_sent.get(key_wp) != today:
-                    async with AsyncSessionLocal() as s:
-                        w_stats = await _weekly_stats(s, user.id, today)
-                    if w_stats["has_activity"]:
-                        tone = (profile.tone if profile and profile.tone else "soft")
-                        goal  = profile.goal.value if profile and profile.goal else None
-                        name  = user.first_name or "друг"
-                        text  = _build_weekly_praise(name, tone, w_stats, goal)
-                        await bot.send_message(
-                            chat_id=user.telegram_id,
-                            text=text,
-                            reply_markup=_webapp_kb(),
-                        )
-                        logger.info("Weekly praise sent to user=%s stats=%s", user.id, w_stats)
-                    _reminder_sent[key_wp] = today
-
         except Exception as exc:
             logger.warning("check_reminders failed for user %s: %s", user.telegram_id, exc)
 
@@ -404,6 +402,80 @@ async def check_reminders(bot: Bot) -> None:
     stale_cache = [uid for uid, (_, d) in _training_notify_cache.items() if d < today]
     for uid in stale_cache:
         del _training_notify_cache[uid]
+
+
+async def check_subscription_period_summary(bot: Bot) -> None:
+    """
+    Daily: replaces the old fixed Sunday-19:00 "weekly praise" push.
+    For each active-subscription user, two independent checks:
+      1) subscription_expires_at is in exactly 3 days → send a 28-day
+         "итоги периода подписки" summary.
+      2) subscription_expires_at has already passed → deactivate the
+         subscription (subscription_active = "inactive"). This also closes
+         the long-standing backlog item: expiry used to be checked lazily
+         on every request via _is_subscription_active, with no job that
+         ever flips the DB flag itself.
+    The two checks are independent — a subscription can be summarised and
+    (on a later run, 3 days after) separately deactivated.
+    """
+    today = date.today()
+    summary_date = today + timedelta(days=3)
+
+    async with AsyncSessionLocal() as session:
+        rows = (await session.execute(
+            select(User, Profile)
+            .outerjoin(Profile, Profile.user_id == User.id)
+            .where(
+                User.is_active == True,
+                User.subscription_active == "active",
+                User.subscription_expires_at.isnot(None),
+            )
+        )).all()
+
+    for user, profile in rows:
+        try:
+            expires_date = user.subscription_expires_at.date()
+
+            # ── Итоги периода подписки: за 3 дня до истечения ────────────
+            if expires_date == summary_date:
+                if profile and not profile.notifications_enabled:
+                    pass
+                elif not _is_eligible_for_pushes(user):
+                    pass
+                else:
+                    key = (user.id, f"period_summary_{expires_date.isoformat()}")
+                    if _reminder_sent.get(key) != today:
+                        async with AsyncSessionLocal() as s:
+                            stats = await _period_stats(s, user.id, today, days=28)
+                        if stats["has_activity"]:
+                            tone = (profile.tone if profile and profile.tone else "soft")
+                            name = user.first_name or "друг"
+                            text = _build_period_summary(name, tone, stats)
+                            await bot.send_message(
+                                chat_id=user.telegram_id,
+                                text=text,
+                                reply_markup=_webapp_kb(),
+                            )
+                            logger.info("Period summary sent to user=%s stats=%s", user.id, stats)
+                        _reminder_sent[key] = today
+
+            # ── Деактивация протухшей подписки ────────────────────────────
+            if expires_date <= today:
+                async with AsyncSessionLocal() as s:
+                    fresh = await s.get(User, user.id)
+                    if fresh and fresh.subscription_active == "active":
+                        fresh.subscription_active = "inactive"
+                        await s.commit()
+                        logger.info(
+                            "Subscription deactivated for user=%s (expired %s)",
+                            user.id, expires_date,
+                        )
+
+        except Exception as exc:
+            logger.warning(
+                "check_subscription_period_summary failed for user %s: %s",
+                user.telegram_id, exc,
+            )
 
 
 async def check_upgrade_reminders(bot: Bot) -> None:
@@ -592,6 +664,16 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         CronTrigger(hour="*/6", minute=0, timezone=MOSCOW),
         args=[bot],
         id="upgrade_reminders",
+    )
+
+    # Daily: subscription period-summary push (3 days before expiry) +
+    # expired-subscription deactivation. Replaces the old fixed
+    # Sunday-19:00 weekly praise.
+    scheduler.add_job(
+        check_subscription_period_summary,
+        CronTrigger(hour=10, minute=0, timezone=MOSCOW),
+        args=[bot],
+        id="subscription_period_summary",
     )
 
     # Daily GetCourse progress sync at 03:00 Moscow

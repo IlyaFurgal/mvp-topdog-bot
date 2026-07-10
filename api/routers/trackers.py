@@ -130,15 +130,9 @@ async def _maybe_push_calorie_over(session, user, profile, prev_sum: float, new_
     if limit <= 0:
         return
     if prev_sum <= limit < new_sum:
-        tone = getattr(profile, "tone", None) if profile else None
-        if tone == "aggressive":
-            text = "Сегодня вышел за дневную норму по калориям. Бывает — глянь с ассистентом, что подкрутить."
-        else:
-            text = (
-                "Сегодня калорий вышло больше дневной нормы. Это нормально время от времени — "
-                "если хочешь, обсуди с ассистентом, как скорректировать 💛"
-            )
-        await send_message(chat_id=user.telegram_id, text=text, reply_markup=webapp_kb())
+        name = user.first_name or "друг"
+        text = f"{name}, сегодня ты превысил норму по калориям. Спроси AI-ассистента, как мягко вернуться в режим."
+        await send_message(chat_id=user.telegram_id, text=text, reply_markup=webapp_kb("▸ Открыть приложение"))
 
 
 @router.post("")
