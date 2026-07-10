@@ -286,7 +286,8 @@ async def send_message(
 
 @router.get("/messages")
 async def get_messages(
+    since: Optional[float] = None,
     user: User = Depends(get_current_user),
 ) -> dict:
-    messages = pop(str(user.telegram_id))
+    messages = pop(str(user.telegram_id), since=since)
     return {"messages": messages}

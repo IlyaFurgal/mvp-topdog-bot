@@ -81,6 +81,10 @@ export default function AiPage() {
   const recTimerRef       = useRef(null)
   const streamRef         = useRef(null)
   const stoppingRef       = useRef(false)   // guard against double stop
+  // Synchronous guard against a double-tap firing handleSend/handleRetry
+  // twice before the `typing` state re-render lands — `typing` alone has
+  // a brief race window since it only updates on the next render.
+  const sendingRef        = useRef(false)
   const micHoldRef        = useRef(false)   // true while finger is held on mic
 
   // Scroll to bottom on initial load and whenever new messages arrive
@@ -204,7 +208,8 @@ export default function AiPage() {
   async function handleSend() {
     const text = input.trim()
     if (!text && !filePreview) return
-    if (typing) return
+    if (typing || sendingRef.current) return
+    sendingRef.current = true
 
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = ''
@@ -238,8 +243,9 @@ export default function AiPage() {
           body.image_name = capturedFile.name
         }
       }
+      const since = Date.now() / 1000
       await client.post('/suvvy/message', body)
-      startPolling()
+      startPolling(since)
     } catch (e) {
       setTyping(false)
       setMessages((prev) =>
@@ -248,22 +254,28 @@ export default function AiPage() {
       if (isPhotoMsg) setFileError('Не удалось загрузить фото. Попробуй ещё раз.')
       const detail = e?.response?.data?.detail
       if (detail === 'Suvvy not configured') addMessage('ai', 'ИИ-ассистент ещё не подключён.')
+    } finally {
+      sendingRef.current = false
     }
   }
 
   async function handleRetry(msg) {
-    if (typing) return
+    if (typing || sendingRef.current) return
+    sendingRef.current = true
     setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, status: 'retrying' } : m))
     setTyping(true)
     try {
+      const since = Date.now() / 1000
       await client.post('/suvvy/message', { text: msg.retryText || msg.text || '' })
       setMessages((prev) =>
         prev.map((m) => m.id === msg.id ? { ...m, status: undefined, retryText: undefined } : m)
       )
-      startPolling()
+      startPolling(since)
     } catch (_) {
       setTyping(false)
       setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, status: 'failed' } : m))
+    } finally {
+      sendingRef.current = false
     }
   }
 
@@ -407,6 +419,9 @@ export default function AiPage() {
   }
 
   async function sendVoiceBlob(blob, mimeType) {
+    if (sendingRef.current) return
+    sendingRef.current = true
+
     const dataUrl = await blobToDataUrl(blob)
     const ext = (mimeType.split('/')[1] ?? 'webm').split(';')[0]
     const filename = `voice_${Date.now()}.${ext}`
@@ -420,12 +435,13 @@ export default function AiPage() {
 
     setTyping(true)
     try {
+      const since = Date.now() / 1000
       await client.post('/suvvy/message', {
         text: '',
         audio_base64: dataUrl,
         audio_name: filename,
       })
-      startPolling()
+      startPolling(since)
     } catch (e) {
       setTyping(false)
       setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, status: 'failed' } : m))
@@ -437,6 +453,8 @@ export default function AiPage() {
       } else {
         setVoiceError('Не удалось отправить голосовое. Попробуй ещё раз.')
       }
+    } finally {
+      sendingRef.current = false
     }
   }
 

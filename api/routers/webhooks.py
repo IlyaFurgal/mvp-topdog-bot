@@ -812,6 +812,11 @@ async def suvvy_webhook(
 
     chat_id = str(data.get("chat_id", ""))
     new_messages = data.get("new_messages", [])
+    logger.info(
+        "Suvvy webhook received: chat_id=%s event_type=%r message_count=%d keys=%s",
+        chat_id, event_type, len(new_messages) if isinstance(new_messages, list) else 0,
+        sorted(data.keys()),
+    )
 
     texts = [
         m["text"]

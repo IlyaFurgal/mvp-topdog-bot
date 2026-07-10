@@ -102,13 +102,20 @@ export function ChatProvider({ children }) {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
   }
 
-  function startPolling() {
+  // `since` (unix seconds, set by the caller to the moment the outgoing
+  // message was sent) is passed to every poll so the backend queue only
+  // returns replies pushed at/after it. Without this, a reply that
+  // arrives after this wait already timed out and gave up could later
+  // get drained by a *different*, newer request's poll cycle and shown
+  // as the answer to the wrong question ("ответ не в такт" — see ТЗ
+  // «пул правок» 2026-07-10, п.2/7/13).
+  function startPolling(since) {
     stopPolling()
     let attempts = 0
     pollRef.current = setInterval(async () => {
       attempts++
       try {
-        const { data } = await client.get('/suvvy/messages')
+        const { data } = await client.get('/suvvy/messages', { params: { since } })
         if (data.messages && data.messages.length > 0) {
           stopPolling()
           setTyping(false)
