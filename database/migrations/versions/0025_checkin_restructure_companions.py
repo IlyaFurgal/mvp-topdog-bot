@@ -7,7 +7,7 @@ Create Date: 2026-07-09
 import sqlalchemy as sa
 from alembic import op
 
-revision = '0025_checkin_restructure_companions'
+revision = '0025_checkin_companions'
 down_revision = '0024_push_media_cache'
 branch_labels = None
 depends_on = None
