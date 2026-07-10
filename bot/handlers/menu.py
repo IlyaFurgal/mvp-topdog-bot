@@ -85,13 +85,13 @@ async def menu_about(message: Message) -> None:
 
 @router.callback_query(F.data == "show_tariffs")
 async def cb_show_tariffs(callback: CallbackQuery) -> None:
-    await callback.message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(callback.from_user.id))
+    await callback.message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(callback.from_user.id), parse_mode="Markdown")
     await callback.answer()
 
 
 @router.message(F.text == "💳 Выбрать тариф")
 async def menu_plans(message: Message) -> None:
-    await message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(message.from_user.id))
+    await message.answer(TARIFFS_TEXT, reply_markup=tariffs_kb(message.from_user.id), parse_mode="Markdown")
 
 
 @router.message(F.text == "✅ Я оплатил / Проверить доступ")

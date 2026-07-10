@@ -80,7 +80,7 @@ def tariffs_kb(tg_id: int | None = None, pro_label: str = "➤ Выбрать П
 
 TARIFFS_TEXT = (
     "Тарифы:\n\n"
-    "ПРО — 2 990 Р/мес.\n"
+    "*ПРО — 2 990 Р/мес.*\n"
     "— Доступ к AI-ассистенту: тренер, нутрициолог, фокус\n"
     "— Трекеры состояния: нагрузка, дисциплина, восстановление\n"
     "— Прогресс и аналитика по неделям\n"
@@ -88,7 +88,7 @@ TARIFFS_TEXT = (
     "— База знаний (записи эфиров и мастер-классов)\n"
     "— Участие в разборах и получение экспертной обратной связи от главного тренера клуба\n"
     "— Участие в мероприятиях клуба\n\n"
-    "ПЛЮС — 990 Р/мес.\n"
+    "*ПЛЮС — 990 Р/мес.*\n"
     "— Доступ к AI-ассистенту: тренер, нутрициолог, фокус\n"
     "— Трекеры состояния: нагрузка, дисциплина, восстановление\n"
     "— Прогресс и аналитика по неделям\n\n"
@@ -97,7 +97,7 @@ TARIFFS_TEXT = (
 
 
 async def send_tariffs(bot: Bot, chat_id: int, tg_id: int | None = None) -> None:
-    await bot.send_message(chat_id, TARIFFS_TEXT, reply_markup=tariffs_kb(tg_id))
+    await bot.send_message(chat_id, TARIFFS_TEXT, reply_markup=tariffs_kb(tg_id), parse_mode="Markdown")
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -216,7 +216,7 @@ async def send_paid_plus_circle(bot: Bot, chat_id: int) -> None:
 
 
 PAID_PLUS_WELCOME_TEXT = (
-    "{name}, теперь ты в MVP 🙌🏼\n\n"
+    "*{name}, теперь ты в MVP 🙌🏼*\n\n"
     "Я твой персональный AI-ассистент.\n\n"
     "Осознанный подход начинается с данных. Настроим твой профиль чтобы "
     "начать твой рост."
@@ -229,6 +229,7 @@ async def send_paid_plus_welcome(bot: Bot, chat_id: int, name: str) -> None:
         chat_id,
         PAID_PLUS_WELCOME_TEXT.format(name=name),
         reply_markup=_webapp_button(),
+        parse_mode="Markdown",
     )
 
 
@@ -247,13 +248,13 @@ PAID_PLUS_THEN_PRO_TEXT = (
     # TODO: list continues here — text not provided
 )
 
-PAID_PLUS_1H_REMINDER_TEXT = "Остался один шаг — настроить профиль."
+PAID_PLUS_1H_REMINDER_TEXT = "*Остался один шаг — настроить профиль.*"
 
 
 async def send_paid_plus_1h_reminder(bot: Bot, chat_id: int) -> None:
     """Send if the user hasn't opened the Mini App / set up their profile
     within 1 hour of the PLUS welcome message."""
-    await bot.send_message(chat_id, PAID_PLUS_1H_REMINDER_TEXT, reply_markup=_webapp_button())
+    await bot.send_message(chat_id, PAID_PLUS_1H_REMINDER_TEXT, reply_markup=_webapp_button(), parse_mode="Markdown")
 
 
 # ── Оплатил ПРО ──────────────────────────────────────────────────────────
@@ -264,12 +265,12 @@ async def send_paid_pro_circle(bot: Bot, chat_id: int) -> None:
 
 
 PAID_PRO_WELCOME_TEXT = (
-    "{name}, теперь ты в MVP 🙌🏼\n\n"
+    "*{name}, теперь ты в MVP 🙌🏼*\n\n"
     "Я твой персональный AI-ассистент.\n\n"
     "Осознанный подход начинается здесь. Вот что тебе нужно сделать:\n"
-    "Шаг 1. Настрой профиль, чтобы пользоваться AI-ассистентом\n"
-    "Шаг 2. Вступай в телеграм-чат с резидентами\n"
-    "Шаг 3. Участвуй в онлайн- и офлайн-активностях клуба. Расписание — в "
+    "*Шаг 1.* Настрой профиль, чтобы пользоваться AI-ассистентом\n"
+    "*Шаг 2.* Вступай в телеграм-чат с резидентами\n"
+    "*Шаг 3.* Участвуй в онлайн- и офлайн-активностях клуба. Расписание — в "
     "телеграм-чате"
 )
 
@@ -280,12 +281,13 @@ async def send_paid_pro_welcome(bot: Bot, chat_id: int, name: str) -> None:
         chat_id,
         PAID_PRO_WELCOME_TEXT.format(name=name),
         reply_markup=_webapp_button(),
+        parse_mode="Markdown",
     )
 
 
 PAID_PRO_STEP2_TEXT = (
-    "Шаг 2. Вступай в телеграм-чат с резидентами по кнопке ниже\n\n"
-    "‼Проверь, что ты подключил(а) бота MVP: @topdogmvp_tech_bot.\n"
+    "*Шаг 2.* Вступай в телеграм-чат с резидентами по кнопке ниже\n\n"
+    "‼Проверь, что ты подключил(а) бота MVP: @topdogmvp\\_tech\\_bot.\n"
     "Только после активации бота ты сможешь вступить в чат."
 )
 
@@ -299,11 +301,11 @@ def paid_pro_step2_kb() -> InlineKeyboardMarkup:
 
 async def send_paid_pro_step2(bot: Bot, chat_id: int) -> None:
     """Send 10 min after send_paid_pro_welcome."""
-    await bot.send_message(chat_id, PAID_PRO_STEP2_TEXT, reply_markup=paid_pro_step2_kb())
+    await bot.send_message(chat_id, PAID_PRO_STEP2_TEXT, reply_markup=paid_pro_step2_kb(), parse_mode="Markdown")
 
 
 PAID_PRO_STEP3_TEXT = (
-    "Шаг 3. Участвуй в онлайн- и офлайн-активностях клуба\n\n"
+    "*Шаг 3.* Участвуй в онлайн- и офлайн-активностях клуба\n\n"
     "Тебя ждут эфиры, мастер-классы, тренировки, встречи, челленджи и другие "
     "форматы с участием ТОП-атлетов, профессиональных спортсменов и ведущих "
     "экспертов.\n\n"
@@ -323,20 +325,20 @@ def paid_pro_step3_kb() -> InlineKeyboardMarkup:
 
 async def send_paid_pro_step3(bot: Bot, chat_id: int) -> None:
     """Send 10 min after send_paid_pro_step2 (~20 min after payment)."""
-    await bot.send_message(chat_id, PAID_PRO_STEP3_TEXT, reply_markup=paid_pro_step3_kb())
+    await bot.send_message(chat_id, PAID_PRO_STEP3_TEXT, reply_markup=paid_pro_step3_kb(), parse_mode="Markdown")
 
 
 # ── Не оплатил — дожим ───────────────────────────────────────────────────
 
-NONPAYER_10MIN_TEXT = "Остался один шаг — выбрать тариф и вступить в клуб."
+NONPAYER_10MIN_TEXT = "*Остался один шаг — выбрать тариф и вступить в клуб.*"
 
 
 async def send_nonpayer_10min(bot: Bot, chat_id: int, tg_id: int | None = None) -> None:
-    await bot.send_message(chat_id, NONPAYER_10MIN_TEXT, reply_markup=tariffs_kb(tg_id))
+    await bot.send_message(chat_id, NONPAYER_10MIN_TEXT, reply_markup=tariffs_kb(tg_id), parse_mode="Markdown")
 
 
 NONPAYER_24H_TEXT = (
-    "{name}, залетай в наш челлендж!\n\n"
+    "*{name}, залетай в наш челлендж!*\n\n"
     "В закрытом клубе MVP Регбист уже запустил первый челлендж⭐\n\n"
     "Начали с отжиманий.\n\n"
     "Каждый день — +1 отжимание.\n"
@@ -357,11 +359,12 @@ async def send_nonpayer_24h(bot: Bot, chat_id: int, name: str) -> None:
         chat_id,
         NONPAYER_24H_TEXT.format(name=name),
         reply_markup=nonpayer_24h_kb(),
+        parse_mode="Markdown",
     )
 
 
 NONPAYER_3D_TEXT = (
-    "Иногда, чтобы изменить свою жизнь, нужно изменить окружение.\n\n"
+    "*Иногда, чтобы изменить свою жизнь, нужно изменить окружение.*\n\n"
     "Выбрать тех, для кого здоровье, тренировки, режим, качественное "
     "питание и сильное тело — это норма жизни.\n\n"
     "Именно такие люди ждут тебя в MVP от TOP DOG."
@@ -379,4 +382,4 @@ def nonpayer_3d_kb() -> InlineKeyboardMarkup:
 
 async def send_nonpayer_3d(bot: Bot, chat_id: int) -> None:
     await send_push_video(bot, chat_id, "nonpayer_3d_final")
-    await bot.send_message(chat_id, NONPAYER_3D_TEXT, reply_markup=nonpayer_3d_kb())
+    await bot.send_message(chat_id, NONPAYER_3D_TEXT, reply_markup=nonpayer_3d_kb(), parse_mode="Markdown")
