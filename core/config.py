@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     MINI_APP_URL: str = "https://topdog-mvp.com"
     MINI_APP_VERSION: int = 2
+    SCHEDULER_ENABLED: bool = True
 
     @property
     def mini_app_url_versioned(self) -> str:

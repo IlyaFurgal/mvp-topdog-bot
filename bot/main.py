@@ -59,10 +59,13 @@ async def on_startup(app: web.Application) -> None:
     except Exception as e:
         logger.warning("Could not set menu button: %s", e)
 
-    scheduler = setup_scheduler(bot)
-    scheduler.start()
-    logger.info("Scheduler started")
-    app["scheduler"] = scheduler
+    if settings.SCHEDULER_ENABLED:
+        scheduler = setup_scheduler(bot)
+        scheduler.start()
+        logger.info("Scheduler started")
+        app["scheduler"] = scheduler
+    else:
+        logger.warning("Scheduler DISABLED via SCHEDULER_ENABLED=false — no pushes will be sent")
 
 
 async def on_shutdown(app: web.Application) -> None:
