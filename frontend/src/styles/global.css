@@ -1229,6 +1229,26 @@ html, body {
   pointer-events: none;
 }
 
+.scroll-picker__edit-input {
+  width: 140px;
+  height: 44px;
+  background: none;
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent-club);
+  -moz-appearance: textfield;
+}
+
+.scroll-picker__edit-input::-webkit-outer-spin-button,
+.scroll-picker__edit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .scroll-picker__unit {
   font-size: 1.1rem;
   color: var(--text-muted);

@@ -214,12 +214,10 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
             <span className="data-row__label">СОН</span>
             <span className="data-row__value"><span>{formatValue('sleep', trackers.sleep) ?? '—'}</span></span>
           </div>
-          {profile?.resting_pulse_enabled && (
-            <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
-              <span className="data-row__label">ПУЛЬС</span>
-              <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
-            </div>
-          )}
+          <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
+            <span className="data-row__label">ПУЛЬС</span>
+            <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
+          </div>
           <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
             <span className="data-row__label">ВОДА</span>
             <span className="data-row__value"><span>{formatValue('water', trackers.water) ?? '—'}</span></span>

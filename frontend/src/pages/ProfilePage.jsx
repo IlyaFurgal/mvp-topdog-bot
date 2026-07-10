@@ -190,10 +190,6 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
   // Notifications toggle
   const [notifEnabled, setNotifEnabled] = useState(profile?.notifications_enabled ?? true)
 
-  // Resting pulse toggle — off by default, manual measurement has a high
-  // barrier to entry; reveals the ПУЛЬС row in MyDataCard when on.
-  const [restingPulseEnabled, setRestingPulseEnabled] = useState(profile?.resting_pulse_enabled ?? false)
-
   // Body metrics
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
@@ -218,7 +214,6 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     setMorningTime(profile.morning_reminder_time ?? profile.push_time ?? '08:00')
     setEveningTime(profile.evening_reminder_time ?? '21:00')
     setNotifEnabled(profile.notifications_enabled ?? true)
-    setRestingPulseEnabled(profile.resting_pulse_enabled ?? false)
     setWeight(profile.weight != null ? String(profile.weight) : '')
     setHeight(profile.height != null ? String(profile.height) : '')
     setWorkoutDaysPerWeek(profile.workout_days_per_week != null ? String(profile.workout_days_per_week) : '')
@@ -261,7 +256,6 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
         height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
         workout_days_per_week: (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
         notifications_enabled: notifEnabled,
-        resting_pulse_enabled: restingPulseEnabled,
         additional_info:       additionalInfo.trim() || null,
       })
       onSaved()
@@ -511,47 +505,6 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
               height: 18,
               borderRadius: '50%',
               background: notifEnabled ? '#000' : '#888',
-              transition: 'left 0.2s',
-            }} />
-          </div>
-        </div>
-
-        {/* Resting pulse toggle */}
-        <p id="field-restingPulse" className="section-label" style={{ marginBottom: 8 }}>ПУЛЬС ПОКОЯ</p>
-        <div
-          onClick={() => setRestingPulseEnabled(v => !v)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 14px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            marginBottom: 16,
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
-            {restingPulseEnabled ? '❤️ Ручной ввод включён' : '🚫 Ручной ввод выключен'}
-          </span>
-          <div style={{
-            width: 44,
-            height: 24,
-            borderRadius: 12,
-            background: restingPulseEnabled ? 'var(--accent)' : '#444',
-            position: 'relative',
-            transition: 'background 0.2s',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 3,
-              left: restingPulseEnabled ? 23 : 3,
-              width: 18,
-              height: 18,
-              borderRadius: '50%',
-              background: restingPulseEnabled ? '#000' : '#888',
               transition: 'left 0.2s',
             }} />
           </div>
