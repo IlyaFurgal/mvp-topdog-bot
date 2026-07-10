@@ -873,6 +873,29 @@ async def suvvy_webhook(
         if hm is not None and health_metrics_data is None:
             health_metrics_data = hm
 
+    # ── Diagnose silently-lost workout markers ──────────────────────────────
+    # _parse_marker already logs a warning when it finds a [[WORKOUT_PLANNED:
+    # marker whose JSON body fails to parse — but if Suvvy emits the marker
+    # name slightly wrong (typo, different casing/spacing, wrong brackets:
+    # e.g. [[WORKOUT_PLAN: instead of [[WORKOUT_PLANNED:),
+    # _extract_json_markers never matches it at all and NOTHING gets logged,
+    # so a workout the agent clearly tried to save just silently vanishes.
+    # Deliberately loose match (just "workout", not the exact marker name)
+    # so a typo'd marker name still gets caught — verified against a
+    # WORKOUT_PLAN (missing "NED") typo, which an exact-string check misses
+    # entirely. False positives (AI casually using the English word) just
+    # cost a spurious log line; a real miss costs a silently lost workout.
+    # See ТЗ «пул правок» 2026-07-10, п.9.
+    if not all_workout_plans:
+        for raw_text in texts:
+            if "workout" in raw_text.lower():
+                logger.warning(
+                    "Suvvy webhook: chat_id=%s mentions 'workout' but no "
+                    "WORKOUT_PLANNED marker was extracted (malformed/mistyped "
+                    "marker syntax?) raw=%r",
+                    chat_id, raw_text[:2000],
+                )
+
     # ── Detect and handle [[RISK]] marker ─────────────────────────────────────
     risk_texts: list[str] = []
     safe_texts: list[str] = []
