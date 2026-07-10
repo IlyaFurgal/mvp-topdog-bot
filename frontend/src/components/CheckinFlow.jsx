@@ -65,7 +65,7 @@ const STEPS = {
 
   // Убраны: prev_comparison, satisfaction, pain (структурированный вопрос —
   // источник теперь диалог с ИИ). При plan_completed==='skipped' чекин
-  // заканчивается сразу после not_trained_reason (rpe/feeling_after/note
+  // заканчивается сразу после plan_completed (rpe/feeling_after/note
   // условны на !=='skipped', поэтому activeSteps естественно обрывается там).
   post_workout: [
     {
@@ -87,19 +87,6 @@ const STEPS = {
         { value: 'tired',      label: 'Устал(а)' },
         { value: 'discomfort', label: 'Дискомфорт в теле' },
         { value: 'other',      label: 'Другое', custom: true },
-      ],
-    },
-    {
-      key: 'not_trained_reason',
-      question: 'Почему не тренировался?',
-      questionF: 'Почему не тренировалась?',
-      condition: (data) => data.plan_completed === 'skipped',
-      options: [
-        { value: 'no_time',     label: 'Не хватило времени' },
-        { value: 'no_motiv',    label: 'Не было мотивации' },
-        { value: 'feeling_bad', label: 'Плохое самочувствие' },
-        { value: 'injury',      label: 'Получил травму',          labelF: 'Получила травму' },
-        { value: 'recovery',    label: 'Сегодня восстанавливаюсь' },
       ],
     },
     {
