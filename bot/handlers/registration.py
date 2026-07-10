@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -18,7 +19,11 @@ from bot.keyboards.inline import (
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
     kb_tone, kb_workout_days, kb_workout_hours,
 )
-from bot.funnel_content import PHONE_NOT_FOUND_TEXT, phone_not_found_kb, tariffs_kb
+from bot.funnel_content import (
+    PHONE_NOT_FOUND_TEXT, phone_not_found_kb, send_paid_plus_circle, send_paid_plus_welcome,
+    send_paid_pro_circle, send_paid_pro_step2, send_paid_pro_step3, send_paid_pro_welcome,
+    tariffs_kb,
+)
 from bot.services.push_media import send_push_video
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
@@ -280,6 +285,46 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
 # ── Проверка телефона по gc_subscriptions ─────────────────────────────────────
 
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> None:
+    """Fire-and-forget a background task, keeping a strong reference so it
+    isn't garbage-collected mid-flight (see api/routers/webhooks.py's
+    identical helper — same footgun, this is the bot-process counterpart
+    for the sign-in funnel below)."""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _run_plus_signin_funnel(bot, chat_id: int, name: str) -> None:
+    """Circle + welcome push for an existing free user whose phone check
+    just matched a PLUS GcSubscription — same tier-welcome funnel as a
+    fresh GC payment webhook (webhooks.py), just triggered from a
+    different entry point and using the already-live bot instance
+    instead of spinning up a throwaway one."""
+    try:
+        await send_paid_plus_circle(bot, chat_id)
+        await asyncio.sleep(10)
+        await send_paid_plus_welcome(bot, chat_id, name)
+    except Exception as exc:
+        logger.error("PLUS sign-in funnel failed for chat_id=%s: %s", chat_id, exc)
+
+
+async def _run_pro_signin_funnel(bot, chat_id: int, name: str) -> None:
+    try:
+        await send_paid_pro_circle(bot, chat_id)
+        await asyncio.sleep(10)
+        await send_paid_pro_welcome(bot, chat_id, name)
+        await asyncio.sleep(600)
+        await send_paid_pro_step2(bot, chat_id)
+        await asyncio.sleep(600)
+        await send_paid_pro_step3(bot, chat_id)
+    except Exception as exc:
+        logger.error("PRO sign-in funnel failed for chat_id=%s: %s", chat_id, exc)
+
+
 @router.message(RegistrationForm.phone_check, F.contact)
 async def contact_handler(message: Message, state: FSMContext) -> None:
     if message.contact.user_id != message.from_user.id:
@@ -297,6 +342,28 @@ async def contact_handler(message: Message, state: FSMContext) -> None:
         )
         return
 
+    await _process_phone_check(message, state, phone)
+
+
+@router.message(RegistrationForm.phone_check, F.text)
+async def manual_phone_handler(message: Message, state: FSMContext) -> None:
+    """Let the user type the number by hand instead of sharing a contact —
+    normalize_phone already tolerates 9xxxxxxxxx / +7.../ 7.../ 8... and
+    any spaces/dashes/parens, so this reuses it verbatim rather than
+    re-parsing. See ТЗ «пул правок», 2026-07-10."""
+    phone = normalize_phone(message.text)
+    if not phone:
+        await message.answer(
+            "Не удалось распознать номер. Напиши его цифрами (можно с +7, 8 или "
+            "9 в начале) или поделись контактом кнопкой ниже 👇",
+            reply_markup=request_contact_kb(),
+        )
+        return
+
+    await _process_phone_check(message, state, phone)
+
+
+async def _process_phone_check(message: Message, state: FSMContext, phone: str) -> None:
     await message.answer("Принял, проверяю номер…", reply_markup=ReplyKeyboardRemove())
 
     support_kb = InlineKeyboardMarkup(inline_keyboard=[[
@@ -357,16 +424,27 @@ async def contact_handler(message: Message, state: FSMContext) -> None:
             select(Profile).where(Profile.user_id == user.id)
         )
         has_profile = profile_res.scalar_one_or_none() is not None
+        tier = sub.tier.value
+        name = user.first_name or "друг"
 
     await state.clear()
 
     if has_profile:
-        # Существующий free-пользователь — показываем приложение
-        await message.answer(
-            "Доступ открыт! 🏆\n\n"
-            "Ты теперь резидент MVP by TopDog. Открывай приложение:",
-            reply_markup=_webapp_kb(),
-        )
+        # Существующий free-пользователь, подписка нашлась — та же
+        # tier-приветственная воронка (кружок + пуш), что и при живой
+        # оплате через GC webhook, вместо статичного "Доступ открыт!"
+        # (см. api/routers/webhooks.py's _run_plus/pro_payment_funnel).
+        await message.answer("Главное меню:", reply_markup=main_menu_kb())
+        if tier == "plus":
+            _spawn(_run_plus_signin_funnel(message.bot, message.chat.id, name))
+        elif tier == "pro":
+            _spawn(_run_pro_signin_funnel(message.bot, message.chat.id, name))
+        else:
+            await message.answer(
+                "Доступ открыт! 🏆\n\n"
+                "Ты теперь резидент MVP by TopDog. Открывай приложение:",
+                reply_markup=_webapp_kb(),
+            )
     else:
         # Новый пользователь — переходим к анкете
         await state.set_state(RegistrationForm.greeting)
@@ -867,8 +945,10 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
     ]])
     await send(welcome_text, reply_markup=welcome_kb)
 
-    # If no subscription — additionally show payment options
-    if not has_sub:
+    if has_sub:
+        await send("Главное меню:", reply_markup=main_menu_kb())
+    else:
+        # If no subscription — additionally show payment options
         await send(
             "Для доступа ко всем функциям оформи подписку:",
             reply_markup=tariffs_kb(target.from_user.id),

@@ -4,6 +4,7 @@ import communityImg from '../assets/2.png'
 import supportImg from '../assets/3.png'
 import clubHeading from '../assets/9.png'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
+import { openPaymentLink } from '../config/payments'
 import { useProfile } from '../context/ProfileContext'
 
 const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
@@ -45,6 +46,11 @@ function BackButton({ onBack }) {
 // «пул правок», 2026-07-10, п.17. Pro is unaffected, freemium (no sub)
 // never reaches this page in the first place (gated earlier by
 // SubscriptionWall).
+function handleUpgradeToPro() {
+  trackUpgradeIntent()
+  openPaymentLink(PRO_URL)
+}
+
 function ProUpsellStub({ title, onBack }) {
   return (
     <div className="page club-page">
@@ -54,16 +60,9 @@ function ProUpsellStub({ title, onBack }) {
         Доступно на тарифе PRO — закрытое сообщество резидентов, база знаний
         и участие в мероприятиях клуба.
       </p>
-      <a
-        href={PRO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="tracker-cta-btn skew-chip"
-        style={{ textDecoration: 'none' }}
-        onClick={() => trackUpgradeIntent()}
-      >
+      <button onClick={handleUpgradeToPro} className="tracker-cta-btn skew-chip">
         <span className="tracker-cta-btn__title">УЛУЧШИТЬ ДО PRO</span>
-      </a>
+      </button>
     </div>
   )
 }
