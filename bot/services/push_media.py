@@ -59,6 +59,36 @@ async def _probe_dimensions(path: Path) -> tuple[int, int] | None:
         return None
 
 
+async def _probe_video_info(path: Path) -> tuple[int, int, int] | None:
+    """width, height, duration_seconds — passed to bot.send_video() as
+    hints. Without them Telegram appears to fall back to a more
+    aggressive default transcode/quality profile on some clients,
+    especially mobile — see ТЗ «пул правок» 2026-07-10, п.4 ("видео в
+    пушах сильно сжимается на телефоне"). Duration comes from the
+    container (format=duration), not the video stream, since stream-level
+    duration isn't reliably populated for every container/codec combo."""
+    dims = await _probe_dimensions(path)
+    if not dims:
+        return None
+    width, height = dims
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "csv=s=x:p=0", str(path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            logger.warning("ffprobe duration failed for %s: %s", path, stderr.decode(errors="ignore")[:200])
+            return width, height, 0
+        duration = int(float(stdout.decode().strip()))
+        return width, height, duration
+    except Exception as exc:
+        logger.warning("ffprobe duration error for %s: %s", path, exc)
+        return width, height, 0
+
+
 async def _ensure_square(path: Path) -> tuple[Path, bool]:
     """video_note requires a square (1:1) video, or Telegram crops it badly
     on its own. Probes the file; if not square, center-crops via ffmpeg
@@ -125,7 +155,12 @@ async def send_push_video(bot: Bot, chat_id: int, key: str) -> bool:
                 message = await bot.send_video_note(chat_id=chat_id, video_note=FSInputFile(upload_path))
                 new_file_id = message.video_note.file_id
             else:
-                message = await bot.send_video(chat_id=chat_id, video=FSInputFile(upload_path))
+                info = await _probe_video_info(upload_path)
+                extra = (
+                    {"width": info[0], "height": info[1], "duration": info[2], "supports_streaming": True}
+                    if info else {}
+                )
+                message = await bot.send_video(chat_id=chat_id, video=FSInputFile(upload_path), **extra)
                 new_file_id = message.video.file_id
         finally:
             if is_temp:
