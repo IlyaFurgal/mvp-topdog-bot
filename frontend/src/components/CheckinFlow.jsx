@@ -70,7 +70,8 @@ const STEPS = {
   post_workout: [
     {
       key: 'plan_completed',
-      question: 'Выполнил(а) план тренировки?',
+      question: 'Выполнил план тренировки?',
+      questionF: 'Выполнила план тренировки?',
       options: [
         { value: 'full',    label: 'Выполнил полностью',  labelF: 'Выполнила полностью', sentiment: 'positive' },
         { value: 'partial', label: 'Выполнил частично',    labelF: 'Выполнила частично', sentiment: 'neutral' },
@@ -80,11 +81,12 @@ const STEPS = {
     },
     {
       key: 'not_completed_reason',
-      question: 'Почему не выполнил(а) план?',
+      question: 'Почему не выполнил план?',
+      questionF: 'Почему не выполнила план?',
       condition: (data) => data.plan_completed === 'partial' || data.plan_completed === 'custom',
       options: [
         { value: 'no_time',    label: 'Не хватило времени на все упражнения' },
-        { value: 'tired',      label: 'Устал(а)' },
+        { value: 'tired',      label: 'Устал', labelF: 'Устала' },
         { value: 'discomfort', label: 'Дискомфорт в теле' },
         { value: 'other',      label: 'Другое', custom: true },
       ],
