@@ -10,7 +10,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup,
-    Message, WebAppInfo,
+    Message, ReplyKeyboardRemove, WebAppInfo,
 )
 
 from bot.keyboards.inline import (
@@ -297,6 +297,8 @@ async def contact_handler(message: Message, state: FSMContext) -> None:
             reply_markup=request_contact_kb(),
         )
         return
+
+    await message.answer("Принял, проверяю номер…", reply_markup=ReplyKeyboardRemove())
 
     support_kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="💬 Поддержка", url=settings.SUPPORT_TG_URL)
