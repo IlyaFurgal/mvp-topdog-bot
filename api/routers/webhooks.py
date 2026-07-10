@@ -618,7 +618,21 @@ async def getcourse_webhook(
                 _apply_subscription_to_user(user, tier.value, "active", expires_at)
                 await session.commit()
                 logger.info("GC payment: updated User sub fields for tg_id=%s", effective_tg_id)
-            await _send_payment_welcome(effective_tg_id, tier.value)
+                name = user.first_name or "друг"
+                if tier.value == "plus":
+                    _spawn(_run_plus_payment_funnel(effective_tg_id, name))
+                elif tier.value == "pro":
+                    _spawn(_run_pro_payment_funnel(effective_tg_id, name))
+                else:
+                    # GcTier only has plus/pro today — kept as an explicit
+                    # fallback rather than silently dropping the push if a
+                    # third tier is ever added.
+                    await _send_payment_welcome(effective_tg_id, tier.value)
+            else:
+                # No local User row yet (tg_id known via GC only) — no
+                # first_name to personalise the funnel with, fall back to
+                # the generic welcome.
+                await _send_payment_welcome(effective_tg_id, tier.value)
 
     elif event == "refund":
         if sub:
@@ -642,6 +656,65 @@ async def getcourse_webhook(
         logger.warning("GC webhook: unknown event=%r", event)
 
     return {"status": "ok"}
+
+
+# ── Tier-specific payment funnels (PLUS/PRO) ────────────────────────────────
+# This module runs in the API process (FastAPI), which has no aiogram Bot
+# instance of its own (that lives in bot/main.py, a separate container/
+# process — see bot/main.py's `bot = Bot(...)`). funnel_content.py's send_*
+# functions need one, so each funnel run opens its own short-lived Bot via
+# `async with`, which closes its session when the chain finishes.
+#
+# Delays (10s / 10min) are done with asyncio.sleep inside a background
+# task rather than persistent APScheduler jobs — these are one-shot,
+# short (<= ~20 min total), per-payment-event sequences with no need to
+# survive a restart, per ТЗ «онбординг с проверкой телефона», 2026-07-10
+# section 6/4.2. (Contrast with the nonpayer dunning sequence in
+# bot/scheduler.py, whose 24h/3-day delays are far too long to trust to
+# an in-memory sleep and are instead backed by a DB row + polling job.)
+
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> None:
+    """Fire-and-forget a background task, keeping a strong reference so
+    it isn't garbage-collected mid-flight (an un-referenced asyncio task
+    can be GC'd before it finishes — a well-known footgun)."""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _run_plus_payment_funnel(chat_id: int, name: str) -> None:
+    from aiogram import Bot
+    from bot.funnel_content import send_paid_plus_circle, send_paid_plus_welcome
+
+    try:
+        async with Bot(token=settings.BOT_TOKEN) as bot:
+            await send_paid_plus_circle(bot, chat_id)
+            await asyncio.sleep(10)
+            await send_paid_plus_welcome(bot, chat_id, name)
+    except Exception as exc:
+        logger.error("PLUS payment funnel failed for chat_id=%s: %s", chat_id, exc)
+
+
+async def _run_pro_payment_funnel(chat_id: int, name: str) -> None:
+    from aiogram import Bot
+    from bot.funnel_content import (
+        send_paid_pro_circle, send_paid_pro_step2, send_paid_pro_step3, send_paid_pro_welcome,
+    )
+
+    try:
+        async with Bot(token=settings.BOT_TOKEN) as bot:
+            await send_paid_pro_circle(bot, chat_id)
+            await asyncio.sleep(10)
+            await send_paid_pro_welcome(bot, chat_id, name)
+            await asyncio.sleep(600)
+            await send_paid_pro_step2(bot, chat_id)
+            await asyncio.sleep(600)
+            await send_paid_pro_step3(bot, chat_id)
+    except Exception as exc:
+        logger.error("PRO payment funnel failed for chat_id=%s: %s", chat_id, exc)
 
 
 async def _send_payment_welcome(telegram_id: int, sub_type: str) -> None:

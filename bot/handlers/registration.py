@@ -18,7 +18,8 @@ from bot.keyboards.inline import (
     kb_lifestyle, kb_push_time, kb_sport, kb_start,
     kb_tone, kb_workout_days, kb_workout_hours,
 )
-from bot.handlers.menu import _plans_kb, _user_has_subscription, _webapp_kb
+from bot.funnel_content import PHONE_NOT_FOUND_TEXT, phone_not_found_kb, tariffs_kb
+from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
 from core.utils.phone import normalize_phone
 from bot.states import RegistrationForm
@@ -26,7 +27,7 @@ from core.config import settings
 from sqlalchemy import select
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
 from database.models import (
-    ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, Profile,
+    ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, NonpayerIntent, Profile,
     PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
 )
 from database.session import AsyncSessionLocal
@@ -238,13 +239,12 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             )
             if has_sub:
                 await message.answer(
-                    f"Добро пожаловать обратно, {name}! 👊\n"
-                    "Открой приложение 👇",
-                    reply_markup=_webapp_kb(),
+                    f"Добро пожаловать обратно, {name}.",
+                    reply_markup=_webapp_kb("▸ Открыть приложение"),
                 )
             else:
                 await message.answer(
-                    f"Добро пожаловать обратно, {name}! 👊",
+                    f"Добро пожаловать обратно, {name}.",
                     reply_markup=freemium_menu_kb(),
                 )
             return
@@ -257,8 +257,20 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
     await state.set_state(RegistrationForm.phone_check)
     await message.answer(
-        "Привет! 👊\n\n"
-        "Я твой ИИ-ассистент MVP by TopDog.\n\n"
+        "Добро пожаловать в MVP.\n\n"
+        "Это клуб, где тренировки, питание и восстановление собраны в одну "
+        "систему, а персональный AI-ассистент помогает следить за прогрессом и "
+        "не даёт сойти с дистанции.\n\n"
+        "Вот, что тебе будет доступно в клубе:\n\n"
+        "— AI-ассистент\n"
+        "Твой личный тренер, нутрициолог и контроль состояния.\n\n"
+        "— Комьюнити\n"
+        "Окружение с общими целями, челленджи с призами и поддержка кураторов.\n\n"
+        "— Топ-атлеты и специалисты\n"
+        "Прямой доступ к профессиональным спортсменам, бойцам TOP DOG, "
+        "экспертам по питанию, медицине и физ. подготовке.\n\n"
+        "— Тренировки и встречи\n"
+        "Мастер-классы, эфиры, нетворк, открытые тренировки и офлайн-движухи.\n\n"
         "Чтобы продолжить, подтверди номер телефона, который указывал при оплате — "
         "это займёт секунду 👇",
         reply_markup=request_contact_kb(),
@@ -297,15 +309,27 @@ async def contact_handler(message: Message, state: FSMContext) -> None:
         if sub is None:
             await state.clear()
             await message.answer(
-                "Оплата с этим номером не найдена.\n\n"
-                "Если ты уже оплатил — напиши в поддержку, разберёмся:",
-                reply_markup=support_kb,
+                PHONE_NOT_FOUND_TEXT,
+                reply_markup=phone_not_found_kb(message.from_user.id),
             )
-            await message.answer(
-                "Ещё не оплатил? Выбери тариф 👇",
-                reply_markup=_plans_kb(message.from_user.id),
-            )
-            await message.answer("Главное меню:", reply_markup=freemium_menu_kb())
+
+            # Kick off the 10min -> 24h -> 3d dunning sequence from this
+            # exact moment ("показали тарифы после неудачной проверки
+            # телефона" — ТЗ «воронка недоплативших», 2026-07-10). A
+            # user re-checking a still-unrecognised number restarts the
+            # clock, matching UpgradeIntent's own re-click behaviour.
+            user_for_intent = await get_user_by_telegram_id(session, message.from_user.id)
+            if user_for_intent:
+                intent = (await session.execute(
+                    select(NonpayerIntent).where(NonpayerIntent.user_id == user_for_intent.id)
+                )).scalar_one_or_none()
+                if intent:
+                    intent.clicked_at = datetime.now(timezone.utc)
+                    intent.remind_count = 0
+                    intent.reminded_at = None
+                else:
+                    session.add(NonpayerIntent(user_id=user_for_intent.id))
+                await session.commit()
             return
 
         if sub.telegram_id is not None and sub.telegram_id != message.from_user.id:
@@ -842,19 +866,9 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
 
     # If no subscription — additionally show payment options
     if not has_sub:
-        buttons = []
-        if settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO:
-            url = settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO
-            buttons.append([InlineKeyboardButton(text="Pro — от 2 990 ₽/мес", url=url)])
-        if settings.GETCOURSE_PLUS_URL or settings.GC_PAYMENT_URL_PLUS:
-            url = settings.GETCOURSE_PLUS_URL or settings.GC_PAYMENT_URL_PLUS
-            buttons.append([InlineKeyboardButton(text="Plus — от 990 ₽/мес", url=url)])
-        if not buttons:
-            buttons = [[InlineKeyboardButton(text="Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
-        pay_kb = InlineKeyboardMarkup(inline_keyboard=buttons)
         await send(
             "Для доступа ко всем функциям оформи подписку:",
-            reply_markup=pay_kb,
+            reply_markup=tariffs_kb(target.from_user.id),
         )
         await send(
             "После оплаты нажми /start — бот сразу покажет кнопку приложения.",

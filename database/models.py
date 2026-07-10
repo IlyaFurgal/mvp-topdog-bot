@@ -204,6 +204,22 @@ class UpgradeIntent(Base):
     remind_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
+class NonpayerIntent(Base):
+    """Tracks the moment tariffs were shown after a failed phone check
+    (registration.py contact_handler, sub is None) so a daily-ish job can
+    run the 10min -> 24h -> 3d dunning sequence (send_nonpayer_*) and
+    survive bot restarts — same shape/pattern as UpgradeIntent, just a
+    separate table since the step count/cadence differ. See ТЗ «онбординг
+    с проверкой телефона, воронка недоплативших», 2026-07-10."""
+    __tablename__ = "nonpayer_intents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, unique=True)
+    clicked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    remind_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
 class ConversationSummary(Base):
     __tablename__ = "conversation_summaries"
 

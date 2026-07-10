@@ -12,9 +12,11 @@ from sqlalchemy import and_, func, select, or_
 from api.deps import _is_eligible_for_pushes
 from api.routers.trackers import calculate_calorie_limit
 from api.services.getcourse import sync_progress_to_gc
+from bot.funnel_content import send_nonpayer_10min, send_nonpayer_24h, send_nonpayer_3d
 from core.config import settings
 from database.models import (
-    Checkin, CheckinType, Profile, Tracker, TrackerType, UpgradeIntent, User, Workout,
+    Checkin, CheckinType, NonpayerIntent, Profile, Tracker, TrackerType, UpgradeIntent,
+    User, Workout,
 )
 from database.session import AsyncSessionLocal
 
@@ -35,6 +37,19 @@ def _webapp_kb(text: str = "Открыть приложение") -> InlineKeybo
         InlineKeyboardButton(
             text=text,
             web_app=WebAppInfo(url=settings.mini_app_url_versioned),
+        )
+    ]])
+
+
+def _checkins_webapp_kb(text: str) -> InlineKeyboardMarkup:
+    """Same as _webapp_kb but deep-links straight into the checkins list
+    (ProfilePage's trackerViewOpen screen) instead of the app's home
+    screen. Used only by morning/evening/post-workout reminders — see ТЗ
+    «deep-link на раздел чекинов», 2026-07-10."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text=text,
+            web_app=WebAppInfo(url=f"{settings.mini_app_url_versioned}&section=checkins"),
         )
     ]])
 
@@ -296,7 +311,7 @@ async def check_reminders(bot: Bot) -> None:
                                 "Как ты себя чувствуешь? Поделись своими ощущениями в приложении.\n\n"
                                 "AI-ассистент учтёт это при формировании плана на день."
                             ),
-                            reply_markup=_webapp_kb("▸ ЗАПОЛНИТЬ"),
+                            reply_markup=_checkins_webapp_kb("▸ ЗАПОЛНИТЬ"),
                         )
                     _reminder_sent[key] = today
 
@@ -312,7 +327,7 @@ async def check_reminders(bot: Bot) -> None:
                             "Как прошёл твой день? Пройди вечерний чек-ап.\n\n"
                             "Это поможет в планировании твоего следующего дня."
                         ),
-                        reply_markup=_webapp_kb("▸ ЗАПОЛНИТЬ"),
+                        reply_markup=_checkins_webapp_kb("▸ ЗАПОЛНИТЬ"),
                     )
                     _reminder_sent[key] = today
 
@@ -388,7 +403,7 @@ async def check_reminders(bot: Bot) -> None:
                                     "Как прошла тренировка? "
                                     "Отметь, как всё прошло — это займёт минуту 💪"
                                 ),
-                                reply_markup=_webapp_kb(),
+                                reply_markup=_checkins_webapp_kb("Открыть приложение"),
                             )
                         _reminder_sent[key_tw] = today
 
@@ -548,6 +563,71 @@ async def check_upgrade_reminders(bot: Bot) -> None:
             logger.warning("Upgrade reminder failed for user %s: %s", user.telegram_id, exc)
 
 
+async def check_nonpayer_reminders(bot: Bot) -> None:
+    """
+    Every 5 minutes: send up to 3 dunning messages to users who saw the
+    tariffs after a failed phone check (registration.py contact_handler,
+    sub is None) but never paid. Same shape as check_upgrade_reminders,
+    just its own table (NonpayerIntent) since the step count/cadence
+    differ, and a tighter poll interval since the first step fires only
+    10 minutes after the click (a 6h poll like the upgrade job would miss
+    it by hours). See ТЗ «онбординг с проверкой телефона, воронка
+    недоплативших», 2026-07-10.
+      - Step 1: 10 min after tariffs shown (remind_count == 0)
+      - Step 2: 24h after step 1          (remind_count == 1)
+      - Step 3: 3 days after step 2       (remind_count == 2)
+    """
+    now = datetime.now(timezone.utc)
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(NonpayerIntent, User)
+            .join(User, NonpayerIntent.user_id == User.id)
+            .where(NonpayerIntent.remind_count < 3)
+        )
+        rows = result.all()
+
+    for intent, user in rows:
+        # Skip users who paid since (resolves the intent either way)
+        if user.subscription_active == "active" and user.subscription_type:
+            continue
+
+        try:
+            if intent.remind_count == 0:
+                delta = now - intent.clicked_at.replace(tzinfo=timezone.utc)
+                if delta < timedelta(minutes=10):
+                    continue
+                await send_nonpayer_10min(bot, user.telegram_id, user.telegram_id)
+
+            elif intent.remind_count == 1 and intent.reminded_at:
+                delta = now - intent.reminded_at.replace(tzinfo=timezone.utc)
+                if delta < timedelta(hours=24):
+                    continue
+                name = user.first_name or "друг"
+                await send_nonpayer_24h(bot, user.telegram_id, name)
+
+            elif intent.remind_count == 2 and intent.reminded_at:
+                delta = now - intent.reminded_at.replace(tzinfo=timezone.utc)
+                if delta < timedelta(days=3):
+                    continue
+                await send_nonpayer_3d(bot, user.telegram_id)
+
+            else:
+                continue
+
+            logger.info("Nonpayer reminder #%d sent to user %s", intent.remind_count + 1, user.telegram_id)
+
+            async with AsyncSessionLocal() as session:
+                fresh = await session.get(NonpayerIntent, intent.id)
+                if fresh:
+                    fresh.reminded_at = now
+                    fresh.remind_count += 1
+                    await session.commit()
+
+        except Exception as exc:
+            logger.warning("Nonpayer reminder failed for user %s: %s", user.telegram_id, exc)
+
+
 _GOAL_DISPLAY = {
     "weight_loss": "Похудение",
     "muscle_gain": "Набор мышц",
@@ -664,6 +744,12 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         CronTrigger(hour="*/6", minute=0, timezone=MOSCOW),
         args=[bot],
         id="upgrade_reminders",
+    )
+    scheduler.add_job(
+        check_nonpayer_reminders,
+        IntervalTrigger(minutes=5),
+        args=[bot],
+        id="nonpayer_reminders",
     )
 
     # Daily: subscription period-summary push (3 days before expiry) +

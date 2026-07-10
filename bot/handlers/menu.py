@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def _webapp_kb() -> InlineKeyboardMarkup:
+def _webapp_kb(text: str = "🚀 Открыть приложение") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
-            text="🚀 Открыть приложение",
+            text=text,
             web_app=WebAppInfo(url=settings.mini_app_url_versioned),
         )
     ]])

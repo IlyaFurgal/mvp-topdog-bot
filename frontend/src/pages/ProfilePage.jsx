@@ -669,6 +669,12 @@ export default function ProfilePage() {
   const [trackerViewOpen, setTrackerViewOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('section') === 'checkins') {
+      setTrackerViewOpen(true)
+    }
+  }, [])
+
   const [checkins, setCheckins] = useState({ morning: null, post_workout: null, evening: null })
   const [checkinsLoading, setCheckinsLoading] = useState(true)
   const [activeFlow, setActiveFlow] = useState(null)

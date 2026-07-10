@@ -6,13 +6,11 @@ Two sections:
   Выбрать тариф, Поддержка, FAQ). These are wired into bot/handlers/menu.py
   and live now.
 
-  FUNNEL — content for the payment/onboarding/dunning sequence (welcome
-  before payment, paid PLUS/PRO flows, non-payer reminders). These are
-  ready-to-call functions but are NOT wired into any trigger yet — the
-  timing logic (when exactly each step fires) is a separate task blocked
-  on the GC-status call with Lena, per Ilya's own instruction. Whoever
-  builds that scheduling should import send_* from here rather than
-  re-typing copy.
+  FUNNEL — content for the payment/onboarding/dunning sequence (paid
+  PLUS/PRO flows, non-payer reminders). Wired in: registration.py
+  (phone-not-found branch) and webhooks.py (GC payment webhook) call these
+  send_* functions on their respective triggers — see ТЗ «онбординг с
+  проверкой телефона, воронка недоплативших», 2026-07-10.
 
 Two spots are explicitly left as TODO placeholders per Ilya ("текст не
 готов — не сочинять"): the ПЛЮС→ПРО upgrade offer (25 min after PLUS
@@ -180,42 +178,32 @@ def faq_kb(tg_id: int | None = None) -> InlineKeyboardMarkup:
 
 # ══════════════════════════════════════════════════════════════════════════
 # FUNNEL — payment / onboarding / dunning sequence
-# NOT wired to any trigger yet. Timing logic is a separate, deferred task.
 # ══════════════════════════════════════════════════════════════════════════
 
-WELCOME_BEFORE_PAYMENT_TEXT = (
-    "{name}, добро пожаловать в MVP.\n\n"
-    "Это клуб, где тренировки, питание и восстановление собраны в одну "
-    "систему, а персональный AI-ассистент помогает следить за прогрессом и "
-    "не даёт сойти с дистанции.\n\n"
-    "Вот, что тебе будет доступно в клубе:\n\n"
-    "— AI-ассистент\n"
-    "Твой личный тренер, нутрициолог и контроль состояния.\n\n"
-    "— Комьюнити\n"
-    "Окружение с общими целями, челленджи с призами и поддержка кураторов.\n\n"
-    "— Топ-атлеты и специалисты\n"
-    "Прямой доступ к профессиональным спортсменам, бойцам TOP DOG, "
-    "экспертам по питанию, медицине и физ. подготовке.\n\n"
-    "— Тренировки и встречи\n"
-    "Мастер-классы, эфиры, нетворк, открытые тренировки и офлайн-движухи.\n\n"
-    "* MVP (Most Valuable Player) — самый ценный игрок: тот, кто решает "
-    "исход игры. В клубе главный игрок — ты."
+# The original standalone "welcome before payment" push (club pitch + a
+# "Выбрать тариф" button, fired straight on /start) was replaced per ТЗ
+# «онбординг с проверкой телефона» (2026-07-10): the pitch is now merged
+# with the phone-number request and lives inline in
+# bot/handlers/registration.py's cmd_start (no {name} yet at that step —
+# it isn't known until after the name-input step later in registration).
+# send_welcome_before_payment() / welcome_before_payment_kb() were removed
+# as unused wrappers.
+
+PHONE_NOT_FOUND_TEXT = (
+    "Оплата с этим номером не найдена. Если уже оплатил — напиши в поддержку, разберёмся.\n\n"
+    "Ждём тебя в клубе. Стань MVP."
 )
 
 
-def welcome_before_payment_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="➤ Выбрать тариф", callback_data="show_tariffs")
-    ]])
-
-
-async def send_welcome_before_payment(bot: Bot, chat_id: int, name: str) -> None:
-    await send_push_video(bot, chat_id, "welcome_before_payment")
-    await bot.send_message(
-        chat_id,
-        WELCOME_BEFORE_PAYMENT_TEXT.format(name=name),
-        reply_markup=welcome_before_payment_kb(),
+def phone_not_found_kb(tg_id: int | None = None) -> InlineKeyboardMarkup:
+    """Tariffs (via tariffs_kb — the single source of truth for payment
+    links) plus a support row, for the "phone not found" branch that also
+    kicks off the nonpayer dunning sequence."""
+    kb = tariffs_kb(tg_id)
+    kb.inline_keyboard.append(
+        [InlineKeyboardButton(text="📩 Поддержка", url=settings.SUPPORT_TG_URL)]
     )
+    return kb
 
 
 # ── Оплатил ПЛЮС ─────────────────────────────────────────────────────────
@@ -226,7 +214,7 @@ async def send_paid_plus_circle(bot: Bot, chat_id: int) -> None:
 
 
 PAID_PLUS_WELCOME_TEXT = (
-    "{name}, теперь ты в MVP 🏠\n\n"
+    "{name}, теперь ты в MVP 🙌🏼\n\n"
     "Я твой персональный AI-ассистент.\n\n"
     "Осознанный подход начинается с данных. Настроим твой профиль чтобы "
     "начать твой рост."
@@ -274,7 +262,7 @@ async def send_paid_pro_circle(bot: Bot, chat_id: int) -> None:
 
 
 PAID_PRO_WELCOME_TEXT = (
-    "{name}, теперь ты в MVP 🏠\n\n"
+    "{name}, теперь ты в MVP 🙌🏼\n\n"
     "Я твой персональный AI-ассистент.\n\n"
     "Осознанный подход начинается здесь. Вот что тебе нужно сделать:\n"
     "Шаг 1. Настрой профиль, чтобы пользоваться AI-ассистентом\n"

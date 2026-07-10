@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import client, { setToken } from './api/client'
 import { getLocalUtcStr } from './utils/timezone'
 import TopNav from './components/TopNav'
@@ -133,6 +133,7 @@ function SelectTimezone({ tg }) {
 
 function AppContent() {
   const { subscriptionType, profileLoading } = useProfile()
+  const location = useLocation()
 
   if (!SKIP_AUTH && !profileLoading && subscriptionType === null) {
     return <LandingPage />
@@ -152,7 +153,7 @@ function AppContent() {
             }}>Загрузка…</div>
           }>
             <Routes>
-              <Route path="/" element={<Navigate to="/profile" replace />} />
+              <Route path="/" element={<Navigate to={{ pathname: "/profile", search: location.search }} replace />} />
               <Route path="/ai"        element={<AiPage />} />
               <Route path="/profile"   element={<ProfilePage />} />
               <Route path="/club"      element={<ClubPage />} />
