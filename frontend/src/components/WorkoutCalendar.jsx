@@ -264,9 +264,8 @@ export default function WorkoutCalendar() {
         </div>
       )}
 
-      {modalOpen && categories.length > 0 && (
+      {modalOpen && (
         <WorkoutModal
-          categories={categories}
           editWorkout={editWorkout}
           initialDate={selectedKey}
           onClose={closeModal}

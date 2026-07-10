@@ -32,6 +32,7 @@ class WorkoutCreate(BaseModel):
     duration_min: Optional[int] = None
     note: Optional[str] = None
     entries: list[EntryIn] = []
+    planned_time: Optional[str] = None   # "HH:MM"
 
 
 class WorkoutUpdate(BaseModel):
@@ -48,6 +49,12 @@ class CustomItemCreate(BaseModel):
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _validate_planned_time(value: str) -> None:
+    parts = value.split(":")
+    if len(parts) != 2 or not (parts[0].isdigit() and parts[1].isdigit()):
+        raise HTTPException(status_code=422, detail="planned_time must be HH:MM")
+
 
 def _entry_dict(e: WorkoutEntry) -> dict:
     return {
@@ -178,12 +185,16 @@ async def create_workout(
         if not cat:
             raise HTTPException(status_code=404, detail="Category not found")
 
+    if body.planned_time is not None:
+        _validate_planned_time(body.planned_time)
+
     workout = Workout(
         user_id=user.id,
         date=body.date,
         category_id=body.category_id,
         duration_min=body.duration_min,
         note=body.note,
+        planned_time=body.planned_time,
     )
     session.add(workout)
     await session.flush()
@@ -263,9 +274,7 @@ async def update_workout(
     if body.note is not None:
         w.note = body.note
     if body.planned_time is not None:
-        parts = body.planned_time.split(":")
-        if len(parts) != 2 or not (parts[0].isdigit() and parts[1].isdigit()):
-            raise HTTPException(status_code=422, detail="planned_time must be HH:MM")
+        _validate_planned_time(body.planned_time)
         w.planned_time = body.planned_time
 
     if body.entries is not None:
