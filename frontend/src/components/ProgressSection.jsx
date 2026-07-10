@@ -474,7 +474,10 @@ export default function ProgressSection({ refreshKey }) {
                     tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
-                    domain={[0, 12]}
+                    domain={[
+                      (dataMin) => Math.max(0, Math.floor(Math.min(dataMin, 8) - 1)),
+                      (dataMax) => Math.ceil(Math.max(dataMax, 8) + 1),
+                    ]}
                     tick={AXIS_TICK}
                     width={30}
                     axisLine={{ stroke: CHART_GREEN }}
