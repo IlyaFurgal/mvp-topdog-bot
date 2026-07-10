@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
-import { trackUpgradeIntent } from '../api/trackUpgrade'
 import myDataHeading from '../assets/8.png'
 import profileHeading from '../assets/7.png'
 import progressHeading from '../assets/12.png'
@@ -79,8 +78,6 @@ for (let h = 18; h <= 23; h++) {
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:00`)
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
 }
-
-const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
 // ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
 
@@ -662,7 +659,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const { profile, subscriptionType, refreshProfile } = useProfile()
+  const { profile, refreshProfile } = useProfile()
   const [editOpen, setEditOpen] = useState(false)
   const [editFocusField, setEditFocusField] = useState(null)
   const [myDataOpen, setMyDataOpen] = useState(false)
@@ -761,19 +758,6 @@ export default function ProfilePage() {
       <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img screen-title-img--hero" />
 
       <MyDataCard onEditClick={() => setMyDataOpen(true)} onDataChanged={() => setDataVersion((v) => v + 1)} />
-
-      {subscriptionType === 'plus' && (
-        <a
-          href={PRO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-accent clip-skew"
-          style={{ textDecoration: 'none', textAlign: 'center' }}
-          onClick={() => trackUpgradeIntent()}
-        >
-          УЛУЧШИТЬ ДО PRO
-        </a>
-      )}
 
       {!checkinsLoading && (
         <button

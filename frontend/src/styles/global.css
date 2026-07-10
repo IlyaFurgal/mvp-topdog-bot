@@ -2111,6 +2111,19 @@ html, body {
   justify-content: center;
   flex-shrink: 0;
   opacity: 0.8;
+  /* A hard long-press (as when using the app in the gym) reads to the
+     browser as a text-selection / copy gesture, which steals the press
+     from the recording handler and pops a selection menu. Lock all of
+     that down on the button itself. */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ai-mic svg {
+  pointer-events: none;
 }
 
 .ai-mic:disabled {

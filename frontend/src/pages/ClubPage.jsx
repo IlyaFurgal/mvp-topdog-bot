@@ -3,6 +3,10 @@ import knowledgeImg from '../assets/1.png'
 import communityImg from '../assets/2.png'
 import supportImg from '../assets/3.png'
 import clubHeading from '../assets/9.png'
+import { trackUpgradeIntent } from '../api/trackUpgrade'
+import { useProfile } from '../context/ProfileContext'
+
+const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
 
 function CardArt({ img }) {
   return (
@@ -36,6 +40,34 @@ function BackButton({ onBack }) {
   )
 }
 
+// Restores the Plus-tier paywall stub that used to gate База знаний /
+// Комьюнити (dropped in an earlier Club-section redesign) — see ТЗ
+// «пул правок», 2026-07-10, п.17. Pro is unaffected, freemium (no sub)
+// never reaches this page in the first place (gated earlier by
+// SubscriptionWall).
+function ProUpsellStub({ title, onBack }) {
+  return (
+    <div className="page club-page">
+      <BackButton onBack={onBack} />
+      <h1 className="page-title page-title--lime">{title}</h1>
+      <p className="club-community-hint">
+        Доступно на тарифе PRO — закрытое сообщество резидентов, база знаний
+        и участие в мероприятиях клуба.
+      </p>
+      <a
+        href={PRO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tracker-cta-btn skew-chip"
+        style={{ textDecoration: 'none' }}
+        onClick={() => trackUpgradeIntent()}
+      >
+        <span className="tracker-cta-btn__title">УЛУЧШИТЬ ДО PRO</span>
+      </a>
+    </div>
+  )
+}
+
 function CommunityView({ onBack }) {
   return (
     <div className="page club-page">
@@ -65,7 +97,15 @@ function CommunityView({ onBack }) {
 
 export default function ClubPage() {
   const [view, setView] = useState('hub')
+  const { subscriptionType } = useProfile()
+  const isPlus = subscriptionType === 'plus'
 
+  if (view === 'knowledge-locked') {
+    return <ProUpsellStub title="БАЗА ЗНАНИЙ" onBack={() => setView('hub')} />
+  }
+  if (view === 'community-locked') {
+    return <ProUpsellStub title="КОМЬЮНИТИ" onBack={() => setView('hub')} />
+  }
   if (view === 'community') {
     return <CommunityView onBack={() => setView('hub')} />
   }
@@ -74,18 +114,26 @@ export default function ClubPage() {
     <div className="page club-page">
       <img src={clubHeading} alt="КЛУБ" className="screen-title-img" />
 
-      <a
-        className="club-card"
-        href={KNOWLEDGE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <span className="club-card__title">БАЗА ЗНАНИЙ</span>
-        <span className="club-card__sub">ПОЛЕЗНЫЕ МАТЕРИАЛЫ</span>
-        <CardArt img={knowledgeImg} />
-      </a>
+      {isPlus ? (
+        <button className="club-card" onClick={() => setView('knowledge-locked')}>
+          <span className="club-card__title">БАЗА ЗНАНИЙ</span>
+          <span className="club-card__sub">ПОЛЕЗНЫЕ МАТЕРИАЛЫ</span>
+          <CardArt img={knowledgeImg} />
+        </button>
+      ) : (
+        <a
+          className="club-card"
+          href={KNOWLEDGE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="club-card__title">БАЗА ЗНАНИЙ</span>
+          <span className="club-card__sub">ПОЛЕЗНЫЕ МАТЕРИАЛЫ</span>
+          <CardArt img={knowledgeImg} />
+        </a>
+      )}
 
-      <button className="club-card" onClick={() => setView('community')}>
+      <button className="club-card" onClick={() => setView(isPlus ? 'community-locked' : 'community')}>
         <span className="club-card__title">КОМЬЮНИТИ</span>
         <span className="club-card__sub">ОБЩЕНИЕ И ВСТРЕЧИ</span>
         <CardArt img={communityImg} />

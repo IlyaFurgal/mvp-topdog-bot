@@ -164,14 +164,19 @@ function WaterInput({ amount, onChange, total }) {
 
   function addPreset(ml) {
     const current = parseInt(draft, 10) || 0
-    const newVal = current + ml
+    // Today's total (already-saved + this delta) can't go below 0.
+    const newVal = Math.max(current + ml, -total)
     setDraft(String(newVal))
     onChange(newVal)
   }
 
   function handleBlur() {
     const n = parseFloat(draft)
-    if (!isNaN(n)) onChange(Math.round(unit === 'l' ? n * 1000 : n))
+    if (!isNaN(n)) {
+      const ml = Math.max(Math.round(unit === 'l' ? n * 1000 : n), -total)
+      onChange(ml)
+      setDraft(String(unit === 'l' ? ml / 1000 : ml))
+    }
     else setDraft('')
   }
 
@@ -199,7 +204,7 @@ function WaterInput({ amount, onChange, total }) {
       </div>
       <div className="water-quick">
         {[100, 250, 500].map((ml) => (
-          <button key={ml} className="water-btn water-btn--minus" onClick={() => addPreset(-ml)}>
+          <button key={ml} className="water-btn water-btn--minus" onClick={() => addPreset(-ml)} disabled={displayTotal <= 0}>
             −{ml} мл
           </button>
         ))}
@@ -240,14 +245,19 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
 
   function addPreset(kcal) {
     const current = parseInt(draft, 10) || 0
-    const newVal = current + kcal
+    // Today's total (already-saved + this delta) can't go below 0.
+    const newVal = Math.max(current + kcal, -total)
     setDraft(String(newVal))
     onChange(newVal)
   }
 
   function handleBlur() {
     const n = parseInt(draft, 10)
-    if (!isNaN(n)) onChange(n)
+    if (!isNaN(n)) {
+      const kcal = Math.max(n, -total)
+      onChange(kcal)
+      setDraft(String(kcal))
+    }
     else setDraft('')
   }
 
@@ -291,7 +301,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
       </div>
       <div className="water-quick">
         {[100, 300, 500].map((kcal) => (
-          <button key={kcal} className="water-btn water-btn--minus" onClick={() => addPreset(-kcal)}>
+          <button key={kcal} className="water-btn water-btn--minus" onClick={() => addPreset(-kcal)} disabled={displayTotal <= 0}>
             −{kcal}
           </button>
         ))}

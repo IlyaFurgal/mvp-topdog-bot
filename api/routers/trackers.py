@@ -122,6 +122,23 @@ async def _calories_today_sum(session, user_id: int) -> float:
     return float(val) if val is not None else 0.0
 
 
+_FLOOR_AT_ZERO_TYPES = {TrackerType.water, TrackerType.calories}
+
+
+async def _tracker_type_today_sum(session, user_id: int, tracker_type: TrackerType) -> float:
+    today = _today_start()
+    val = await session.scalar(
+        select(func.sum(Tracker.value)).where(
+            and_(
+                Tracker.user_id == user_id,
+                Tracker.type == tracker_type,
+                Tracker.created_at >= today,
+            )
+        )
+    )
+    return float(val) if val is not None else 0.0
+
+
 async def _maybe_push_calorie_over(session, user, profile, prev_sum: float, new_sum: float) -> None:
     """Шлёт пуш только если ИМЕННО эта запись пересекла дневной лимит."""
     if not _is_eligible_for_pushes(user):
@@ -141,10 +158,22 @@ async def create_tracker(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    tracker_type = TrackerType(body.type)
+    value = body.value
+
+    # Water/calories are additive (each row is a delta, day total = sum) —
+    # a negative delta from the "minus" quick-add buttons must not push
+    # the day's running total below 0. Frontend already clamps this; this
+    # is the server-side backstop for direct API calls.
+    if tracker_type in _FLOOR_AT_ZERO_TYPES and value < 0:
+        existing_sum = await _tracker_type_today_sum(session, user.id, tracker_type)
+        if existing_sum + value < 0:
+            value = -existing_sum
+
     tracker = Tracker(
         user_id=user.id,
-        type=TrackerType(body.type),
-        value=body.value,
+        type=tracker_type,
+        value=value,
         unit=body.unit,
         meal_type=body.meal_type,
         label=body.label,
@@ -157,9 +186,9 @@ async def create_tracker(
     await session.commit()
     await session.refresh(tracker)
 
-    if TrackerType(body.type) == TrackerType.calories:
+    if tracker_type == TrackerType.calories:
         new_sum = await _calories_today_sum(session, user.id)
-        prev_sum = new_sum - float(body.value)
+        prev_sum = new_sum - float(value)
         prof = await session.scalar(select(Profile).where(Profile.user_id == user.id))
         await _maybe_push_calorie_over(session, user, prof, prev_sum, new_sum)
 
