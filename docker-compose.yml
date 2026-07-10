@@ -30,6 +30,7 @@ services:
     volumes:
       - ./database/migrations:/app/database/migrations
       - ./uploads:/app/uploads
+      - ./bot/media:/app/bot/media
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +45,7 @@ services:
     env_file: .env
     environment:
       # Override DATABASE_URL: bot uses host network so db resolves as 127.0.0.1
-      DATABASE_URL: postgresql+asyncpg://topdog:topdog123@127.0.0.1:5432/topdog
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/topdog
     volumes:
       # Push videos (bot/media_registry.py) — mounted so they survive a
       # --no-cache rebuild instead of only living in the image layer.
