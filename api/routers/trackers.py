@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.bot_sender import send_message, webapp_kb
 from api.deps import _is_eligible_for_pushes, get_current_user
-from database.models import Profile, Tracker, TrackerType, User
+from database.models import Checkin, CheckinType, Profile, Tracker, TrackerType, User
 from database.session import get_session
 
 router = APIRouter(prefix="/trackers", tags=["trackers"])
@@ -56,14 +56,63 @@ class CaloriesTodayUpdate(BaseModel):
         return v
 
 
-def calculate_calorie_limit(profile, current_weight: float | None = None) -> int:
+# ── Норма калорий v2 — база (BMR × NEAT) + добавка за тренировку по RPE ──────
+# Заменяет старую схему на классических коэффициентах активности (1.375-1.9,
+# уже включавших тренировки "в среднем" — статичная надбавка каждый день,
+# тренировался или нет, ошибка 400-700 ккал/сутки). Теперь: база не содержит
+# тренировок вообще (NEAT = только бытовая активность), расход тренировки
+# добавляется по факту зафиксированного чекина с RPE. См. ТЗ «новая логика
+# расчёта калорий», 2026-07-10. Шаг 5 (еженедельная автокалибровка по тренду
+# веса, adjustment_kcal) сознательно не реализован в этой итерации — шаги
+# 1-4 самодостаточны, автокалибровка per ТЗ может ехать отдельным релизом.
+
+NEAT_COEFFICIENTS: dict[str, float] = {
+    "sedentary":    1.2,    # офис/удалёнка, большую часть дня сижу
+    "moderate":     1.325,  # часть дня на ногах
+    "active":       1.425,  # много хожу, подвижная работа
+    "very_active":  1.525,  # физический труд, весь день в движении
+}
+
+# RPE (из чекина после тренировки) -> MET, сетка завизирована методологом.
+# (верхняя_граница_RPE, MET) — первая подходящая по возрастанию.
+_RPE_MET_TABLE: list[tuple[int, float]] = [
+    (2, 3.0),
+    (4, 3.75),
+    (6, 5.0),
+    (8, 6.0),
+    (10, 8.0),
+]
+
+# Чекин после тренировки не спрашивает длительность — фиксированный час на
+# тренировку (ТЗ допускает дефолт 60 мин при отсутствии поля).
+_DEFAULT_TRAINING_HOURS = 1.0
+
+_TRAINING_ADDITION_CAP_PCT = 0.40  # кап добавки: не более 40% от базовой цели дня
+
+
+def _rpe_to_met(rpe: int) -> float:
+    for upper, met in _RPE_MET_TABLE:
+        if rpe <= upper:
+            return met
+    return _RPE_MET_TABLE[-1][1]
+
+
+def calculate_base_calorie_target(profile, current_weight: float | None = None) -> int:
+    """BMR × NEAT, скорректировано по цели, с полом безопасности (не ниже
+    BMR). Без тренировочной добавки — используй calculate_calorie_limit для
+    итоговой цели дня."""
     if not profile:
         return 2500
     weight = current_weight or profile.weight
     height = profile.height
     birth_date = profile.birth_date
-    if not weight or not height or not birth_date:
+    if not weight or not birth_date:
         return 2500
+
+    if not height:
+        # Правило Б.6: без роста BMR не посчитать — грубая оценка вместо
+        # выдумывания роста, помечается как "оценка" на стороне интерфейса.
+        return round(weight * 30)
 
     today = date.today()
     age = today.year - birth_date.year - (
@@ -78,24 +127,64 @@ def calculate_calorie_limit(profile, current_weight: float | None = None) -> int
     else:
         bmr = 10 * weight + 6.25 * height - 5 * age - 78
 
-    activity_coefs = {
-        "sedentary": 1.2,
-        "light": 1.375,
-        "moderate": 1.55,
-        "active": 1.725,
-        "very_active": 1.9,
-    }
-    activity = profile.activity_level.value if profile.activity_level else "moderate"
-    tdee = bmr * activity_coefs.get(activity, 1.55)
+    neat = profile.neat_level.value if profile.neat_level else "moderate"
+    base = bmr * NEAT_COEFFICIENTS.get(neat, NEAT_COEFFICIENTS["moderate"])
 
     goal = profile.goal.value if profile.goal else None
     goals = profile.goals or []
     if goal == "weight_loss" or "weight_loss" in goals:
-        tdee *= 0.85
+        target = base * 0.85   # -15%, середина диапазона -10..-20%
     elif goal == "muscle_gain" or "muscle_gain" in goals:
-        tdee *= 1.12
+        target = base * 1.12   # +12%, середина диапазона +10..+15%
+    else:
+        target = base
 
-    return round(tdee)
+    target = max(target, bmr)  # пол безопасности — никогда не ниже BMR
+    return round(target)
+
+
+async def _todays_training_addition(session, user_id: int, weight_kg: float, base_target: int) -> int:
+    """Сумма добавок за все зафиксированные сегодня post_workout чекины с
+    RPE, конвертированные в MET × вес × 1ч, капнутая на 40% базовой цели
+    дня. Правка тренировки задним числом закрытые дни не пересчитывает —
+    добавка считается только для сегодняшних чекинов на момент запроса."""
+    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    rows = (await session.execute(
+        select(Checkin.data).where(
+            and_(
+                Checkin.user_id == user_id,
+                Checkin.type == CheckinType.post_workout,
+                Checkin.created_at >= today_start,
+            )
+        )
+    )).scalars().all()
+
+    addition = 0.0
+    for data in rows:
+        rpe = data.get("rpe") if isinstance(data, dict) else None
+        if isinstance(rpe, (int, float)) and 1 <= rpe <= 10:
+            addition += _rpe_to_met(int(rpe)) * weight_kg * _DEFAULT_TRAINING_HOURS
+
+    cap = base_target * _TRAINING_ADDITION_CAP_PCT
+    return round(min(addition, cap))
+
+
+async def calculate_calorie_limit(
+    session,
+    user_id: int,
+    profile,
+    current_weight: float | None = None,
+) -> int:
+    """Итоговая цель калорий на сегодня: база (BMR × NEAT, скорректированная
+    по цели) + добавка за зафиксированные сегодня тренировки по RPE."""
+    base_target = calculate_base_calorie_target(profile, current_weight)
+    if not profile:
+        return base_target
+    weight = current_weight or profile.weight
+    if not weight:
+        return base_target
+    addition = await _todays_training_addition(session, user_id, weight, base_target)
+    return base_target + addition
 
 
 def _today_start() -> datetime:
@@ -143,7 +232,7 @@ async def _maybe_push_calorie_over(session, user, profile, prev_sum: float, new_
     """Шлёт пуш только если ИМЕННО эта запись пересекла дневной лимит."""
     if not _is_eligible_for_pushes(user):
         return
-    limit = calculate_calorie_limit(profile)
+    limit = await calculate_calorie_limit(session, user.id, profile)
     if limit <= 0:
         return
     if prev_sum <= limit < new_sum:
@@ -392,7 +481,7 @@ async def get_today_trackers(
             current_weight = latest_w.value
             out["weight"] = {"value": latest_w.value, "unit": latest_w.unit, "id": latest_w.id}
 
-    out["calorie_limit"] = calculate_calorie_limit(profile, current_weight=current_weight)
+    out["calorie_limit"] = await calculate_calorie_limit(session, user.id, profile, current_weight=current_weight)
     return out
 
 
@@ -519,7 +608,7 @@ async def get_tracker_stats(
         cal_stat = {
             "today": round(today_cal),
             "avg_7days": avg7_cal,
-            "goal": calculate_calorie_limit(profile, current_weight=latest_weight_val),
+            "goal": await calculate_calorie_limit(session, user.id, profile, current_weight=latest_weight_val),
         }
 
     return {"weight": weight_stat, "water": water_stat, "sleep": sleep_stat, "calories": cal_stat}

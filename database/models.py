@@ -44,6 +44,18 @@ class ActivityLevel(str, enum.Enum):
     very_active = "very_active"
 
 
+class NeatLevel(str, enum.Enum):
+    """Дневная активность вне тренировок (non-exercise activity), заменяет
+    activity_level в расчёте нормы калорий — см. ТЗ «новая логика расчёта
+    калорий», 2026-07-10. activity_level больше не используется в формуле
+    (был производной от частоты тренировок — двойной учёт нагрузки), но
+    колонка/данные оставлены как есть, не удаляются."""
+    sedentary = "sedentary"       # Сидячая — 1.2
+    moderate = "moderate"         # Умеренная — 1.325
+    active = "active"             # Активная — 1.425
+    very_active = "very_active"   # Очень активная — 1.525
+
+
 class FitnessLevel(str, enum.Enum):
     beginner = "beginner"
     intermediate = "intermediate"
@@ -124,6 +136,7 @@ class Profile(Base):
     goal: Mapped[Goal | None] = mapped_column(Enum(Goal))
     sport_type: Mapped[str | None] = mapped_column(String(128))
     activity_level: Mapped[ActivityLevel | None] = mapped_column(Enum(ActivityLevel))
+    neat_level: Mapped[NeatLevel | None] = mapped_column(Enum(NeatLevel))
     fitness_level: Mapped[FitnessLevel | None] = mapped_column(Enum(FitnessLevel))
     workout_days_per_week: Mapped[int | None] = mapped_column(Integer)
     workout_hours_per_day: Mapped[int | None] = mapped_column(Integer)  # только для продвинутых

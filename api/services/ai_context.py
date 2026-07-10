@@ -14,6 +14,12 @@ Placeholders returned by build_ai_context():
     tracker_sleep          — "7 ч"          | ""
     tracker_water_today    — "1.5 л"        | ""   (today's sum)
     tracker_calories_today — "1800 ккал"    | ""   (today's sum)
+    calorie_goal_today     — "2571"                (today's target: BMR × NEAT,
+                                                     goal-adjusted, + RPE training
+                                                     addition if a workout was
+                                                     logged today — see ТЗ «новая
+                                                     логика расчёта калорий»,
+                                                     2026-07-10)
 
   Weekly progress:
     progress_week  — "дисциплина 75%, 6 тренировок за неделю" | ""
@@ -42,6 +48,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.routers.trackers import calculate_calorie_limit
 from database.models import (
     Checkin, CheckinType, ConversationSummary,
     HealthMetrics, Profile, Tracker, TrackerType, User,
@@ -496,6 +503,11 @@ async def build_ai_context(session: AsyncSession, user: User) -> dict:
     }
 
     placeholders.update(await _tracker_placeholders(session, user.id))
+    # Актуальная цель калорий на сегодня (база + добавка за тренировку по
+    # RPE) — чтобы советы нутрициолога совпадали с цифрой на ринге в
+    # приложении, а не с классическими коэффициентами. См. ТЗ «новая
+    # логика расчёта калорий», 2026-07-10.
+    placeholders["calorie_goal_today"] = str(await calculate_calorie_limit(session, user.id, profile))
     placeholders["progress_week"]   = await _weekly_progress_str(session, user.id)
     placeholders["dialog_summary"]  = await _dialog_summary_str(session, user.id)
     placeholders["workouts_month"]  = await _workouts_month_str(session, user.id)

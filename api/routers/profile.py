@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
-from database.models import FitnessLevel, Profile, Tone, Tracker, TrackerType, UpgradeIntent, User
+from database.models import FitnessLevel, NeatLevel, Profile, Tone, Tracker, TrackerType, UpgradeIntent, User
 from database.session import get_session
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -37,6 +37,7 @@ async def get_my_profile(
         "goal":                 profile.goal.value if profile and profile.goal else None,
         "goals":                goals,
         "fitness_level":        profile.fitness_level.value if profile and profile.fitness_level else None,
+        "neat_level":           profile.neat_level.value if profile and profile.neat_level else None,
         "sport_type":           profile.sport_type if profile else None,
         "timezone":             profile.timezone if profile else None,
         "push_time":            profile.push_time if profile else None,
@@ -64,6 +65,7 @@ class ProfileUpdate(BaseModel):
     tone:                   Optional[str]       = None   # "soft" | "aggressive"
     goals:                  Optional[list[str]] = None
     fitness_level:          Optional[str]       = None
+    neat_level:             Optional[str]       = None   # "sedentary"|"moderate"|"active"|"very_active"
     sport_type:             Optional[str]       = None
     push_time:              Optional[str]       = None   # "HH:MM"
     timezone:               Optional[str]       = None
@@ -110,6 +112,12 @@ async def update_my_profile(
             profile.fitness_level = FitnessLevel(body.fitness_level)
         except ValueError:
             raise HTTPException(status_code=422, detail=f"Invalid fitness_level: {body.fitness_level}")
+
+    if body.neat_level is not None:
+        try:
+            profile.neat_level = NeatLevel(body.neat_level)
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid neat_level: {body.neat_level}")
 
     if body.sport_type is not None:
         profile.sport_type = body.sport_type

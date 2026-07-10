@@ -37,6 +37,13 @@ const FITNESS_LABELS_PLAIN = {
   advanced: 'Продвинутый',
 }
 
+const NEAT_OPTIONS = [
+  ['sedentary',    'Сидячая — офис/удалёнка'],
+  ['moderate',     'Умеренная — часть дня на ногах'],
+  ['active',       'Активная — много хожу'],
+  ['very_active',  'Очень активная — физический труд'],
+]
+
 const TIMEZONE_OPTIONS = [
   ['UTC-12', 'UTC-12 — Бейкер'],
   ['UTC-11', 'UTC-11 — Самоа'],
@@ -177,6 +184,9 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
   // Fitness level
   const [fitnessLevel, setFitnessLevel] = useState(profile?.fitness_level ?? '')
 
+  // NEAT — дневная активность вне тренировок (влияет на норму калорий)
+  const [neatLevel, setNeatLevel] = useState(profile?.neat_level ?? '')
+
   // Sport type (free text)
   const [sportType, setSportType] = useState(profile?.sport_type ?? '')
 
@@ -209,6 +219,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     setTone(profile.tone ?? 'soft')
     setSelectedGoals(profile.goals ?? (profile.goal ? [profile.goal] : []))
     setFitnessLevel(profile.fitness_level ?? '')
+    setNeatLevel(profile.neat_level ?? '')
     setSportType(profile.sport_type ?? '')
     setTz(profile.timezone ?? 'UTC+3')
     setMorningTime(profile.morning_reminder_time ?? profile.push_time ?? '08:00')
@@ -248,6 +259,7 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
         tone:                  tone || undefined,
         goals:                 selectedGoals.length > 0 ? selectedGoals : undefined,
         fitness_level:         fitnessLevel || undefined,
+        neat_level:            neatLevel || undefined,
         sport_type:            sportType || undefined,
         timezone:              tz || undefined,
         morning_reminder_time: morningTime || undefined,
@@ -363,6 +375,30 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
                 color: fitnessLevel === key ? '#000' : 'var(--text)',
                 fontWeight: 700,
                 fontSize: '0.8rem',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* NEAT — дневная активность вне тренировок, влияет на норму калорий */}
+        <p id="field-neat" className="section-label" style={{ marginBottom: 8 }}>ДНЕВНАЯ АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+          {NEAT_OPTIONS.map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setNeatLevel(key)}
+              style={{
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: neatLevel === key ? 'var(--accent)' : 'var(--card-bg)',
+                color: neatLevel === key ? '#000' : 'var(--text)',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                textAlign: 'left',
                 cursor: 'pointer',
               }}
             >

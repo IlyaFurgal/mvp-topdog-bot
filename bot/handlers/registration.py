@@ -33,8 +33,8 @@ from core.config import settings
 from sqlalchemy import select
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
 from database.models import (
-    ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, NonpayerIntent, Profile,
-    PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
+    ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, NeatLevel, NonpayerIntent,
+    Profile, PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
 )
 from database.session import AsyncSessionLocal
 
@@ -694,7 +694,9 @@ async def step_lifestyle(callback: CallbackQuery, state: FSMContext) -> None:
     days_val, activity_val = _DAYS_MAP.get(days_key, (3, ActivityLevel.moderate))
     await state.update_data(workout_days=days_val, activity_level=activity_val.value)
     await state.set_state(RegistrationForm.lifestyle)
-    await callback.message.edit_text("Твой образ жизни?", reply_markup=kb_lifestyle())
+    await callback.message.edit_text(
+        "Какая у тебя дневная активность вне тренировок?", reply_markup=kb_lifestyle()
+    )
     await callback.answer()
 
 
@@ -841,11 +843,22 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
         "female": Gender.female,
     }.get(data.get("gender", ""))
 
-    # Activity level
+    # Activity level (legacy — no longer feeds the calorie formula, see
+    # neat_level below, but still saved for backward compat / other uses)
     activity_val: ActivityLevel | None = None
     if raw_al := data.get("activity_level"):
         try:
             activity_val = ActivityLevel(raw_al)
+        except ValueError:
+            pass
+
+    # NEAT level (дневная активность вне тренировок) — the "образ жизни"
+    # question, now feeds the calorie formula's base coefficient instead
+    # of being collected and discarded.
+    neat_val: NeatLevel | None = None
+    if raw_neat := data.get("lifestyle"):
+        try:
+            neat_val = NeatLevel(raw_neat)
         except ValueError:
             pass
 
@@ -884,6 +897,7 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
                 sport_type=data.get("sport_type"),
                 fitness_level=_FITNESS_MAP.get(data.get("fitness_level", "")),
                 activity_level=activity_val,
+                neat_level=neat_val,
                 workout_days_per_week=data.get("workout_days"),
                 workout_hours_per_day=data.get("workout_hours"),
                 health_restrictions=data.get("health_restrictions"),

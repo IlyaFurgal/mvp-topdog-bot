@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import (
-    ActivityLevel, FitnessLevel, Gender, Goal, Profile, Tone, User,
+    ActivityLevel, FitnessLevel, Gender, Goal, NeatLevel, Profile, Tone, User,
 )
 
 
@@ -45,6 +45,7 @@ async def create_profile(
     sport_type: str | None = None,
     fitness_level: FitnessLevel | None = None,
     activity_level: ActivityLevel | None = None,
+    neat_level: NeatLevel | None = None,
     workout_days_per_week: int | None = None,
     workout_hours_per_day: int | None = None,
     health_restrictions: str | None = None,
@@ -66,6 +67,7 @@ async def create_profile(
         sport_type=sport_type,
         fitness_level=fitness_level,
         activity_level=activity_level,
+        neat_level=neat_level,
         workout_days_per_week=workout_days_per_week,
         workout_hours_per_day=workout_hours_per_day,
         health_restrictions=health_restrictions,

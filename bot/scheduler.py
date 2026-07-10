@@ -338,7 +338,7 @@ async def check_reminders(bot: Bot) -> None:
                     async with AsyncSessionLocal() as s:
                         water_today = await _today_tracker_sum(s, user.id, TrackerType.water)
                         cal_today   = await _today_tracker_sum(s, user.id, TrackerType.calories)
-                    cal_limit = calculate_calorie_limit(profile)
+                        cal_limit   = await calculate_calorie_limit(s, user.id, profile)
                     name = user.first_name or "друг"
 
                     # TODO(Илья, ТЗ «обновление текстов ежедневных пушей» 2026-07-10):

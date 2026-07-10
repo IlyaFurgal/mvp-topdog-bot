@@ -107,18 +107,25 @@ def kb_workout_days() -> InlineKeyboardMarkup:
 
 
 def kb_lifestyle() -> InlineKeyboardMarkup:
+    """Дневная активность вне тренировок (NEAT) — заменяет частоту
+    тренировок в расчёте калорий, см. ТЗ «новая логика расчёта калорий»,
+    2026-07-10, шаг 2."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="Активный — много двигаюсь",
-            callback_data="reg_lifestyle_active",
+            text="Сидячая — офис/удалёнка, большую часть дня сижу",
+            callback_data="reg_lifestyle_sedentary",
         )],
         [InlineKeyboardButton(
-            text="Средний — по-разному",
+            text="Умеренная — часть дня на ногах",
             callback_data="reg_lifestyle_moderate",
         )],
         [InlineKeyboardButton(
-            text="Сидячий — офис/дом",
-            callback_data="reg_lifestyle_sedentary",
+            text="Активная — много хожу, подвижная работа",
+            callback_data="reg_lifestyle_active",
+        )],
+        [InlineKeyboardButton(
+            text="Очень активная — физический труд, весь день в движении",
+            callback_data="reg_lifestyle_very_active",
         )],
     ])
 
