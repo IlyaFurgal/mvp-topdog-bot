@@ -19,6 +19,7 @@ from bot.keyboards.inline import (
     kb_tone, kb_workout_days, kb_workout_hours,
 )
 from bot.funnel_content import PHONE_NOT_FOUND_TEXT, phone_not_found_kb, tariffs_kb
+from bot.services.push_media import send_push_video
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
 from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
 from core.utils.phone import normalize_phone
@@ -255,6 +256,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             first_name=message.from_user.first_name,
         )
 
+    await send_push_video(message.bot, message.chat.id, "welcome_before_payment")
     await state.set_state(RegistrationForm.phone_check)
     await message.answer(
         "Добро пожаловать в MVP.\n\n"
