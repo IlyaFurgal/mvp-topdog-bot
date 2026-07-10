@@ -67,10 +67,12 @@ def tariffs_kb(tg_id: int | None = None, pro_label: str = "➤ Выбрать П
         return _with_utm(url)
 
     buttons = []
-    if settings.GC_PAYMENT_URL_PRO:
-        buttons.append([InlineKeyboardButton(text=pro_label, url=_url(settings.GC_PAYMENT_URL_PRO))])
-    if settings.GC_PAYMENT_URL_PLUS:
-        buttons.append([InlineKeyboardButton(text=plus_label, url=_url(settings.GC_PAYMENT_URL_PLUS))])
+    pro_url = settings.GC_PAYMENT_URL_PRO or settings.GETCOURSE_PRO_URL
+    plus_url = settings.GC_PAYMENT_URL_PLUS or settings.GETCOURSE_PLUS_URL
+    if pro_url:
+        buttons.append([InlineKeyboardButton(text=pro_label, url=_url(pro_url))])
+    if plus_url:
+        buttons.append([InlineKeyboardButton(text=plus_label, url=_url(plus_url))])
     if not buttons:
         buttons = [[InlineKeyboardButton(text="📩 Написать менеджеру", url=settings.SUPPORT_TG_URL)]]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

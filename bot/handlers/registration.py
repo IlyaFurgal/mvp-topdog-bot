@@ -316,6 +316,7 @@ async def contact_handler(message: Message, state: FSMContext) -> None:
                 PHONE_NOT_FOUND_TEXT,
                 reply_markup=phone_not_found_kb(message.from_user.id),
             )
+            await message.answer("Главное меню:", reply_markup=freemium_menu_kb())
 
             # Kick off the 10min -> 24h -> 3d dunning sequence from this
             # exact moment ("показали тарифы после неудачной проверки
