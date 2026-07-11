@@ -126,7 +126,6 @@ export default function ClubPage() {
   return (
     <div className="page club-page">
       <img src={clubHeading} alt="КЛУБ" className="screen-title-img" />
-      <div className="stripe-divider" />
 
       {isPlus ? (
         <button className="club-card" onClick={() => setView('knowledge-locked')}>

@@ -112,7 +112,6 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">РОСТ (ДЛЯ ИМТ)</span>
       </div>
-      <div className="stripe-divider" />
 
       <p className="progress-label" style={{ marginBottom: 8 }}>Показатель учитывается для расчёта ИМТ</p>
 
@@ -513,7 +512,6 @@ export default function ProfilePage() {
   return (
     <div className="page club-page" style={{ position: 'relative' }}>
       <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img screen-title-img--hero" />
-      <div className="stripe-divider" />
 
       <MyDataCard
         onEditClick={() => setMyDataOpen(true)}
@@ -531,10 +529,8 @@ export default function ProfilePage() {
           <span className="tracker-cta-btn__title">ЗАПОЛНИ ТРЕКЕР</span>
         </button>
       )}
-      <div className="stripe-divider" />
 
       <img src={progressHeading} alt="ПРОГРЕСС" className="screen-title-img screen-title-img--hero" style={{ marginTop: 32, marginBottom: 14 }} />
-      <div className="stripe-divider" />
       <ProgressSection refreshKey={dataVersion} />
     </div>
   )

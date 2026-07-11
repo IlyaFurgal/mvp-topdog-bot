@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { saveTracker } from '../api/trackers'
+import waterBottleEmpty from '../assets/water_bottle_бутылка_воды.png'
+import waterBottleFull from '../assets/Полная бутылка.png'
 import ScrollPicker from './ScrollPicker'
 
 const GOAL_WATER = 2000
@@ -78,7 +80,6 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">{TITLES[type]}</span>
       </div>
-      <div className="stripe-divider" />
 
       <div className="tracker-page-body">
         {type === 'weight' && (
@@ -205,7 +206,10 @@ function WaterInput({ amount, onChange, total }) {
               onClick={() => addPreset(active ? -BOTTLE_ML : BOTTLE_ML)}
               title={active ? `Убрать ${BOTTLE_ML} мл` : `Добавить ${BOTTLE_ML} мл`}
             >
-              0.5Л
+              <span className="water-bottle__icon-wrap">
+                <img src={active ? waterBottleFull : waterBottleEmpty} alt="" className="water-bottle__icon" />
+                <span className="water-bottle__label">0.5Л</span>
+              </span>
             </button>
           )
         })}

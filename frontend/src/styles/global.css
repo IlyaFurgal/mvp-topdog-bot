@@ -443,8 +443,13 @@ html, body {
    regardless of source order, without touching border-color (kept in the
    plain .checkin-card rule above so .checkin-card--done/--empty can still
    override it). */
+/* Same gradient-sheen plate as .tracker-cta-btn/.tracker-page-title-plate
+   instead of the page's own 4.png texture, which made the card blend into
+   the background rather than read as a raised plate. */
 .checkin-card.skew-chip {
-  background: url('../assets/4.png') center / cover no-repeat, linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
+  background:
+    linear-gradient(158deg, transparent 42%, rgba(255, 255, 255, 0.10) 54%, transparent 66%),
+    linear-gradient(105deg, #3a3a3a 0%, #202020 52%, #101010 100%);
 }
 
 .checkin-card:active {
@@ -1376,6 +1381,7 @@ html, body {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--text-muted);
+  text-align: left;
 }
 
 .progress-bar {
@@ -1401,8 +1407,8 @@ html, body {
 
 .calorie-ring {
   position: relative;
-  width: 180px;
-  height: 180px;
+  width: 280px;
+  height: 280px;
   margin: 12px auto;
 }
 
@@ -1432,7 +1438,7 @@ html, body {
   font-weight: 700;
   font-style: italic;
   letter-spacing: 0.04em;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .calorie-ring__value {
@@ -1449,7 +1455,7 @@ html, body {
   font-size: 0.65rem;
   font-weight: 700;
   font-style: italic;
-  color: var(--text-muted);
+  color: var(--text);
   margin-top: 2px;
 }
 
@@ -1459,31 +1465,42 @@ html, body {
   margin: 12px 0;
 }
 
-/* Plain chips, not bottle-shaped art — a real bottle graphic per unit was
-   too wide for all 8 to fit on one row on mobile widths. */
 .water-bottle {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 10px 2px;
+  background: none;
+  border: none;
+  padding: 4px 0;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  font-family: var(--font-accent);
-  font-size: 0.7rem;
-  font-weight: 700;
-  font-style: italic;
-  color: var(--text-muted);
 }
 
-.water-bottle--active {
-  background: var(--accent-club);
-  border-color: var(--accent-club);
+.water-bottle__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.water-bottle__icon {
+  height: 42px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.water-bottle__label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 11px;
+  text-align: center;
+  font-size: 0.42rem;
+  font-weight: 800;
   color: #111;
 }
 
@@ -1532,6 +1549,7 @@ html, body {
   background: none;
   border: none;
   outline: none;
+  text-align: center;
   font-family: var(--font-accent);
   font-size: 1rem;
   font-weight: 700;
@@ -1541,7 +1559,7 @@ html, body {
 }
 
 .kcal-input-pill__field::placeholder {
-  color: var(--text-muted);
+  color: var(--accent-club);
   opacity: 1;
 }
 
