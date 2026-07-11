@@ -41,8 +41,8 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
   }
 
   return (
-    <div className="page club-page">
-      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
+    <div className="page club-page workout-page-overlay">
+      <button className="club-back" onClick={onClose}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">

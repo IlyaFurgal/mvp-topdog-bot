@@ -74,7 +74,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
 
   return (
     <div className="page club-page">
-      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
+      <button className="club-back" onClick={onClose}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">{TITLES[type]}</span>
@@ -401,11 +401,11 @@ function MacroCol({ label, current, delta, target, onChangeDelta }) {
 function formatSleepMinutes(mins) {
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  return `${h}:${String(m).padStart(2, '0')}ч`
+  return `${h}:${String(m).padStart(2, '0')}`
 }
 
 function parseSleepMinutes(str) {
-  const m = str.trim().replace(/ч$/i, '').match(/^(\d{1,2}):?(\d{0,2})$/)
+  const m = str.trim().match(/^(\d{1,2}):?(\d{0,2})$/)
   if (!m) return NaN
   const h = parseInt(m[1], 10)
   const mm = m[2] ? parseInt(m[2], 10) : 0
@@ -451,6 +451,7 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
         step={15}
         format={formatSleepMinutes}
         parse={parseSleepMinutes}
+        unit="ч"
       />
     </div>
   )

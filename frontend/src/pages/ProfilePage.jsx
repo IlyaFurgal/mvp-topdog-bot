@@ -29,9 +29,9 @@ const GOAL_OPTIONS = [
 ]
 
 const FITNESS_OPTIONS = [
-  ['beginner',     '🌱 Новичок'],
-  ['intermediate', '💪 Средний'],
-  ['advanced',     '🔥 Продвинутый'],
+  ['beginner',     'Новичок'],
+  ['intermediate', 'Средний'],
+  ['advanced',     'Продвинутый'],
 ]
 
 const FITNESS_LABELS_PLAIN = {
@@ -107,7 +107,7 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
 
   return (
     <div className="page club-page">
-      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
+      <button className="club-back" onClick={onClose}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">ЗАПИСАТЬ РОСТ</span>
@@ -132,7 +132,7 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
 function TextEditPage({ title, subtitle, value, onChange, placeholder, multiline, numeric, onBack, onSave, saving }) {
   return (
     <div className="page club-page">
-      <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
+      <button className="club-back" onClick={onBack}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">{title}</span>
@@ -174,7 +174,7 @@ function TextEditPage({ title, subtitle, value, onChange, placeholder, multiline
 function OptionEditPage({ title, options, value, onSelect, onBack, saving }) {
   return (
     <div className="page club-page">
-      <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
+      <button className="club-back" onClick={onBack}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">{title}</span>
@@ -187,7 +187,6 @@ function OptionEditPage({ title, options, value, onSelect, onBack, saving }) {
             type="button"
             className={`option-list__item${key === value ? ' option-list__item--active' : ''}`}
             onClick={() => onSelect(key)}
-            disabled={saving}
           >
             {label}
           </button>
@@ -279,6 +278,7 @@ function MyDataView({ profile, onBack, onSaved }) {
       await client.patch('/profile/me', buildProfilePayload(snapshot))
       onSaved()
       setEditField(null)
+      setSaving(false)
       return true
     } catch (e) {
       setError('Ошибка сохранения. Попробуй ещё раз.')
@@ -448,12 +448,12 @@ function MyDataView({ profile, onBack, onSaved }) {
       <div className="stripe-divider" />
 
       <div className="data-row skew-chip" onClick={() => setEditField('name')}>
-        <span className="data-row__label">{preferredName || 'ИМЯ'}</span>
+        <span className="data-row__label data-row__label--big">{preferredName || 'ИМЯ'}</span>
         <span className="data-row__value data-row__value--fixed"><span>{tierLabel}</span></span>
       </div>
 
       <div className="data-row skew-chip" onClick={() => setEditField('tone')}>
-        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
+        <span className="data-row__label data-row__label--big">ТОН ОБЩЕНИЯ</span>
         <span className="data-row__value data-row__value--fixed"><span>{tone === 'aggressive' ? 'ЖЁСТКИЙ' : 'МЯГКИЙ'}</span></span>
       </div>
 

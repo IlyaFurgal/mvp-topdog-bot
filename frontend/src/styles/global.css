@@ -149,6 +149,19 @@ html, body {
   padding: 24px 16px 16px;
 }
 
+/* WorkoutModal is opened from deep inside WorkoutCalendar -> ProgressSection
+   -> ProfilePage's normal document flow, not from a top-level page swap like
+   TrackerModal/HeightPage/MyDataView — without this it rendered inline at
+   its parent's scroll position instead of taking over the screen. */
+.workout-page-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .page-title {
   font-size: 2.2rem;
   font-weight: 900;
@@ -3961,6 +3974,16 @@ select optgroup {
   white-space: nowrap;
 }
 
+/* ИМЯ/ТОН ОБЩЕНИЯ are the only two rows left with the grey plate — they
+   read as prominent header rows in the reference, much bigger/bolder
+   than a regular row label. */
+.data-row__label--big {
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
 /* Value plate = the baked grey-metallic parallelogram asset (diagonal
    left edge, transparent outside the shape so the dark row shows through
    for the cut). The row itself is no longer CSS-skewed — the slant lives
@@ -4002,13 +4025,15 @@ select optgroup {
 }
 
 /* Flat text-list rows (goals, and every other МОИ ДАННЫЕ field except
-   name/tone) — no plate background, just label/value on a hairline. */
+   name/tone) — a plain grey bar, not the skewed parallelogram plate. */
 .flat-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 2px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 9px 10px;
+  margin-bottom: 3px;
+  background: linear-gradient(100deg, #232323 0%, #171717 100%);
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -4102,10 +4127,10 @@ select optgroup {
   width: 100%;
   box-sizing: border-box;
   margin: -4px 0 8px;
-  padding: 10px 12px;
+  padding: 14px 16px;
   background: linear-gradient(105deg, #2c2c2c 0%, #1a1a1a 55%, #121212 100%);
   border: none;
-  border-radius: 4px;
+  border-radius: 14px;
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -4116,10 +4141,10 @@ select optgroup {
 .field-input {
   display: block;
   width: 100%;
-  padding: 10px 14px;
+  padding: 14px 16px;
   background: linear-gradient(100deg, #2a2a2a 0%, #161616 100%);
   border: none;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  border-radius: 14px;
   color: var(--text);
   font-family: var(--font-accent);
   font-style: italic;
