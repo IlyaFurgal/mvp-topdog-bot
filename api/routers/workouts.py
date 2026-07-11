@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -33,6 +33,14 @@ class WorkoutCreate(BaseModel):
     note: Optional[str] = None
     entries: list[EntryIn] = []
     planned_time: Optional[str] = None   # "HH:MM"
+    rpe: Optional[int] = None            # 1-10, feeds the calorie training addition
+
+    @field_validator("rpe")
+    @classmethod
+    def _validate_rpe(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and not (1 <= v <= 10):
+            raise ValueError("rpe must be 1-10")
+        return v
 
 
 class WorkoutUpdate(BaseModel):
@@ -41,6 +49,14 @@ class WorkoutUpdate(BaseModel):
     note: Optional[str] = None
     entries: Optional[list[EntryIn]] = None
     planned_time: Optional[str] = None   # "HH:MM" — set via "перенести тренировку"
+    rpe: Optional[int] = None            # 1-10
+
+    @field_validator("rpe")
+    @classmethod
+    def _validate_rpe(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and not (1 <= v <= 10):
+            raise ValueError("rpe must be 1-10")
+        return v
 
 
 class CustomItemCreate(BaseModel):
@@ -80,6 +96,7 @@ def _workout_dict(w: Workout) -> dict:
         "duration_min": w.duration_min,
         "note": w.note,
         "planned_time": w.planned_time,
+        "rpe": w.rpe,
         "created_at": w.created_at.isoformat(),
         "entries": [_entry_dict(e) for e in (w.entries or [])],
     }
@@ -195,6 +212,7 @@ async def create_workout(
         duration_min=body.duration_min,
         note=body.note,
         planned_time=body.planned_time,
+        rpe=body.rpe,
     )
     session.add(workout)
     await session.flush()
@@ -276,6 +294,8 @@ async def update_workout(
     if body.planned_time is not None:
         _validate_planned_time(body.planned_time)
         w.planned_time = body.planned_time
+    if body.rpe is not None:
+        w.rpe = body.rpe
 
     if body.entries is not None:
         # Replace all entries

@@ -6,7 +6,6 @@ import TopNav from './components/TopNav'
 import MvpRibbon from './components/MvpRibbon'
 import SwipeNavigator from './components/SwipeNavigator'
 import LandingPage from './components/LandingPage'
-import OnboardingModal from './components/OnboardingModal'
 import { ProfileProvider, useProfile } from './context/ProfileContext'
 import { ChatProvider } from './context/ChatContext'
 import { lazyWithRetry } from './utils/lazyWithRetry'
@@ -142,7 +141,6 @@ function AppContent() {
   return (
     <>
       <TopNav />
-      <OnboardingModal />
       <main className="main-content">
         <MvpRibbon />
         <SwipeNavigator>

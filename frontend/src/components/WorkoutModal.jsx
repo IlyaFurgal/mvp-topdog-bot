@@ -3,21 +3,30 @@ import { createWorkout, updateWorkout } from '../api/workouts'
 
 export default function WorkoutModal({ editWorkout, initialDate, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
 
   const [date, setDate] = useState(editWorkout?.date ?? initialDate ?? today)
   const [time, setTime] = useState(editWorkout?.planned_time ?? '')
   const [note, setNote] = useState(editWorkout?.note ?? '')
+  const [durationMin, setDurationMin] = useState(
+    editWorkout?.duration_min != null ? String(editWorkout.duration_min) : ''
+  )
+  const [rpe, setRpe] = useState(editWorkout?.rpe ?? null)
 
   async function handleSubmit() {
     if (!date) return
     setSaving(true)
+    setError('')
     try {
+      const durationNum = parseInt(durationMin, 10)
       const body = {
         date,
         note: note.trim() || null,
         planned_time: time || null,
+        duration_min: !isNaN(durationNum) && durationNum > 0 ? durationNum : null,
+        rpe,
       }
       if (editWorkout) {
         await updateWorkout(editWorkout.id, body)
@@ -25,8 +34,10 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
         await createWorkout({ ...body, category_id: null, entries: [] })
       }
       onSaved()
-    } catch (_) {}
-    setSaving(false)
+    } catch (e) {
+      setError('Не удалось сохранить. Попробуй ещё раз.')
+      setSaving(false)
+    }
   }
 
   return (
@@ -58,6 +69,37 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
           </div>
         </div>
 
+        {/* duration */}
+        <div className="wf-section">
+          <label className="wf-label">ДЛИТЕЛЬНОСТЬ (МИН, НЕОБЯЗАТЕЛЬНО)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            className="wf-input"
+            placeholder="напр. 60"
+            min="1"
+            value={durationMin}
+            onChange={e => setDurationMin(e.target.value)}
+          />
+        </div>
+
+        {/* RPE */}
+        <div className="wf-section">
+          <label className="wf-label">RPE — НАСКОЛЬКО ТЯЖЕЛО ПРОШЛА (НЕОБЯЗАТЕЛЬНО)</label>
+          <div className="checkin-flow__rpe">
+            {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`checkin-flow__rpe-btn ${n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : ''}${rpe === n ? ' checkin-flow__rpe-btn--selected' : ''}`}
+                onClick={() => setRpe(rpe === n ? null : n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* note */}
         <div className="wf-section">
           <label className="wf-label">ЗАМЕТКА (необязательно)</label>
@@ -69,6 +111,8 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
             onChange={e => setNote(e.target.value)}
           />
         </div>
+
+        {error && <p className="wf-error">{error}</p>}
 
         <button
           className="btn btn-accent"

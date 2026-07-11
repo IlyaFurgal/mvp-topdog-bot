@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import knowledgeImg from '../assets/1.png'
 import communityImg from '../assets/2.png'
 import supportImg from '../assets/3.png'
 import clubHeading from '../assets/9.png'
 import { trackUpgradeIntent } from '../api/trackUpgrade'
-import { openPaymentLink } from '../config/payments'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 import { useProfile } from '../context/ProfileContext'
 
-const PRO_URL = import.meta.env.VITE_GC_PAYMENT_URL_PRO || import.meta.env.VITE_GETCOURSE_PRO_URL || '#'
+// The VITE_GC_PAYMENT_URL_PRO / VITE_GETCOURSE_PRO_URL frontend env vars
+// this used to read were never actually configured in production — the
+// button silently fell through to '#'/a bounce landing. LandingPage.jsx
+// already solved this correctly: fetch the backend-resolved URL from
+// /api/config/public (same GC_PAYMENT_URL_PRO the bot's tariffs_kb() uses
+// and that's proven to work), falling back to the static PAYMENT_URLS
+// landing only if that fetch fails. See ТЗ «правки раунд 3», 2026-07-10, п.4.
 
 function CardArt({ img }) {
   return (
@@ -46,12 +52,12 @@ function BackButton({ onBack }) {
 // «пул правок», 2026-07-10, п.17. Pro is unaffected, freemium (no sub)
 // never reaches this page in the first place (gated earlier by
 // SubscriptionWall).
-function handleUpgradeToPro() {
-  trackUpgradeIntent()
-  openPaymentLink(PRO_URL)
-}
+function ProUpsellStub({ title, onBack, proUrl }) {
+  function handleUpgradeToPro() {
+    trackUpgradeIntent()
+    openPaymentLink(proUrl)
+  }
 
-function ProUpsellStub({ title, onBack }) {
   return (
     <div className="page club-page">
       <BackButton onBack={onBack} />
@@ -96,14 +102,22 @@ function CommunityView({ onBack }) {
 
 export default function ClubPage() {
   const [view, setView] = useState('hub')
+  const [proUrl, setProUrl] = useState(PAYMENT_URLS.pro1m)
   const { subscriptionType } = useProfile()
   const isPlus = subscriptionType === 'plus'
 
+  useEffect(() => {
+    fetch('/api/config/public')
+      .then((r) => r.json())
+      .then((data) => { if (data.getcourse_pro_url) setProUrl(data.getcourse_pro_url) })
+      .catch(() => {})
+  }, [])
+
   if (view === 'knowledge-locked') {
-    return <ProUpsellStub title="БАЗА ЗНАНИЙ" onBack={() => setView('hub')} />
+    return <ProUpsellStub title="БАЗА ЗНАНИЙ" onBack={() => setView('hub')} proUrl={proUrl} />
   }
   if (view === 'community-locked') {
-    return <ProUpsellStub title="КОМЬЮНИТИ" onBack={() => setView('hub')} />
+    return <ProUpsellStub title="КОМЬЮНИТИ" onBack={() => setView('hub')} proUrl={proUrl} />
   }
   if (view === 'community') {
     return <CommunityView onBack={() => setView('hub')} />

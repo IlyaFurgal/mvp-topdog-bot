@@ -107,13 +107,15 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
   const [activeTracker, setActiveTracker] = useState(null)
   const [heightModalOpen, setHeightModalOpen] = useState(false)
   const [calorieLimit, setCalorieLimit] = useState(null)
+  const [macroTargets, setMacroTargets] = useState(null)
 
   async function load() {
     try {
       const trackData = await getTodayTrackers()
-      const { calorie_limit, calories_meals, ...rest } = trackData
+      const { calorie_limit, calories_meals, macro_targets, ...rest } = trackData
       setTrackers(rest)
       setCalorieLimit(calorie_limit ?? null)
+      setMacroTargets(macro_targets ?? null)
     } catch (_) {}
   }
 
@@ -230,6 +232,7 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
           type={activeTracker}
           todayData={trackers[activeTracker]}
           calorieLimit={calorieLimit}
+          macroTargets={macroTargets}
           onClose={() => setActiveTracker(null)}
           onSaved={() => { setActiveTracker(null); load(); onDataChanged?.() }}
         />

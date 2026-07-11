@@ -204,8 +204,6 @@ export default function ProgressSection({ refreshKey }) {
   // Prefer insight's discipline_pct (7-day window) so the % and the insight text always agree
   const displayedDiscipline = insight?.discipline_pct != null ? insight.discipline_pct : discipline
 
-  const hasMetrics = displayedDiscipline !== null || avgRpe !== null || recoveryPct !== null
-
   // Самочувствие (утро, шкала 1-10) и Настроение (вечер, шкала 1-10) —
   // отдельные графики, источник данных чекины, а не трекеры.
   const feelingData = checkins
@@ -257,28 +255,30 @@ export default function ProgressSection({ refreshKey }) {
       ) : (
         <>
           {/* ── Metrics ─────────────────────────────────── */}
-          {hasMetrics && (
-            <div className="metrics-cards">
-              <div className="metric-card">
-                <span className="metric-label">НАГРУЗКА</span>
-                <span className="metric-value">
-                  {avgRpe ?? 'Нет данных'}
-                </span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-label">ДИСЦИПЛИНА</span>
-                <span className="metric-value">
-                  {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
-                </span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
-                <span className="metric-value">
-                  {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
-                </span>
-              </div>
+          {/* Always rendered — each card already falls back to "Нет
+              данных"/"—" on its own; hiding the whole row whenever all
+              three happen to be null at once made the cards seem to
+              "disappear" instead of showing an empty state. */}
+          <div className="metrics-cards">
+            <div className="metric-card">
+              <span className="metric-label">НАГРУЗКА</span>
+              <span className="metric-value">
+                {avgRpe ?? 'Нет данных'}
+              </span>
             </div>
-          )}
+            <div className="metric-card">
+              <span className="metric-label">ДИСЦИПЛИНА</span>
+              <span className="metric-value">
+                {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
+              <span className="metric-value">
+                {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
+              </span>
+            </div>
+          </div>
 
           {/* ── Insight ─────────────────────────────────── */}
           {insight && (

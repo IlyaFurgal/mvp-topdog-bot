@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.bot_sender import send_message, webapp_kb
 from api.deps import _is_eligible_for_pushes, get_current_user
-from database.models import Checkin, CheckinType, Profile, Tracker, TrackerType, User
+from database.models import Checkin, CheckinType, Profile, Tracker, TrackerType, User, Workout
 from database.session import get_session
 
 router = APIRouter(prefix="/trackers", tags=["trackers"])
@@ -144,12 +144,21 @@ def calculate_base_calorie_target(profile, current_weight: float | None = None) 
 
 
 async def _todays_training_addition(session, user_id: int, weight_kg: float, base_target: int) -> int:
-    """Сумма добавок за все зафиксированные сегодня post_workout чекины с
-    RPE, конвертированные в MET × вес × 1ч, капнутая на 40% базовой цели
-    дня. Правка тренировки задним числом закрытые дни не пересчитывает —
-    добавка считается только для сегодняшних чекинов на момент запроса."""
+    """Сумма добавок за все зафиксированные сегодня тренировки с RPE,
+    конвертированные в MET × вес × длительность(ч), капнутая на 40%
+    базовой цели дня. Правка тренировки задним числом закрытые дни не
+    пересчитывает — считается только для сегодняшних записей на момент
+    запроса. Два источника, оба суммируются:
+      1) post_workout чекины (data["rpe"]) — длительность не спрашивается
+         там, фиксированный час по допущению ТЗ.
+      2) Workout-записи (календарь/быстрое добавление) с явным rpe —
+         используют реальную duration_min, если указана (иначе тоже 1ч).
+    Пользователь обычно логирует ЛИБО через чекин, ЛИБО через календарь,
+    не оба сразу за одну и ту же тренировку — полноценная дедупликация
+    между двумя независимыми моделями данных не производится."""
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
-    rows = (await session.execute(
+
+    checkin_rows = (await session.execute(
         select(Checkin.data).where(
             and_(
                 Checkin.user_id == user_id,
@@ -160,13 +169,45 @@ async def _todays_training_addition(session, user_id: int, weight_kg: float, bas
     )).scalars().all()
 
     addition = 0.0
-    for data in rows:
+    for data in checkin_rows:
         rpe = data.get("rpe") if isinstance(data, dict) else None
         if isinstance(rpe, (int, float)) and 1 <= rpe <= 10:
             addition += _rpe_to_met(int(rpe)) * weight_kg * _DEFAULT_TRAINING_HOURS
 
+    workout_rows = (await session.execute(
+        select(Workout.rpe, Workout.duration_min).where(
+            and_(
+                Workout.user_id == user_id,
+                Workout.date == date.today(),
+                Workout.rpe.isnot(None),
+            )
+        )
+    )).all()
+    for rpe, duration_min in workout_rows:
+        if isinstance(rpe, int) and 1 <= rpe <= 10:
+            hours = (duration_min / 60) if duration_min else _DEFAULT_TRAINING_HOURS
+            addition += _rpe_to_met(rpe) * weight_kg * hours
+
     cap = base_target * _TRAINING_ADDITION_CAP_PCT
     return round(min(addition, cap))
+
+
+def calculate_macro_targets(calorie_target: int, weight_kg: float | None, profile) -> dict:
+    """Целевые Б/Ж/У на день, исходя из цели калорий. Белок — г/кг веса
+    (2.0 при дефиците, 1.8 иначе — правило из ТЗ «новая логика расчёта
+    калорий» §4), жир — 25% калорий, углеводы — остаток. См. ТЗ «правки
+    раунд 3», 2026-07-10, п.9."""
+    weight = weight_kg or (profile.weight if profile else None) or 70.0
+    goal = profile.goal.value if profile and profile.goal else None
+    goals = profile.goals or [] if profile else []
+    is_deficit = goal == "weight_loss" or "weight_loss" in goals
+
+    protein_g = round(weight * (2.0 if is_deficit else 1.8))
+    fat_g = round(calorie_target * 0.25 / 9)
+    carbs_kcal = calorie_target - protein_g * 4 - fat_g * 9
+    carbs_g = round(max(carbs_kcal, 0) / 4)
+
+    return {"protein_g": protein_g, "fat_g": fat_g, "carbs_g": carbs_g}
 
 
 async def calculate_calorie_limit(
@@ -482,6 +523,7 @@ async def get_today_trackers(
             out["weight"] = {"value": latest_w.value, "unit": latest_w.unit, "id": latest_w.id}
 
     out["calorie_limit"] = await calculate_calorie_limit(session, user.id, profile, current_weight=current_weight)
+    out["macro_targets"] = calculate_macro_targets(out["calorie_limit"], current_weight, profile)
     return out
 
 

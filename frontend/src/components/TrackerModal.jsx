@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { saveTracker } from '../api/trackers'
 import ScrollPicker from './ScrollPicker'
+import waterBottleIcon from '../assets/water_bottle_бутылка_воды.png'
 
 const GOAL_WATER = 2000
+const BOTTLE_ML = 500
+const BOTTLE_COUNT = 8   // 4L range — comfortably covers a typical day incl. overshoot
 
 const TITLES = {
   weight:   'ЗАПИСАТЬ ВЕС',
@@ -12,7 +15,7 @@ const TITLES = {
   pulse:    'ЗАПИСАТЬ ПУЛЬС',
 }
 
-export default function TrackerModal({ type, todayData, calorieLimit, onClose, onSaved }) {
+export default function TrackerModal({ type, todayData, calorieLimit, macroTargets, onClose, onSaved }) {
   const overlayRef = useRef(null)
   const [saving, setSaving] = useState(false)
 
@@ -103,6 +106,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, onClose, o
             total={caloriesTotal}
             limit={calorieLimit ?? 2000}
             todayMacros={todayData}
+            macroTargets={macroTargets}
             protein={protein}
             onProtein={setProtein}
             fat={fat}
@@ -160,7 +164,7 @@ function WaterInput({ amount, onChange, total }) {
   const [unit, setUnit] = useState('ml')  // 'ml' | 'l'
   // Live preview: bar reflects saved + current draft
   const displayTotal = total + amount
-  const pct = Math.min((displayTotal / GOAL_WATER) * 100, 100)
+  const filledCount = Math.min(Math.round(displayTotal / BOTTLE_ML), BOTTLE_COUNT)
 
   function addPreset(ml) {
     const current = parseInt(draft, 10) || 0
@@ -185,30 +189,25 @@ function WaterInput({ amount, onChange, total }) {
       <p className="water-today">
         Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} мл</strong> из {GOAL_WATER} мл
       </p>
-      <div className="progress-bar">
-        <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
+
+      <div className="water-bottle-grid">
+        {Array.from({ length: BOTTLE_COUNT }, (_, i) => {
+          const active = i < filledCount
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`water-bottle${active ? ' water-bottle--active' : ''}`}
+              onClick={() => addPreset(active ? -BOTTLE_ML : BOTTLE_ML)}
+              title={active ? `Убрать ${BOTTLE_ML} мл` : `Добавить ${BOTTLE_ML} мл`}
+            >
+              <span className="water-bottle__icon" style={{ WebkitMaskImage: `url(${waterBottleIcon})`, maskImage: `url(${waterBottleIcon})` }} />
+              <span className="water-bottle__label">0.5Л</span>
+            </button>
+          )
+        })}
       </div>
-      <div className="water-quick">
-        {[100, 250, 500].map((ml) => (
-          <button key={ml} className="water-btn" onClick={() => addPreset(ml)}>
-            +{ml} мл
-          </button>
-        ))}
-        <button
-          className="water-btn water-btn--reset"
-          onClick={() => { setDraft(''); onChange(0) }}
-          disabled={!draft}
-        >
-          Сброс
-        </button>
-      </div>
-      <div className="water-quick">
-        {[100, 250, 500].map((ml) => (
-          <button key={ml} className="water-btn water-btn--minus" onClick={() => addPreset(-ml)} disabled={displayTotal <= 0}>
-            −{ml} мл
-          </button>
-        ))}
-      </div>
+
       <div className="water-custom">
         <input
           type="number"
@@ -235,12 +234,58 @@ function WaterInput({ amount, onChange, total }) {
   )
 }
 
-function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, protein, onProtein, fat, onFat, carbs, onCarbs }) {
+function CalorieRing({ pct, overLimit, remaining, limit }) {
+  // Gauge-style ring (gap at the bottom, like the reference asset) built in
+  // SVG rather than the static progress_ring PNG, since the PNG bakes in
+  // one fixed percentage — this needs to fill dynamically 0-100% and turn
+  // red past the limit. Arc spans 270° with a 90° gap centered at the
+  // bottom (from 135° to 405°/45°).
+  const r = 42
+  const circumference = 2 * Math.PI * r
+  const arcFraction = 270 / 360
+  const arcLength = circumference * arcFraction
+  const fillLength = arcLength * (pct / 100)
+
+  return (
+    <div className="calorie-ring">
+      <svg viewBox="0 0 100 100" className="calorie-ring__svg">
+        <circle
+          cx="50" cy="50" r={r}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${arcLength} ${circumference}`}
+          strokeDashoffset={0}
+          transform="rotate(135 50 50)"
+        />
+        <circle
+          cx="50" cy="50" r={r}
+          fill="none"
+          stroke={overLimit ? 'var(--danger)' : 'var(--accent-club)'}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${fillLength} ${circumference}`}
+          strokeDashoffset={0}
+          transform="rotate(135 50 50)"
+        />
+      </svg>
+      <div className="calorie-ring__center">
+        <span className="calorie-ring__label">ОСТАЛОСЬ</span>
+        <span className="calorie-ring__value">{Math.round(remaining).toLocaleString('ru')}</span>
+        <span className="calorie-ring__goal">ЦЕЛЬ {limit.toLocaleString('ru')} ККАЛ</span>
+      </div>
+    </div>
+  )
+}
+
+function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, macroTargets, protein, onProtein, fat, onFat, carbs, onCarbs }) {
   const [draft, setDraft] = useState('')
-  // Live preview: bar reflects saved + current draft
+  // Live preview: ring reflects saved + current draft
   const displayTotal = total + amount
   const pct = Math.min((displayTotal / limit) * 100, 100)
   const overLimit = displayTotal > limit
+  const remaining = Math.max(limit - displayTotal, 0)
   const hasMacroTotals = todayMacros && (todayMacros.protein_g || todayMacros.fat_g || todayMacros.carbs_g)
 
   function addPreset(kcal) {
@@ -267,22 +312,19 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, pro
         Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} ккал</strong>
         {' '}/ норма {limit.toLocaleString('ru')} ккал
       </p>
-      <div className="progress-bar">
-        <div
-          className="progress-bar__fill"
-          style={{ width: `${pct}%`, background: overLimit ? 'var(--danger)' : undefined }}
-        />
-      </div>
+
+      <CalorieRing pct={pct} overLimit={overLimit} remaining={remaining} limit={limit} />
+
       {overLimit && (
         <p className="progress-label" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
           Норма на сегодня превышена — если хочешь, обсуди с ассистентом.
         </p>
       )}
-      {hasMacroTotals && (
+      {(hasMacroTotals || macroTargets) && (
         <p className="water-today" style={{ marginTop: 4 }}>
-          Б: <strong>{Math.round(todayMacros.protein_g || 0)}г</strong>
-          {' '}Ж: <strong>{Math.round(todayMacros.fat_g || 0)}г</strong>
-          {' '}У: <strong>{Math.round(todayMacros.carbs_g || 0)}г</strong>
+          Б: <strong>{Math.round(todayMacros?.protein_g || 0)}{macroTargets ? `/${macroTargets.protein_g}` : ''}г</strong>
+          {' '}Ж: <strong>{Math.round(todayMacros?.fat_g || 0)}{macroTargets ? `/${macroTargets.fat_g}` : ''}г</strong>
+          {' '}У: <strong>{Math.round(todayMacros?.carbs_g || 0)}{macroTargets ? `/${macroTargets.carbs_g}` : ''}г</strong>
         </p>
       )}
       <div className="water-quick">

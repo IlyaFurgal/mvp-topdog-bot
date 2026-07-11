@@ -20,9 +20,9 @@ from bot.keyboards.inline import (
     kb_tone, kb_workout_days, kb_workout_hours,
 )
 from bot.funnel_content import (
-    PHONE_NOT_FOUND_TEXT, phone_not_found_kb, send_paid_plus_circle, send_paid_plus_welcome,
-    send_paid_pro_circle, send_paid_pro_step2, send_paid_pro_step3, send_paid_pro_welcome,
-    tariffs_kb,
+    PHONE_NOT_FOUND_TEXT, about_club_kb, phone_not_found_kb, send_paid_plus_circle,
+    send_paid_plus_welcome, send_paid_pro_circle, send_paid_pro_step2, send_paid_pro_step3,
+    send_paid_pro_welcome, tariffs_kb,
 )
 from bot.services.push_media import send_push_video
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
@@ -278,9 +278,10 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         "экспертам по питанию, медицине и физ. подготовке.\n\n"
         "*— Тренировки и встречи*\n"
         "Мастер-классы, эфиры, нетворк, открытые тренировки и офлайн-движухи.",
-        reply_markup=freemium_menu_kb(),
+        reply_markup=about_club_kb(),
         parse_mode="Markdown",
     )
+    await message.answer("Главное меню:", reply_markup=freemium_menu_kb())
 
 
 # ── Проверка телефона по gc_subscriptions ─────────────────────────────────────
@@ -446,7 +447,14 @@ async def _process_phone_check(message: Message, state: FSMContext, phone: str) 
                 reply_markup=_webapp_kb(),
             )
     else:
-        # Новый пользователь — переходим к анкете
+        # Новый пользователь, подписка нашлась — та же tier-воронка, что и
+        # выше для has_profile (см. ТЗ «правки раунд 3», 2026-07-10),
+        # запускается параллельно с переходом к анкете.
+        if tier == "plus":
+            _spawn(_run_plus_signin_funnel(message.bot, message.chat.id, name))
+        elif tier == "pro":
+            _spawn(_run_pro_signin_funnel(message.bot, message.chat.id, name))
+
         await state.set_state(RegistrationForm.greeting)
         await message.answer(
             "Доступ подтверждён! 🏆\n\n"

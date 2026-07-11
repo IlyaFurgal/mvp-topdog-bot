@@ -291,6 +291,9 @@ class Workout(Base):
     # «переработка структуры чекинов»). Consumed by bot/scheduler.py's
     # post-workout reminder instead of Checkin.data.
     planned_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    # 1-10, для добавки к цели калорий по факту тренировки (MET по RPE ×
+    # вес × duration_min) — см. ТЗ «правки раунд 3» 2026-07-10, п.8/9.
+    rpe: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped["WorkoutCategory | None"] = relationship(back_populates="workouts")
