@@ -1475,6 +1475,13 @@ html, body {
   font-weight: 700;
   font-style: italic;
   color: var(--accent-club);
+  -moz-appearance: textfield;
+}
+
+.calorie-side__edit-input::-webkit-outer-spin-button,
+.calorie-side__edit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .calorie-ring {

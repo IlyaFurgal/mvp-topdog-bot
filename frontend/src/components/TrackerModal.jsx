@@ -303,7 +303,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
   const displayBurned = burnedOverride ?? burned ?? 0
 
   function startBurnedEdit() {
-    setBurnedDraft(String(displayBurned))
+    setBurnedDraft(displayBurned ? String(displayBurned) : '')
     setBurnedEditing(true)
   }
 
