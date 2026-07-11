@@ -71,7 +71,6 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
     }
   }
 
-  const addLabel = type === 'water' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
 
   return (
     <div className="page club-page">
@@ -117,11 +116,12 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
         )}
 
         <button
-          className={type === 'calories' ? 'btn tracker-save-btn--side' : 'btn btn-accent'}
+          className="btn tracker-save-btn--side"
           onClick={handleSave}
           disabled={saving}
+          style={{ marginTop: 8 }}
         >
-          {saving ? 'СОХРАНЯЕМ...' : addLabel}
+          {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
         </button>
       </div>
     </div>
@@ -401,11 +401,11 @@ function MacroCol({ label, current, delta, target, onChangeDelta }) {
 function formatSleepMinutes(mins) {
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  return `${h}:${String(m).padStart(2, '0')}`
+  return `${h}:${String(m).padStart(2, '0')}ч`
 }
 
 function parseSleepMinutes(str) {
-  const m = str.trim().match(/^(\d{1,2}):?(\d{0,2})$/)
+  const m = str.trim().replace(/ч$/i, '').match(/^(\d{1,2}):?(\d{0,2})$/)
   if (!m) return NaN
   const h = parseInt(m[1], 10)
   const mm = m[2] ? parseInt(m[2], 10) : 0

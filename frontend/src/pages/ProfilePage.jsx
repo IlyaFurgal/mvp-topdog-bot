@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
+import goalsHeading from '../assets/Цели.png'
 import myDataHeading from '../assets/8.png'
 import profileHeading from '../assets/7.png'
 import progressHeading from '../assets/12.png'
@@ -12,7 +13,6 @@ import ProgressSection from '../components/ProgressSection'
 import ScrollPicker from '../components/ScrollPicker'
 import TrackerModal from '../components/TrackerModal'
 import { useProfile } from '../context/ProfileContext'
-import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
 
@@ -110,10 +110,10 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
       <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
 
       <div className="tracker-page-title-plate skew-chip">
-        <span className="tracker-page-title">РОСТ (ДЛЯ ИМТ)</span>
+        <span className="tracker-page-title">ЗАПИСАТЬ РОСТ</span>
       </div>
 
-      <p className="progress-label" style={{ marginBottom: 8 }}>Показатель учитывается для расчёта ИМТ</p>
+      <p className="progress-label" style={{ textAlign: 'left', fontSize: '0.7rem', marginBottom: 8 }}>Показатель учитывается для расчёта ИМТ</p>
 
       <div className="tracker-input">
         <ScrollPicker value={height} onChange={setHeight} min={100} max={230} step={1} decimals={0} unit="см" />
@@ -265,15 +265,6 @@ function MyDataView({ profile, onBack, onSaved }) {
   const fitnessLabel = fitnessLevel ? (FITNESS_LABELS_PLAIN[fitnessLevel] ?? fitnessLevel) : '—'
   const neatLabel = NEAT_OPTIONS.find(([k]) => k === neatLevel)?.[1] ?? '—'
 
-  const chipRef = useUniformChipWidth([
-    tierLabel, tone, fitnessLabel, neatLabel, sportType, tz, morningTime, eveningTime,
-    notifEnabled, restingPulseEnabled, weight, height, workoutDaysPerWeek,
-  ])
-
-  function toggleGoal(key) {
-    setSelectedGoals((prev) => (prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]))
-  }
-
   const [editField, setEditField] = useState(null)
 
   async function persist(overrides = {}) {
@@ -386,6 +377,28 @@ function MyDataView({ profile, onBack, onSaved }) {
       />
     )
   }
+  if (editField === 'notifications') {
+    return (
+      <OptionEditPage
+        title="УВЕДОМЛЕНИЯ"
+        options={[['on', 'Включены'], ['off', 'Выключены']]}
+        value={notifEnabled ? 'on' : 'off'}
+        onSelect={(v) => { const val = v === 'on'; setNotifEnabled(val); persist({ notifEnabled: val }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'pulse') {
+    return (
+      <OptionEditPage
+        title="ПУЛЬС ПОКОЯ"
+        options={[['on', 'Включён'], ['off', 'Выключен']]}
+        value={restingPulseEnabled ? 'on' : 'off'}
+        onSelect={(v) => { const val = v === 'on'; setRestingPulseEnabled(val); persist({ restingPulseEnabled: val }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
   if (editField === 'weight') {
     return (
       <TextEditPage
@@ -428,7 +441,7 @@ function MyDataView({ profile, onBack, onSaved }) {
   }
 
   return (
-    <div className="page club-page" ref={chipRef}>
+    <div className="page club-page">
       <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
 
       <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
@@ -436,80 +449,80 @@ function MyDataView({ profile, onBack, onSaved }) {
 
       <div className="data-row skew-chip" onClick={() => setEditField('name')}>
         <span className="data-row__label">{preferredName || 'ИМЯ'}</span>
-        <span className="data-row__value"><span>{tierLabel}</span></span>
+        <span className="data-row__value data-row__value--fixed"><span>{tierLabel}</span></span>
       </div>
 
       <div className="data-row skew-chip" onClick={() => setEditField('tone')}>
         <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
-        <span className="data-row__value"><span>{tone === 'aggressive' ? 'ЖЁСТКИЙ' : 'МЯГКИЙ'}</span></span>
+        <span className="data-row__value data-row__value--fixed"><span>{tone === 'aggressive' ? 'ЖЁСТКИЙ' : 'МЯГКИЙ'}</span></span>
       </div>
 
-      <p className="section-heading">ЦЕЛИ</p>
+      <img src={goalsHeading} alt="ЦЕЛИ" className="goals-heading-img" />
       {GOAL_OPTIONS.map(([key, label]) => (
-        <div key={key} className="data-row skew-chip" onClick={() => toggleGoal(key)}>
-          <span className="data-row__label">{label.toUpperCase()}</span>
-          <span className="data-row__value"><span>{selectedGoals.includes(key) ? '✓' : '+'}</span></span>
+        <div key={key} className="flat-row" onClick={() => toggleGoal(key)}>
+          <span className="flat-row__label">{label.toUpperCase()}</span>
+          <span className="flat-row__value">{selectedGoals.includes(key) ? '−' : '+'}</span>
         </div>
       ))}
 
-      <div className="data-row skew-chip" onClick={() => setEditField('fitness')}>
-        <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
-        <span className="data-row__value"><span>{fitnessLabel}</span></span>
+      <div className="flat-row" onClick={() => setEditField('fitness')}>
+        <span className="flat-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
+        <span className="flat-row__value">+</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('neat')}>
-        <span className="data-row__label">АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</span>
-        <span className="data-row__value"><span>{neatLabel}</span></span>
+      <div className="flat-row" onClick={() => setEditField('neat')}>
+        <span className="flat-row__label">АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</span>
+        <span className="flat-row__value">+</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('sport')}>
-        <span className="data-row__label">ВИД СПОРТА</span>
-        <span className="data-row__value"><span>{sportType || '+'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('sport')}>
+        <span className="flat-row__label">ВИД СПОРТА</span>
+        <span className="flat-row__value">+</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('timezone')}>
-        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
-        <span className="data-row__value"><span>{tz}</span></span>
+      <div className="flat-row" onClick={() => setEditField('timezone')}>
+        <span className="flat-row__label">ЧАСОВОЙ ПОЯС</span>
+        <span className="flat-row__value">{tz}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('morning')}>
-        <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value"><span>{morningTime}</span></span>
+      <div className="flat-row" onClick={() => setEditField('morning')}>
+        <span className="flat-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
+        <span className="flat-row__value">{morningTime}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('evening')}>
-        <span className="data-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value"><span>{eveningTime}</span></span>
+      <div className="flat-row" onClick={() => setEditField('evening')}>
+        <span className="flat-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
+        <span className="flat-row__value">{eveningTime}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => { setNotifEnabled((v) => !v); persist({ notifEnabled: !notifEnabled }) }}>
-        <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
-        <span className="data-row__value"><span>{notifEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('notifications')}>
+        <span className="flat-row__label">УВЕДОМЛЕНИЯ</span>
+        <span className="flat-row__value">+</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => { setRestingPulseEnabled((v) => !v); persist({ restingPulseEnabled: !restingPulseEnabled }) }}>
-        <span className="data-row__label">ПУЛЬС ПОКОЯ</span>
-        <span className="data-row__value"><span>{restingPulseEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('pulse')}>
+        <span className="flat-row__label">ПУЛЬС ПОКОЯ</span>
+        <span className="flat-row__value">+</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('weight')}>
-        <span className="data-row__label">ВЕС (СТАРТОВЫЙ, КГ)</span>
-        <span className="data-row__value"><span>{weight ? `${weight} КГ` : '+'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('weight')}>
+        <span className="flat-row__label">ВЕС (СТАРТОВЫЙ, КГ)</span>
+        <span className="flat-row__value">{weight ? `${weight} КГ` : '+'}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('height')}>
-        <span className="data-row__label">РОСТ (СМ)</span>
-        <span className="data-row__value"><span>{height ? `${height} СМ` : '+'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('height')}>
+        <span className="flat-row__label">РОСТ (СМ)</span>
+        <span className="flat-row__value">{height ? `${height} СМ` : '+'}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('workoutDays')}>
-        <span className="data-row__label">ТРЕНИРОВОК В НЕДЕЛЮ</span>
-        <span className="data-row__value"><span>{workoutDaysPerWeek || '+'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('workoutDays')}>
+        <span className="flat-row__label">ТРЕНИРОВОК В НЕДЕЛЮ</span>
+        <span className="flat-row__value">{workoutDaysPerWeek || '+'}</span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setEditField('additional')}>
-        <span className="data-row__label">ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</span>
-        <span className="data-row__value"><span>{additionalInfo ? 'Изменить' : '+'}</span></span>
+      <div className="flat-row" onClick={() => setEditField('additional')}>
+        <span className="flat-row__label">ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</span>
+        <span className="flat-row__value">+</span>
       </div>
 
       {error && <p style={{ color: '#ff4444', fontSize: '0.85rem', marginTop: 8 }}>{error}</p>}
@@ -589,7 +602,7 @@ export default function ProfilePage() {
       <MyDataView
         profile={profile}
         onBack={() => setMyDataOpen(false)}
-        onSaved={() => { setMyDataOpen(false); refreshProfile() }}
+        onSaved={() => refreshProfile()}
       />
     )
   }

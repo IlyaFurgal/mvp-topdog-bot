@@ -41,41 +41,34 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
   }
 
   return (
-    <div className="workout-modal">
-      <div className="workout-modal__header">
-        <button className="checkin-flow__back" onClick={onClose}>‹</button>
-        <span className="workout-modal__title">
-          {editWorkout ? 'РЕДАКТИРОВАТЬ ТРЕНИРОВКУ' : 'НОВАЯ ТРЕНИРОВКА'}
+    <div className="page club-page">
+      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
+
+      <div className="tracker-page-title-plate skew-chip">
+        <span className="tracker-page-title">
+          {editWorkout ? 'РЕДАКТИРОВАТЬ ТРЕНИРОВКУ' : 'ЗАПИСАТЬ ТРЕНИРОВКУ'}
         </span>
       </div>
 
       <div className="workout-modal__form">
-        {/* Date + time */}
+        {/* date */}
         <div className="wf-section">
-          <label className="wf-label">ДАТА И ВРЕМЯ</label>
-          <div className="wf-inline">
-            <input
-              type="date"
-              className="wf-input wf-input--flex"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
-            <input
-              type="time"
-              className="wf-input"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-            />
-          </div>
+          <label className="wf-label">ДАТА</label>
+          <input
+            type="date"
+            className="field-input"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+          />
         </div>
 
         {/* duration */}
         <div className="wf-section">
-          <label className="wf-label">ДЛИТЕЛЬНОСТЬ (МИН, НЕОБЯЗАТЕЛЬНО)</label>
+          <label className="wf-label">ДЛИТЕЛЬНОСТЬ (МИН)</label>
           <input
             type="number"
             inputMode="numeric"
-            className="wf-input"
+            className="field-input"
             placeholder="напр. 60"
             min="1"
             value={durationMin}
@@ -86,25 +79,28 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
         {/* RPE */}
         <div className="wf-section">
           <label className="wf-label">RPE — НАСКОЛЬКО ТЯЖЕЛО ПРОШЛА (НЕОБЯЗАТЕЛЬНО)</label>
-          <div className="checkin-flow__rpe">
-            {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`checkin-flow__rpe-btn ${n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : ''}${rpe === n ? ' checkin-flow__rpe-btn--selected' : ''}`}
-                onClick={() => setRpe(rpe === n ? null : n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
+          <input
+            type="number"
+            inputMode="numeric"
+            className="field-input"
+            placeholder="1–10"
+            min="1"
+            max="10"
+            value={rpe ?? ''}
+            onChange={e => {
+              const v = e.target.value
+              if (v === '') { setRpe(null); return }
+              const n = Math.max(1, Math.min(10, parseInt(v, 10) || 0))
+              setRpe(n)
+            }}
+          />
         </div>
 
         {/* note */}
         <div className="wf-section">
-          <label className="wf-label">ЗАМЕТКА (необязательно)</label>
+          <label className="wf-label">ЗАМЕТКА</label>
           <textarea
-            className="wf-textarea"
+            className="additional-info-textarea"
             placeholder="Напиши заметку о тренировке..."
             value={note}
             rows={3}
@@ -115,11 +111,12 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
         {error && <p className="wf-error">{error}</p>}
 
         <button
-          className="btn btn-accent"
+          className="btn tracker-save-btn--side"
           onClick={handleSubmit}
           disabled={saving || !date}
+          style={{ marginTop: 8 }}
         >
-          {saving ? 'СОХРАНЯЕМ...' : (editWorkout ? 'СОХРАНИТЬ' : 'ЗАПИСАТЬ ТРЕНИРОВКУ')}
+          {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
         </button>
       </div>
     </div>
