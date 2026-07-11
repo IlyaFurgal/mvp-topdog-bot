@@ -8,7 +8,7 @@ from bot.funnel_content import (
     ABOUT_CLUB_TEXT, FAQ_TEXT, SUPPORT_TEXT, TARIFFS_TEXT,
     about_club_kb, faq_kb, support_kb, tariffs_kb,
 )
-from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
+from bot.keyboards.reply import freemium_menu_kb, request_contact_kb
 from bot.services.push_media import send_push_video
 from bot.states import RegistrationForm
 from core.config import settings

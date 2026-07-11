@@ -48,6 +48,14 @@
   box-sizing: border-box;
 }
 
+/* Form controls don't inherit font-family from the page by default (browsers
+   give them a UA form-control font instead) — without this, every
+   tap-to-edit value (scroll-picker, macro fields, profile rows) visibly
+   switches font the moment it turns into an <input>/<select>. */
+input, select, textarea, button {
+  font-family: inherit;
+}
+
 /* Shared treatment for every neon accent label — one place to keep the
    Gramatika Bold-Slanted / uppercase / lh-100 / ls-0 spec consistent.
    Apply to screen headings and standalone numeric values only — never to
@@ -197,6 +205,25 @@ html, body {
   text-transform: uppercase;
   cursor: pointer;
   margin-top: 8px;
+}
+
+/* Dark pill instead of the full-width solid-fill CTA — matches the
+   calories reference, which puts a small side-aligned save button under
+   the macro row instead of a primary button spanning the screen. */
+.tracker-save-btn--side {
+  align-self: flex-start;
+  width: auto;
+  height: auto;
+  padding: 12px 28px;
+  background: var(--surface);
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: var(--accent-club);
+  font-style: italic;
+}
+
+.tracker-save-btn--side:active {
+  opacity: 0.85;
 }
 
 .btn-accent {
@@ -1110,8 +1137,8 @@ html, body {
   margin-bottom: 20px;
   box-sizing: border-box;
   background:
-    linear-gradient(158deg, transparent 42%, rgba(255, 255, 255, 0.10) 54%, transparent 66%),
-    linear-gradient(105deg, #3a3a3a 0%, #202020 52%, #101010 100%);
+    linear-gradient(158deg, transparent 38%, rgba(255, 255, 255, 0.18) 54%, transparent 70%),
+    linear-gradient(105deg, #4a4a4a 0%, #202020 48%, #0a0a0a 100%);
 }
 
 .tracker-page-title {
@@ -1343,6 +1370,14 @@ html, body {
   color: var(--text);
 }
 
+.water-today--calories {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .progress-bar {
   height: 8px;
   background: #2e2e2e;
@@ -1392,9 +1427,11 @@ html, body {
 }
 
 .calorie-ring__label {
-  font-size: 0.65rem;
+  font-family: var(--font-accent);
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  font-style: italic;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
@@ -1408,104 +1445,48 @@ html, body {
 }
 
 .calorie-ring__goal {
-  font-size: 0.6rem;
+  font-family: var(--font-accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-style: italic;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
 .water-bottle-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px;
   margin: 12px 0;
-  justify-content: center;
 }
 
+/* Plain chips, not bottle-shaped art — a real bottle graphic per unit was
+   too wide for all 8 to fit on one row on mobile widths. */
 .water-bottle {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
+  background: var(--surface);
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px 2px;
   cursor: pointer;
-  padding: 4px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
-.water-bottle__icon-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.water-bottle__icon {
-  width: 32px;
-  height: 55px;
-  object-fit: contain;
-  display: block;
-}
-
-.water-bottle__label {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 14px;
-  text-align: center;
-  font-size: 0.5rem;
-  font-weight: 800;
+.water-bottle--active {
+  background: var(--accent-club);
+  border-color: var(--accent-club);
   color: #111;
 }
 
-.water-quick {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.water-btn {
-  flex: 1;
-  padding: 14px 0;
-  background: var(--surface);
-  border: 1px solid #333;
-  border-radius: 10px;
-  color: var(--text);
-  font-family: var(--font-accent);
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: center;
-}
-
-.water-btn--active {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: #0d1f3c;
-}
-
-.water-btn--reset {
-  flex: 0 0 auto;
-  padding: 14px 12px;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-.water-btn--reset:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.water-custom {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.water-custom .weight-num-input {
-  flex: 1;
-}
-
-.water-btn--minus {
-  color: var(--text-muted);
-}
 
 .macro-cols {
   display: flex;
@@ -1523,10 +1504,60 @@ html, body {
   min-width: 0;
 }
 
-.macro-col__icon {
-  height: 16px;
-  width: auto;
-  object-fit: contain;
+.macro-col__label {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.kcal-input-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(100deg, #2a2a2a 0%, #161616 100%);
+  border: 1px solid #333;
+  border-radius: 24px;
+  padding: 14px 20px;
+  margin-top: 8px;
+}
+
+.kcal-input-pill__field {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.kcal-input-pill__field::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.kcal-input-pill__field::-webkit-outer-spin-button,
+.kcal-input-pill__field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.kcal-input-pill__unit {
+  flex-shrink: 0;
+  font-family: var(--font-accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-left: 12px;
 }
 
 .macro-col__value {
@@ -2741,6 +2772,7 @@ html, body {
   font-family: var(--font-accent);
   font-size: 0.9rem;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 0;
@@ -3950,9 +3982,10 @@ select optgroup {
 }
 
 .stripe-divider {
-  height: 16px;
-  width: 118px;
-  background: url('../assets/5.png') left center / contain no-repeat;
+  height: 8px;
+  width: 100%;
+  max-width: 220px;
+  background: url('../assets/Градиентная строка.png') left center / contain no-repeat;
   margin: 4px 0 20px;
 }
 

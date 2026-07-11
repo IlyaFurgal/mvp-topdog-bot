@@ -9,6 +9,7 @@ import weightTitle from '../assets/13.png'
 import waterTitle from '../assets/14.png'
 import caloriesTitle from '../assets/15.png'
 import sleepTitle from '../assets/16.png'
+import loadTitle from '../assets/Нагрузка.png'
 import WorkoutCalendar from './WorkoutCalendar'
 
 const PERIODS = [
@@ -204,16 +205,11 @@ export default function ProgressSection({ refreshKey }) {
   // Prefer insight's discipline_pct (7-day window) so the % and the insight text always agree
   const displayedDiscipline = insight?.discipline_pct != null ? insight.discipline_pct : discipline
 
-  // Самочувствие (утро, шкала 1-10) и Настроение (вечер, шкала 1-10) —
-  // отдельные графики, источник данных чекины, а не трекеры.
-  const feelingData = checkins
-    .filter((c) => c.type === 'morning' && Number.isFinite(Number(c.data?.feeling)))
-    .map((c) => ({ created_at: c.created_at, value: Number(c.data.feeling) }))
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-
-  const moodData = checkins
-    .filter((c) => c.type === 'evening' && Number.isFinite(Number(c.data?.mood)))
-    .map((c) => ({ created_at: c.created_at, value: Number(c.data.mood) }))
+  // Нагрузка — RPE (1-10) с post_workout чекинов, один пункт на чекин
+  // (как самочувствие/настроение раньше), не агрегируется по дням.
+  const loadData = postWorkouts
+    .map((c) => ({ created_at: c.created_at, value: Number(c.data?.rpe) }))
+    .filter((d) => Number.isFinite(d.value) && d.value >= 1 && d.value <= 10)
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
   return (
@@ -511,16 +507,19 @@ export default function ProgressSection({ refreshKey }) {
             )}
           </div>
 
-          {/* ── Самочувствие (утренний чекин) ────────────── */}
+          {/* ── Нагрузка (RPE, post_workout чекины) ──────── */}
           <div className="card chart-card">
             <div className="chart-header">
-              <span className="chart-title">САМОЧУВСТВИЕ</span>
+              <img src={loadTitle} alt="НАГРУЗКА" className="chart-title-img" />
+              {avgRpe != null && (
+                <span className="chart-current">{avgRpe} RPE/день</span>
+              )}
             </div>
-            {feelingData.length === 0 ? (
+            {loadData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={feelingData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <LineChart data={loadData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                   <XAxis
                     dataKey="created_at"
                     tickFormatter={fmtDate}
@@ -529,14 +528,17 @@ export default function ProgressSection({ refreshKey }) {
                     tickLine={{ stroke: CHART_GREEN }}
                   />
                   <YAxis
-                    domain={[1, 10]}
+                    domain={[
+                      (dataMin) => Math.max(1, Math.floor(dataMin) - 1),
+                      (dataMax) => Math.min(10, Math.ceil(dataMax) + 1),
+                    ]}
                     tick={AXIS_TICK}
                     width={24}
                     axisLine={{ stroke: CHART_GREEN }}
                     tickLine={{ stroke: CHART_GREEN }}
                   />
                   <Tooltip
-                    formatter={(v) => [v, 'Самочувствие']}
+                    formatter={(v) => [v, 'Нагрузка']}
                     contentStyle={TOOLTIP_STYLE}
                     labelFormatter={fmtDate}
                   />
@@ -551,47 +553,14 @@ export default function ProgressSection({ refreshKey }) {
                 </LineChart>
               </ResponsiveContainer>
             )}
-          </div>
-
-          {/* ── Настроение (вечерний чекин) ──────────────── */}
-          <div className="card chart-card">
-            <div className="chart-header">
-              <span className="chart-title">НАСТРОЕНИЕ</span>
-            </div>
-            {moodData.length === 0 ? (
-              <EmptyChart />
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={moodData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <XAxis
-                    dataKey="created_at"
-                    tickFormatter={fmtDate}
-                    tick={AXIS_TICK}
-                    axisLine={{ stroke: CHART_GREEN }}
-                    tickLine={{ stroke: CHART_GREEN }}
-                  />
-                  <YAxis
-                    domain={[1, 10]}
-                    tick={AXIS_TICK}
-                    width={24}
-                    axisLine={{ stroke: CHART_GREEN }}
-                    tickLine={{ stroke: CHART_GREEN }}
-                  />
-                  <Tooltip
-                    formatter={(v) => [v, 'Настроение']}
-                    contentStyle={TOOLTIP_STYLE}
-                    labelFormatter={fmtDate}
-                  />
-                  <Line
-                    type="linear"
-                    dataKey="value"
-                    stroke={CHART_GREEN}
-                    strokeWidth={2}
-                    dot={<SquareDot />}
-                    activeDot={<SquareDot r={9} />}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            {loadData.length > 0 && (
+              <StatRow
+                items={[
+                  { label: 'МИН', value: Math.min(...loadData.map((d) => d.value)) },
+                  { label: 'МАКС', value: Math.max(...loadData.map((d) => d.value)) },
+                  { label: 'СРЕДНЕЕ 7 ДНЕЙ', value: avgRpe },
+                ]}
+              />
             )}
           </div>
         </>

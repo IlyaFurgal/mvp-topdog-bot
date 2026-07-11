@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { saveTracker } from '../api/trackers'
 import ScrollPicker from './ScrollPicker'
-import waterBottleEmpty from '../assets/water_bottle_бутылка_воды.png'
-import waterBottleFull from '../assets/Полная бутылка.png'
-import proteinIcon from '../assets/Белки.png'
-import fatIcon from '../assets/Жиры.png'
-import carbsIcon from '../assets/Углеводы.png'
 
 const GOAL_WATER = 2000
 const BOTTLE_ML = 500
@@ -74,7 +69,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
     }
   }
 
-  const addLabel = type === 'water' || type === 'calories' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
+  const addLabel = type === 'water' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
 
   return (
     <div className="page club-page">
@@ -83,6 +78,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
       <div className="tracker-page-title-plate skew-chip">
         <span className="tracker-page-title">{TITLES[type]}</span>
       </div>
+      <div className="stripe-divider" />
 
       <div className="tracker-page-body">
         {type === 'weight' && (
@@ -119,7 +115,11 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
           <PulseInput value={pulse} onChange={setPulse} />
         )}
 
-        <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
+        <button
+          className={type === 'calories' ? 'btn tracker-save-btn--side' : 'btn btn-accent'}
+          onClick={handleSave}
+          disabled={saving}
+        >
           {saving ? 'СОХРАНЯЕМ...' : addLabel}
         </button>
       </div>
@@ -205,10 +205,7 @@ function WaterInput({ amount, onChange, total }) {
               onClick={() => addPreset(active ? -BOTTLE_ML : BOTTLE_ML)}
               title={active ? `Убрать ${BOTTLE_ML} мл` : `Добавить ${BOTTLE_ML} мл`}
             >
-              <span className="water-bottle__icon-wrap">
-                <img src={active ? waterBottleFull : waterBottleEmpty} alt="" className="water-bottle__icon" />
-                <span className="water-bottle__label">0.5Л</span>
-              </span>
+              0.5Л
             </button>
           )
         })}
@@ -258,7 +255,7 @@ function CalorieRing({ pct, overLimit, remaining, limit }) {
           cx="50" cy="50" r={r}
           fill="none"
           stroke="var(--border)"
-          strokeWidth="8"
+          strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={`${arcLength} ${circumference}`}
           strokeDashoffset={0}
@@ -268,7 +265,7 @@ function CalorieRing({ pct, overLimit, remaining, limit }) {
           cx="50" cy="50" r={r}
           fill="none"
           stroke={overLimit ? 'var(--danger)' : 'var(--accent-club)'}
-          strokeWidth="8"
+          strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={`${fillLength} ${circumference}`}
           strokeDashoffset={0}
@@ -312,9 +309,9 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
 
   return (
     <div className="tracker-input">
-      <p className="water-today">
-        Сегодня: <strong>{Math.round(displayTotal).toLocaleString('ru')} ккал</strong>
-        {' '}/ норма {limit.toLocaleString('ru')} ккал
+      <p className="water-today water-today--calories">
+        СЕГОДНЯ: {Math.round(displayTotal).toLocaleString('ru')} ККАЛ
+        {' '}/ НОРМА {limit.toLocaleString('ru')} ККАЛ
       </p>
 
       <CalorieRing pct={pct} overLimit={overLimit} remaining={remaining} limit={limit} />
@@ -324,53 +321,33 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
           Норма на сегодня превышена — если хочешь, обсуди с ассистентом.
         </p>
       )}
-      <div className="water-quick">
-        {[100, 300, 500].map((kcal) => (
-          <button key={kcal} className="water-btn" onClick={() => addPreset(kcal)}>
-            +{kcal}
-          </button>
-        ))}
-        <button
-          className="water-btn water-btn--reset"
-          onClick={() => { setDraft(''); onChange(0) }}
-          disabled={!draft}
-        >
-          Сброс
-        </button>
-      </div>
-      <div className="water-quick">
-        {[100, 300, 500].map((kcal) => (
-          <button key={kcal} className="water-btn water-btn--minus" onClick={() => addPreset(-kcal)} disabled={displayTotal <= 0}>
-            −{kcal}
-          </button>
-        ))}
-      </div>
-      <div className="water-custom">
+
+      <div className="kcal-input-pill">
         <input
           type="number"
           inputMode="numeric"
-          className="weight-num-input"
+          className="kcal-input-pill__field"
           value={draft}
-          placeholder="или введи ± ккал"
+          placeholder="ВВЕДИ ККАЛ..."
           onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
           onBlur={handleBlur}
         />
-        <span className="weight-unit">ккал</span>
+        <span className="kcal-input-pill__unit">ККАЛ</span>
       </div>
 
       <div className="macro-cols">
         <MacroCol
-          icon={carbsIcon} label="УГЛЕВОДЫ"
+          label="УГЛЕВОДЫ"
           current={todayMacros?.carbs_g || 0} delta={carbs} target={macroTargets?.carbs_g}
           onChangeDelta={onCarbs}
         />
         <MacroCol
-          icon={proteinIcon} label="БЕЛКИ"
+          label="БЕЛКИ"
           current={todayMacros?.protein_g || 0} delta={protein} target={macroTargets?.protein_g}
           onChangeDelta={onProtein}
         />
         <MacroCol
-          icon={fatIcon} label="ЖИРЫ"
+          label="ЖИРЫ"
           current={todayMacros?.fat_g || 0} delta={fat} target={macroTargets?.fat_g}
           onChangeDelta={onFat}
         />
@@ -379,7 +356,7 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
   )
 }
 
-function MacroCol({ icon, label, current, delta, target, onChangeDelta }) {
+function MacroCol({ label, current, delta, target, onChangeDelta }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const display = current + (parseFloat(delta) || 0)
@@ -396,7 +373,7 @@ function MacroCol({ icon, label, current, delta, target, onChangeDelta }) {
 
   return (
     <div className="macro-col">
-      <img src={icon} alt={label} className="macro-col__icon" />
+      <span className="macro-col__label">{label}</span>
       {editing ? (
         <input
           type="number"

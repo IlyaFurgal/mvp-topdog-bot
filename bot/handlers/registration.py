@@ -26,7 +26,7 @@ from bot.funnel_content import (
 )
 from bot.services.push_media import send_push_video
 from bot.handlers.menu import _user_has_subscription, _webapp_kb
-from bot.keyboards.reply import freemium_menu_kb, main_menu_kb, request_contact_kb
+from bot.keyboards.reply import freemium_menu_kb, request_contact_kb
 from core.utils.phone import normalize_phone
 from bot.states import RegistrationForm
 from core.config import settings
@@ -244,8 +244,18 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                 user.subscription_status,
             )
             if has_sub:
+                # _webapp_kb is an inline keyboard attached to this one message —
+                # it does nothing to a persistent ReplyKeyboardMarkup left over
+                # from an earlier main_menu_kb()/freemium_menu_kb() send (e.g.
+                # from the phone-check flow below), which Telegram keeps showing
+                # at the bottom forever until something explicitly replaces or
+                # removes it. Clear it first, then send the actual inline button.
                 await message.answer(
                     f"Добро пожаловать обратно, {name}.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await message.answer(
+                    "▸ Открыть приложение",
                     reply_markup=_webapp_kb("▸ Открыть приложение"),
                 )
             else:
@@ -435,7 +445,11 @@ async def _process_phone_check(message: Message, state: FSMContext, phone: str) 
         # tier-приветственная воронка (кружок + пуш), что и при живой
         # оплате через GC webhook, вместо статичного "Доступ открыт!"
         # (см. api/routers/webhooks.py's _run_plus/pro_payment_funnel).
-        await message.answer("Главное меню:", reply_markup=main_menu_kb())
+        # See the has_sub branch in cmd_start above — main_menu_kb() here was
+        # the actual source of the stale persistent keyboard: once shown, it
+        # sat at the bottom forever since the sign-in funnels below only send
+        # inline buttons, which never replace a persistent ReplyKeyboardMarkup.
+        await message.answer("Главное меню:", reply_markup=ReplyKeyboardRemove())
         if tier == "plus":
             _spawn(_run_plus_signin_funnel(message.bot, message.chat.id, name))
         elif tier == "pro":
@@ -968,7 +982,12 @@ async def _finish_registration(target: CallbackQuery | Message, state: FSMContex
     await send(welcome_text, reply_markup=welcome_kb)
 
     if has_sub:
-        await send("Главное меню:", reply_markup=main_menu_kb())
+        # The welcome_kb inline button above already opens the app — no need
+        # for the legacy multi-button main_menu_kb reply keyboard, which (as
+        # a persistent keyboard) would otherwise sit at the bottom forever
+        # since nothing else in the current UX ever replaces it. Still clear
+        # any persistent keyboard a prior interaction may have left behind.
+        await send("Открывай приложение 👇", reply_markup=ReplyKeyboardRemove())
     else:
         # If no subscription — additionally show payment options
         await send(
