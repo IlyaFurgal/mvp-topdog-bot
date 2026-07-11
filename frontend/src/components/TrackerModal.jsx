@@ -396,10 +396,7 @@ function MacroCol({ icon, label, current, delta, target, onChangeDelta }) {
 
   return (
     <div className="macro-col">
-      <span className="macro-col__label-group">
-        <img src={icon} alt="" className="macro-col__icon" />
-        <span className="macro-col__label">{label}</span>
-      </span>
+      <img src={icon} alt={label} className="macro-col__icon" />
       {editing ? (
         <input
           type="number"

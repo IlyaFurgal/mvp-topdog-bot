@@ -1523,25 +1523,10 @@ html, body {
   min-width: 0;
 }
 
-.macro-col__label-group {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
 .macro-col__icon {
-  width: 15px;
-  height: 15px;
+  height: 16px;
+  width: auto;
   object-fit: contain;
-}
-
-.macro-col__label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
 }
 
 .macro-col__value {
@@ -1631,20 +1616,20 @@ html, body {
   text-align: center;
 }
 
+/* Selection is just an outline ring — it doesn't touch color/border/background,
+   so the button keeps its own quality-hint color (red/amber/green) when picked. */
 .sleep-btn--active {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
-  background: #1a0d3c;
+  outline: 2px solid var(--accent-club);
+  outline-offset: -2px;
 }
 
 /* Quick-pick duration quality hint — low end reads as a warning, the
-   healthy 7-9h range gets a soft green fill. Skipped when the button is
-   the active selection so the purple "selected" color always wins. */
-.sleep-btn--5:not(.sleep-btn--active) { border-color: #ef4444; color: #ef4444; }
-.sleep-btn--6:not(.sleep-btn--active) { border-color: #f59e0b; color: #f59e0b; }
-.sleep-btn--7:not(.sleep-btn--active),
-.sleep-btn--8:not(.sleep-btn--active),
-.sleep-btn--9:not(.sleep-btn--active) {
+   healthy 7-9h range gets a soft green fill. */
+.sleep-btn--5 { border-color: #ef4444; color: #ef4444; }
+.sleep-btn--6 { border-color: #f59e0b; color: #f59e0b; }
+.sleep-btn--7,
+.sleep-btn--8,
+.sleep-btn--9 {
   border-color: #4ade8055;
   color: #86efac;
   background: #1c3324;

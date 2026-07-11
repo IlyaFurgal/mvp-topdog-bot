@@ -263,7 +263,7 @@ export default function ProgressSection({ refreshKey }) {
             <div className="metric-card">
               <span className="metric-label">НАГРУЗКА</span>
               <span className="metric-value">
-                {avgRpe ?? 'Нет данных'}
+                {avgRpe ?? '—'}
               </span>
             </div>
             <div className="metric-card">
@@ -275,7 +275,7 @@ export default function ProgressSection({ refreshKey }) {
             <div className="metric-card">
               <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
               <span className="metric-value">
-                {recoveryPct !== null ? `${recoveryPct}%` : 'Нет данных'}
+                {recoveryPct !== null ? `${recoveryPct}%` : '—'}
               </span>
             </div>
           </div>
