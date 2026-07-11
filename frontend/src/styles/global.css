@@ -1099,10 +1099,24 @@ html, body {
 
 /* ── TrackerModal (full-page) ─────────────────────────── */
 
+/* Title banner reusing the same skewed dark-plate + sheen treatment as
+   .tracker-cta-btn ("ЗАПОЛНИ ТРЕКЕР") — the app's established "parallelogram
+   title" pattern, applied here instead of a plain text heading. */
+.tracker-page-title-plate.skew-chip {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  background:
+    linear-gradient(158deg, transparent 42%, rgba(255, 255, 255, 0.10) 54%, transparent 66%),
+    linear-gradient(105deg, #3a3a3a 0%, #202020 52%, #101010 100%);
+}
+
 .tracker-page-title {
-  display: block;
   font-family: var(--font-accent);
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0.02em;
@@ -1409,9 +1423,8 @@ html, body {
 
 .water-bottle {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
@@ -1420,20 +1433,27 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.water-bottle__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .water-bottle__icon {
   width: 32px;
   height: 55px;
   object-fit: contain;
+  display: block;
 }
 
 .water-bottle__label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.water-bottle--active .water-bottle__label {
-  color: var(--accent-club);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  text-align: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: #111;
 }
 
 .water-quick {
@@ -1487,43 +1507,74 @@ html, body {
   color: var(--text-muted);
 }
 
-.macro-row {
+.macro-cols {
   display: flex;
-  flex-direction: column;
   gap: 10px;
   margin-top: 16px;
-}
-
-.macro-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.macro-field .weight-num-input {
-  flex: 0 0 90px;
   text-align: center;
 }
 
-.macro-field__label-group {
+.macro-col {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.macro-field__icon {
-  width: 18px;
-  height: 18px;
+.macro-col__label-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.macro-col__icon {
+  width: 15px;
+  height: 15px;
   object-fit: contain;
 }
 
-.macro-field__label {
-  font-size: 0.75rem;
+.macro-col__label {
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.macro-col__value {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-accent);
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-club);
+  cursor: pointer;
+}
+
+.macro-col__edit-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--accent-club);
+  outline: none;
+  text-align: center;
+  font-family: var(--font-accent);
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-club);
+  -moz-appearance: textfield;
+}
+
+.macro-col__edit-input::-webkit-outer-spin-button,
+.macro-col__edit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .water-manual {
@@ -1586,12 +1637,18 @@ html, body {
   background: #1a0d3c;
 }
 
-/* Quick-pick duration quality hint — low end reads as a warning, high end
-   as healthy. Skipped when the button is the active selection so the
-   purple "selected" color always wins. */
+/* Quick-pick duration quality hint — low end reads as a warning, the
+   healthy 7-9h range gets a soft green fill. Skipped when the button is
+   the active selection so the purple "selected" color always wins. */
 .sleep-btn--5:not(.sleep-btn--active) { border-color: #ef4444; color: #ef4444; }
 .sleep-btn--6:not(.sleep-btn--active) { border-color: #f59e0b; color: #f59e0b; }
-.sleep-btn--9:not(.sleep-btn--active) { border-color: #22c55e; color: #22c55e; }
+.sleep-btn--7:not(.sleep-btn--active),
+.sleep-btn--8:not(.sleep-btn--active),
+.sleep-btn--9:not(.sleep-btn--active) {
+  border-color: #4ade8055;
+  color: #86efac;
+  background: #1c3324;
+}
 
 .sleep-inputs {
   display: flex;
@@ -3914,6 +3971,60 @@ select optgroup {
   margin: 4px 0 20px;
 }
 
+.section-heading {
+  font-family: var(--font-accent);
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent-club);
+  margin: 20px 0 8px;
+}
+
+/* Native <input>/<select> living inside a .data-row__value chip — reset
+   browser chrome so it reads as plain text (color/size come from the
+   existing ".data-row__value > *" rule) with the whole chip as tap target. */
+.data-row__input {
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.data-row__input--name {
+  text-align: left;
+  cursor: text;
+  flex: 1;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.additional-info-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: -4px 0 8px;
+  padding: 10px 12px;
+  background: linear-gradient(105deg, #2c2c2c 0%, #1a1a1a 55%, #121212 100%);
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 .field-input {
   display: block;
   width: 100%;
@@ -4054,6 +4165,15 @@ select optgroup {
   font-size: 1rem;
   font-weight: 800;
   font-style: italic;
+  /* The grid column is narrow (avatar takes ~35% of the row), so a long
+     label (КАЛОРИИ, ПОЛЬЗОВАТЕЛЬ) competing with a wide value chip can run
+     out of room under the base .data-row__label's nowrap+ellipsis — that
+     clipped words down to 2-3 letters. Let it wrap instead so the full
+     word always stays readable. */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.15;
 }
 
 .my-data-grid .data-row__value {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
@@ -109,8 +109,9 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
     <div className="page club-page">
       <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
 
-      <span className="tracker-page-title">РОСТ (ДЛЯ ИМТ)</span>
-      <div className="stripe-divider" />
+      <div className="tracker-page-title-plate skew-chip">
+        <span className="tracker-page-title">РОСТ (ДЛЯ ИМТ)</span>
+      </div>
 
       <p className="progress-label" style={{ marginBottom: 8 }}>Показатель учитывается для расчёта ИМТ</p>
 
@@ -124,133 +125,90 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
   )
 }
 
-// ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
+// ── МОИ ДАННЫЕ — single-page summary + inline editing ───────────────────────────
 
-function MyDataView({ profile, onBack, onEdit }) {
-  const fitnessLabel = profile?.fitness_level
-    ? (FITNESS_LABELS_PLAIN[profile.fitness_level] ?? profile.fitness_level)
-    : '—'
+function EditableRow({ label, value, onChange, placeholder, type = 'text', suffix }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
 
-  const chipRef = useUniformChipWidth([
-    profile?.tone, fitnessLabel, profile?.morning_reminder_time,
-    profile?.evening_reminder_time, profile?.notifications_enabled,
-    profile?.weight, profile?.height, profile?.workout_days_per_week,
-  ])
+  function startEdit() {
+    setDraft(value ?? '')
+    setEditing(true)
+  }
+
+  function commit() {
+    onChange(draft)
+    setEditing(false)
+  }
 
   return (
-    <div className="page club-page" ref={chipRef}>
-      <button className="club-back" onClick={onBack}>‹ НАЗАД</button>
-
-      <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
-      <div className="stripe-divider" />
-
-      <div className="data-row skew-chip" onClick={() => onEdit('tone')}>
-        <span className="data-row__label">СТИЛЬ ОБЩЕНИЯ</span>
-        <span className="data-row__value">
-          <span>{profile?.tone === 'aggressive' ? 'Жёсткий' : profile?.tone === 'soft' ? 'Мягкий' : '—'}</span>
-        </span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('goals')}>
-        <span className="data-row__label">ЦЕЛИ</span>
-        <span className="data-row__value"><span>Подроб.</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('fitness')}>
-        <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
-        <span className="data-row__value"><span>{fitnessLabel}</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('sport')}>
-        <span className="data-row__label">ВИД СПОРТА</span>
-        <span className="data-row__value"><span>Подроб.</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('morning')}>
-        <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value"><span>{profile?.morning_reminder_time ?? '08:00'}</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('evening')}>
-        <span className="data-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value"><span>{profile?.evening_reminder_time ?? '21:00'}</span></span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('notifications')}>
-        <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
-        <span className="data-row__value">
-          <span>{profile?.notifications_enabled === false ? 'Выкл.' : 'Вкл.'}</span>
-        </span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('weight')}>
-        <span className="data-row__label">ВЕС</span>
-        <span className="data-row__value">
-          <span>{profile?.weight != null ? `${profile.weight} кг` : '—'}</span>
-        </span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('height')}>
-        <span className="data-row__label">РОСТ</span>
-        <span className="data-row__value">
-          <span>{profile?.height != null ? `${profile.height} см` : '—'}</span>
-        </span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('workoutDaysPerWeek')}>
-        <span className="data-row__label">ТРЕНИРОВОК В НЕДЕЛЮ</span>
-        <span className="data-row__value">
-          <span>{profile?.workout_days_per_week != null ? profile.workout_days_per_week : '—'}</span>
-        </span>
-      </div>
-      <div className="data-row skew-chip" onClick={() => onEdit('additional')}>
-        <span className="data-row__label">ДОП. ИНФОРМАЦИЯ</span>
-        <span className="data-row__value"><span>Подроб.</span></span>
-      </div>
+    <div className="data-row skew-chip">
+      <span className="data-row__label">{label}</span>
+      <span className="data-row__value">
+        {editing ? (
+          <input
+            type={type}
+            inputMode={type === 'number' ? 'decimal' : undefined}
+            autoFocus
+            className="data-row__input"
+            value={draft}
+            placeholder={placeholder}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
+          />
+        ) : (
+          <span onClick={startEdit}>{value ? `${value}${suffix ?? ''}` : (placeholder ?? '+')}</span>
+        )}
+      </span>
     </div>
   )
 }
 
-// ── Edit Modal ────────────────────────────────────────────────────────────────
+function ExpandableTextRow({ label, value, onChange }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="data-row skew-chip" onClick={() => setOpen((v) => !v)}>
+        <span className="data-row__label">{label}</span>
+        <span className="data-row__value"><span>{value ? 'Изменить' : '+'}</span></span>
+      </div>
+      {open && (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          maxLength={1000}
+          rows={4}
+          placeholder={"Например:\nболит правое плечо\nизбегаю прыжков и тяжёлых приседаний"}
+          className="additional-info-textarea"
+        />
+      )}
+    </>
+  )
+}
 
-function EditProfileModal({ profile, focusField, onClose, onSaved }) {
-  const overlayRef = useRef(null)
+function MyDataView({ profile, onBack, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Preferred name
   const [preferredName, setPreferredName] = useState(profile?.preferred_name ?? '')
-
-  // Tone
   const [tone, setTone] = useState(profile?.tone ?? 'soft')
-
-  // Goals: multi-select
-  const initialGoals = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
-  const [selectedGoals, setSelectedGoals] = useState(initialGoals)
-
-  // Fitness level
+  const [selectedGoals, setSelectedGoals] = useState(profile?.goals ?? (profile?.goal ? [profile.goal] : []))
   const [fitnessLevel, setFitnessLevel] = useState(profile?.fitness_level ?? '')
-
-  // NEAT — дневная активность вне тренировок (влияет на норму калорий)
   const [neatLevel, setNeatLevel] = useState(profile?.neat_level ?? '')
-
-  // Sport type (free text)
   const [sportType, setSportType] = useState(profile?.sport_type ?? '')
-
-  // Timezone
   const [tz, setTz] = useState(profile?.timezone ?? 'UTC+3')
-
-  // Reminder times
   const [morningTime, setMorningTime] = useState(profile?.morning_reminder_time ?? '08:00')
   const [eveningTime, setEveningTime] = useState(profile?.evening_reminder_time ?? '21:00')
-
-  // Notifications toggle
   const [notifEnabled, setNotifEnabled] = useState(profile?.notifications_enabled ?? true)
-
-  // Body metrics
+  const [restingPulseEnabled, setRestingPulseEnabled] = useState(profile?.resting_pulse_enabled ?? false)
   const [weight, setWeight] = useState(profile?.weight != null ? String(profile.weight) : '')
   const [height, setHeight] = useState(profile?.height != null ? String(profile.height) : '')
-
-  // Target training frequency
   const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(
     profile?.workout_days_per_week != null ? String(profile.workout_days_per_week) : ''
   )
-
-  // Additional info (free-form notes for AI)
   const [additionalInfo, setAdditionalInfo] = useState(profile?.additional_info ?? '')
 
-  // Sync all form fields when profile loads or changes
   useEffect(() => {
     if (!profile) return
     setPreferredName(profile.preferred_name ?? '')
@@ -263,50 +221,65 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     setMorningTime(profile.morning_reminder_time ?? profile.push_time ?? '08:00')
     setEveningTime(profile.evening_reminder_time ?? '21:00')
     setNotifEnabled(profile.notifications_enabled ?? true)
+    setRestingPulseEnabled(profile.resting_pulse_enabled ?? false)
     setWeight(profile.weight != null ? String(profile.weight) : '')
     setHeight(profile.height != null ? String(profile.height) : '')
     setWorkoutDaysPerWeek(profile.workout_days_per_week != null ? String(profile.workout_days_per_week) : '')
     setAdditionalInfo(profile.additional_info ?? '')
   }, [profile])
 
-  // Jump straight to the field the user tapped in МОИ ДАННЫЕ instead of
-  // always opening at the top of a long form
-  useEffect(() => {
-    if (!focusField) return
-    const id = setTimeout(() => {
-      document.getElementById(`field-${focusField}`)?.scrollIntoView({ block: 'start' })
-    }, 0)
-    return () => clearTimeout(id)
-  }, [focusField])
+  const tierLabel = profile?.subscription_type === 'pro' ? 'PRO' : profile?.subscription_type === 'plus' ? 'PLUS' : '—'
+  const fitnessLabel = fitnessLevel ? (FITNESS_LABELS_PLAIN[fitnessLevel] ?? fitnessLevel) : '—'
+  const neatLabel = NEAT_OPTIONS.find(([k]) => k === neatLevel)?.[1] ?? '—'
+
+  const chipRef = useUniformChipWidth([
+    tierLabel, tone, fitnessLabel, neatLabel, sportType, tz, morningTime, eveningTime,
+    notifEnabled, restingPulseEnabled, weight, height, workoutDaysPerWeek,
+  ])
 
   function toggleGoal(key) {
-    setSelectedGoals((prev) =>
-      prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]
-    )
+    setSelectedGoals((prev) => (prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]))
+  }
+
+  function cycleTone() {
+    setTone((t) => (t === 'aggressive' ? 'soft' : 'aggressive'))
+  }
+
+  function cycleFitness() {
+    const keys = FITNESS_OPTIONS.map(([k]) => k)
+    const idx = keys.indexOf(fitnessLevel)
+    setFitnessLevel(keys[(idx + 1) % keys.length])
+  }
+
+  function cycleNeat() {
+    const keys = NEAT_OPTIONS.map(([k]) => k)
+    const idx = keys.indexOf(neatLevel)
+    setNeatLevel(keys[(idx + 1) % keys.length])
   }
 
   async function handleSave() {
     setError(null)
     setSaving(true)
     try {
-      const weightNum = weight !== '' ? parseFloat(weight.replace(',', '.')) : undefined
+      const weightNum = weight !== '' ? parseFloat(String(weight).replace(',', '.')) : undefined
       const heightNum = height !== '' ? parseInt(height, 10) : undefined
       const workoutDaysNum = workoutDaysPerWeek !== '' ? parseInt(workoutDaysPerWeek, 10) : undefined
       await client.patch('/profile/me', {
-        preferred_name:        preferredName || undefined,
-        tone:                  tone || undefined,
-        goals:                 selectedGoals.length > 0 ? selectedGoals : undefined,
-        fitness_level:         fitnessLevel || undefined,
-        neat_level:            neatLevel || undefined,
-        sport_type:            sportType || undefined,
-        timezone:              tz || undefined,
-        morning_reminder_time: morningTime || undefined,
-        evening_reminder_time: eveningTime || undefined,
-        weight:                (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
-        height:                (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
-        workout_days_per_week: (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
-        notifications_enabled: notifEnabled,
-        additional_info:       additionalInfo.trim() || null,
+        preferred_name:         preferredName || undefined,
+        tone:                   tone || undefined,
+        goals:                  selectedGoals.length > 0 ? selectedGoals : undefined,
+        fitness_level:          fitnessLevel || undefined,
+        neat_level:             neatLevel || undefined,
+        sport_type:             sportType || undefined,
+        timezone:               tz || undefined,
+        morning_reminder_time:  morningTime || undefined,
+        evening_reminder_time:  eveningTime || undefined,
+        weight:                 (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
+        height:                 (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
+        workout_days_per_week:  (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
+        notifications_enabled:  notifEnabled,
+        resting_pulse_enabled:  restingPulseEnabled,
+        additional_info:        additionalInfo.trim() || null,
       })
       onSaved()
     } catch (e) {
@@ -315,370 +288,99 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
     }
   }
 
-  function handleOverlay(e) {
-    if (e.target === overlayRef.current) onClose()
-  }
-
   return (
-    <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
-      <div className="modal-sheet modal-sheet--scroll">
-        <div className="modal-header">
-          <span className="modal-title">РЕДАКТИРОВАТЬ ПРОФИЛЬ</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <div className="page club-page" ref={chipRef}>
+      <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
 
-        {/* Preferred name */}
-        <p id="field-name" className="section-label" style={{ marginBottom: 8 }}>ИМЯ</p>
+      <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
+      <div className="stripe-divider" />
+
+      <div className="data-row data-row--name skew-chip">
         <input
-          type="text"
+          className="data-row__input data-row__input--name"
           value={preferredName}
-          onChange={(e) => setPreferredName(e.target.value)}
           placeholder="Как к тебе обращаться?"
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            boxSizing: 'border-box',
-            marginBottom: 16,
-          }}
+          onChange={(e) => setPreferredName(e.target.value)}
         />
-
-        {/* Tone */}
-        <p id="field-tone" className="section-label" style={{ marginBottom: 8 }}>СТИЛЬ ОБЩЕНИЯ</p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {[
-            ['aggressive', '💪 Жёсткий'],
-            ['soft',       '🤝 Мягкий'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTone(key)}
-              style={{
-                flex: 1,
-                padding: '9px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: tone === key ? 'var(--accent)' : 'var(--card-bg)',
-                color: tone === key ? '#000' : 'var(--text)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Goals */}
-        <p id="field-goals" className="section-label" style={{ marginBottom: 8 }}>ЦЕЛИ</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-          {GOAL_OPTIONS.map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => toggleGoal(key)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: selectedGoals.includes(key) ? 'var(--accent)' : 'var(--card-bg)',
-                color: selectedGoals.includes(key) ? '#000' : 'var(--text)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              {selectedGoals.includes(key) ? '✅ ' : '◻️ '}{label}
-            </button>
-          ))}
-        </div>
-
-        {/* Fitness level */}
-        <p id="field-fitness" className="section-label" style={{ marginBottom: 8 }}>УРОВЕНЬ ПОДГОТОВКИ</p>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {FITNESS_OPTIONS.map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setFitnessLevel(key)}
-              style={{
-                padding: '7px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: fitnessLevel === key ? 'var(--accent)' : 'var(--card-bg)',
-                color: fitnessLevel === key ? '#000' : 'var(--text)',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* NEAT — дневная активность вне тренировок, влияет на норму калорий */}
-        <p id="field-neat" className="section-label" style={{ marginBottom: 8 }}>ДНЕВНАЯ АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-          {NEAT_OPTIONS.map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setNeatLevel(key)}
-              style={{
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: neatLevel === key ? 'var(--accent)' : 'var(--card-bg)',
-                color: neatLevel === key ? '#000' : 'var(--text)',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Sport type */}
-        <p id="field-sport" className="section-label" style={{ marginBottom: 8 }}>ВИД СПОРТА</p>
-        <input
-          type="text"
-          value={sportType}
-          onChange={(e) => setSportType(e.target.value)}
-          placeholder="Фитнес / зал, Бег, Бокс..."
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            boxSizing: 'border-box',
-            marginBottom: 16,
-          }}
-        />
-
-        {/* Timezone */}
-        <p id="field-timezone" className="section-label" style={{ marginBottom: 8 }}>ЧАСОВОЙ ПОЯС</p>
-        <select
-          value={tz}
-          onChange={(e) => setTz(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            marginBottom: 16,
-            appearance: 'none',
-            WebkitAppearance: 'none',
-          }}
-        >
-          {!TIMEZONE_OPTIONS.some(([k]) => k === tz) && tz && (
-            <option value={tz}>{tz}</option>
-          )}
-          {TIMEZONE_OPTIONS.map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-
-        {/* Morning reminder */}
-        <p id="field-morning" className="section-label" style={{ marginBottom: 8 }}>УТРЕННЕЕ НАПОМИНАНИЕ</p>
-        <select
-          value={morningTime}
-          onChange={(e) => setMorningTime(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            marginBottom: 16,
-            appearance: 'none',
-            WebkitAppearance: 'none',
-          }}
-        >
-          {!MORNING_TIMES.includes(morningTime) && morningTime && (
-            <option value={morningTime}>{morningTime}</option>
-          )}
-          {MORNING_TIMES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-
-        {/* Evening reminder */}
-        <p id="field-evening" className="section-label" style={{ marginBottom: 8 }}>ВЕЧЕРНЕЕ НАПОМИНАНИЕ</p>
-        <select
-          value={eveningTime}
-          onChange={(e) => setEveningTime(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            marginBottom: 16,
-            appearance: 'none',
-            WebkitAppearance: 'none',
-          }}
-        >
-          {!EVENING_TIMES.includes(eveningTime) && eveningTime && (
-            <option value={eveningTime}>{eveningTime}</option>
-          )}
-          {EVENING_TIMES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-
-        {/* Notifications toggle */}
-        <p id="field-notifications" className="section-label" style={{ marginBottom: 8 }}>УВЕДОМЛЕНИЯ</p>
-        <div
-          onClick={() => setNotifEnabled(v => !v)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 14px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            marginBottom: 16,
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
-            {notifEnabled ? '🔔 Напоминания включены' : '🔕 Напоминания выключены'}
-          </span>
-          <div style={{
-            width: 44,
-            height: 24,
-            borderRadius: 12,
-            background: notifEnabled ? 'var(--accent)' : '#444',
-            position: 'relative',
-            transition: 'background 0.2s',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 3,
-              left: notifEnabled ? 23 : 3,
-              width: 18,
-              height: 18,
-              borderRadius: '50%',
-              background: notifEnabled ? '#000' : '#888',
-              transition: 'left 0.2s',
-            }} />
-          </div>
-        </div>
-
-        {/* Weight */}
-        <p id="field-weight" className="section-label" style={{ marginBottom: 8 }}>ВЕС (стартовый, кг)</p>
-        <input
-          className="field-input"
-          type="number"
-          inputMode="decimal"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          placeholder="Например: 75.5"
-          min="30"
-          max="300"
-          step="0.1"
-          style={{ marginBottom: 4 }}
-        />
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-          Стартовый вес для расчёта нормы калорий. Текущий вес меняй через трекер.
-        </p>
-
-        {/* Height */}
-        <p id="field-height" className="section-label" style={{ marginBottom: 8 }}>РОСТ (см)</p>
-        <input
-          className="field-input"
-          type="number"
-          inputMode="numeric"
-          value={height}
-          onChange={(e) => setHeight(e.target.value)}
-          placeholder="Например: 178"
-          min="100"
-          max="250"
-          style={{ marginBottom: 16 }}
-        />
-
-        {/* Target workouts per week */}
-        <p id="field-workoutDaysPerWeek" className="section-label" style={{ marginBottom: 8 }}>ТРЕНИРОВОК В НЕДЕЛЮ</p>
-        <input
-          className="field-input"
-          type="number"
-          inputMode="numeric"
-          value={workoutDaysPerWeek}
-          onChange={(e) => setWorkoutDaysPerWeek(e.target.value)}
-          placeholder="Например: 4"
-          min="1"
-          max="7"
-          style={{ marginBottom: 4 }}
-        />
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-          Сколько тренировок в неделю планируешь — тренер будет строить программу под это количество.
-        </p>
-
-        {/* Additional info */}
-        <p id="field-additional" className="section-label" style={{ marginBottom: 4 }}>ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</p>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8 }}>
-          Травмы, ограничения, пожелания — ИИ учтёт это в рекомендациях
-        </p>
-        <textarea
-          value={additionalInfo}
-          onChange={(e) => setAdditionalInfo(e.target.value)}
-          maxLength={1000}
-          rows={5}
-          placeholder={"Например:\nболит правое плечо\nгрыжа L4-L5\nизбегаю прыжков и тяжёлых приседаний"}
-          style={{
-            width: '100%',
-            minHeight: 110,
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--card-bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem',
-            boxSizing: 'border-box',
-            marginBottom: 4,
-            resize: 'vertical',
-            fontFamily: 'inherit',
-            lineHeight: 1.5,
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-          }}
-        />
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'right' }}>
-          {additionalInfo.length}/1000
-        </p>
-
-        {error && (
-          <p style={{ color: '#ff4444', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>
-        )}
-
-        <button
-          className="btn btn-accent"
-          onClick={handleSave}
-          disabled={saving}
-          style={{ marginTop: 8 }}
-        >
-          {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
-        </button>
+        <span className="data-row__value"><span>{tierLabel}</span></span>
       </div>
+
+      <div className="data-row skew-chip" onClick={cycleTone}>
+        <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
+        <span className="data-row__value"><span>{tone === 'aggressive' ? 'ЖЁСТКИЙ' : 'МЯГКИЙ'}</span></span>
+      </div>
+
+      <p className="section-heading">ЦЕЛИ</p>
+      {GOAL_OPTIONS.map(([key, label]) => (
+        <div key={key} className="data-row skew-chip" onClick={() => toggleGoal(key)}>
+          <span className="data-row__label">{label.toUpperCase()}</span>
+          <span className="data-row__value"><span>{selectedGoals.includes(key) ? '✓' : '+'}</span></span>
+        </div>
+      ))}
+
+      <div className="data-row skew-chip" onClick={cycleFitness}>
+        <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
+        <span className="data-row__value"><span>{fitnessLabel}</span></span>
+      </div>
+
+      <div className="data-row skew-chip" onClick={cycleNeat}>
+        <span className="data-row__label">АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</span>
+        <span className="data-row__value"><span>{neatLabel}</span></span>
+      </div>
+
+      <EditableRow label="ВИД СПОРТА" value={sportType} onChange={setSportType} placeholder="Фитнес, бег, бокс..." />
+
+      <div className="data-row skew-chip">
+        <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
+        <span className="data-row__value">
+          <select className="data-row__input" value={tz} onChange={(e) => setTz(e.target.value)}>
+            {!TIMEZONE_OPTIONS.some(([k]) => k === tz) && tz && <option value={tz}>{tz}</option>}
+            {TIMEZONE_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </span>
+      </div>
+
+      <div className="data-row skew-chip">
+        <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
+        <span className="data-row__value">
+          <select className="data-row__input" value={morningTime} onChange={(e) => setMorningTime(e.target.value)}>
+            {!MORNING_TIMES.includes(morningTime) && morningTime && <option value={morningTime}>{morningTime}</option>}
+            {MORNING_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </span>
+      </div>
+
+      <div className="data-row skew-chip">
+        <span className="data-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
+        <span className="data-row__value">
+          <select className="data-row__input" value={eveningTime} onChange={(e) => setEveningTime(e.target.value)}>
+            {!EVENING_TIMES.includes(eveningTime) && eveningTime && <option value={eveningTime}>{eveningTime}</option>}
+            {EVENING_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </span>
+      </div>
+
+      <div className="data-row skew-chip" onClick={() => setNotifEnabled((v) => !v)}>
+        <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
+        <span className="data-row__value"><span>{notifEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
+      </div>
+
+      <div className="data-row skew-chip" onClick={() => setRestingPulseEnabled((v) => !v)}>
+        <span className="data-row__label">ПУЛЬС ПОКОЯ</span>
+        <span className="data-row__value"><span>{restingPulseEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
+      </div>
+
+      <EditableRow label="ВЕС (СТАРТОВЫЙ, КГ)" value={weight} onChange={setWeight} type="number" suffix=" КГ" placeholder="Например: 75.5" />
+      <EditableRow label="РОСТ (СМ)" value={height} onChange={setHeight} type="number" suffix=" СМ" placeholder="Например: 178" />
+      <EditableRow label="ТРЕНИРОВОК В НЕДЕЛЮ" value={workoutDaysPerWeek} onChange={setWorkoutDaysPerWeek} type="number" placeholder="Например: 4" />
+
+      <ExpandableTextRow label="ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ" value={additionalInfo} onChange={setAdditionalInfo} />
+
+      {error && <p style={{ color: '#ff4444', fontSize: '0.85rem', marginTop: 8 }}>{error}</p>}
+
+      <button className="btn btn-accent" onClick={handleSave} disabled={saving} style={{ marginTop: 20 }}>
+        {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
+      </button>
     </div>
   )
 }
@@ -687,8 +389,6 @@ function EditProfileModal({ profile, focusField, onClose, onSaved }) {
 
 export default function ProfilePage() {
   const { profile, refreshProfile } = useProfile()
-  const [editOpen, setEditOpen] = useState(false)
-  const [editFocusField, setEditFocusField] = useState(null)
   const [myDataOpen, setMyDataOpen] = useState(false)
   const [trackerViewOpen, setTrackerViewOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
@@ -754,21 +454,11 @@ export default function ProfilePage() {
 
   if (myDataOpen) {
     return (
-      <>
-        <MyDataView
-          profile={profile}
-          onBack={() => setMyDataOpen(false)}
-          onEdit={(field) => { setEditFocusField(field); setEditOpen(true) }}
-        />
-        {editOpen && (
-          <EditProfileModal
-            profile={profile}
-            focusField={editFocusField}
-            onClose={() => { setEditOpen(false); setEditFocusField(null) }}
-            onSaved={() => { setEditOpen(false); setEditFocusField(null); refreshProfile() }}
-          />
-        )}
-      </>
+      <MyDataView
+        profile={profile}
+        onBack={() => setMyDataOpen(false)}
+        onSaved={() => { setMyDataOpen(false); refreshProfile() }}
+      />
     )
   }
 

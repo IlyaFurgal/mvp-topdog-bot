@@ -6,7 +6,7 @@ const VISIBLE_PAD = 2  // empty rows above/below so the first/last value can rea
 // Vertical swipe/scroll number picker — snaps to each step, highlights the
 // value sitting in the center band. Used for weight/pulse instead of
 // tap-to-adjust buttons.
-export default function ScrollPicker({ value, onChange, min, max, step, decimals = 0, unit, format }) {
+export default function ScrollPicker({ value, onChange, min, max, step, decimals = 0, unit, format, parse }) {
   const listRef = useRef(null)
   const rafRef = useRef(null)
   const inputRef = useRef(null)
@@ -55,14 +55,14 @@ export default function ScrollPicker({ value, onChange, min, max, step, decimals
 
   function startEditing() {
     const current = values[centerIdx]
-    setEditDraft(decimals > 0 ? current.toFixed(decimals) : String(current))
+    setEditDraft(format ? format(current) : (decimals > 0 ? current.toFixed(decimals) : String(current)))
     setEditing(true)
     // Focus after the input mounts
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   function commitEdit() {
-    const n = parseFloat(editDraft.replace(',', '.'))
+    const n = parse ? parse(editDraft) : parseFloat(editDraft.replace(',', '.'))
     if (!isNaN(n)) {
       const clamped = Math.min(max, Math.max(min, n))
       const idx = closestIndex(clamped)
@@ -93,11 +93,11 @@ export default function ScrollPicker({ value, onChange, min, max, step, decimals
       {editing ? (
         <input
           ref={inputRef}
-          type="number"
-          inputMode="decimal"
+          type={parse ? 'text' : 'number'}
+          inputMode={parse ? 'numeric' : 'decimal'}
           className="scroll-picker__edit-input"
           value={editDraft}
-          step={step}
+          step={parse ? undefined : step}
           onChange={(e) => setEditDraft(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur() } }}

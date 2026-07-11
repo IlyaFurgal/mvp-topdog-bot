@@ -80,8 +80,9 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
     <div className="page club-page">
       <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
 
-      <span className="tracker-page-title">{TITLES[type]}</span>
-      <div className="stripe-divider" />
+      <div className="tracker-page-title-plate skew-chip">
+        <span className="tracker-page-title">{TITLES[type]}</span>
+      </div>
 
       <div className="tracker-page-body">
         {type === 'weight' && (
@@ -204,8 +205,10 @@ function WaterInput({ amount, onChange, total }) {
               onClick={() => addPreset(active ? -BOTTLE_ML : BOTTLE_ML)}
               title={active ? `Убрать ${BOTTLE_ML} мл` : `Добавить ${BOTTLE_ML} мл`}
             >
-              <img src={active ? waterBottleFull : waterBottleEmpty} alt="" className="water-bottle__icon" />
-              <span className="water-bottle__label">0.5Л</span>
+              <span className="water-bottle__icon-wrap">
+                <img src={active ? waterBottleFull : waterBottleEmpty} alt="" className="water-bottle__icon" />
+                <span className="water-bottle__label">0.5Л</span>
+              </span>
             </button>
           )
         })}
@@ -288,7 +291,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
   const pct = Math.min((displayTotal / limit) * 100, 100)
   const overLimit = displayTotal > limit
   const remaining = Math.max(limit - displayTotal, 0)
-  const hasMacroTotals = todayMacros && (todayMacros.protein_g || todayMacros.fat_g || todayMacros.carbs_g)
 
   function addPreset(kcal) {
     const current = parseInt(draft, 10) || 0
@@ -320,13 +322,6 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
       {overLimit && (
         <p className="progress-label" style={{ color: 'var(--text-muted)', marginTop: 4 }}>
           Норма на сегодня превышена — если хочешь, обсуди с ассистентом.
-        </p>
-      )}
-      {(hasMacroTotals || macroTargets) && (
-        <p className="water-today" style={{ marginTop: 4 }}>
-          Б: <strong>{Math.round(todayMacros?.protein_g || 0)}{macroTargets ? `/${macroTargets.protein_g}` : ''}г</strong>
-          {' '}Ж: <strong>{Math.round(todayMacros?.fat_g || 0)}{macroTargets ? `/${macroTargets.fat_g}` : ''}г</strong>
-          {' '}У: <strong>{Math.round(todayMacros?.carbs_g || 0)}{macroTargets ? `/${macroTargets.carbs_g}` : ''}г</strong>
         </p>
       )}
       <div className="water-quick">
@@ -363,53 +358,64 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
         <span className="weight-unit">ккал</span>
       </div>
 
-      <div className="macro-row">
-        <div className="macro-field">
-          <span className="macro-field__label-group">
-            <img src={proteinIcon} alt="" className="macro-field__icon" />
-            <span className="macro-field__label">БЕЛКИ, Г</span>
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            className="weight-num-input"
-            value={protein}
-            min="0"
-            placeholder="0"
-            onChange={(e) => onProtein(e.target.value)}
-          />
-        </div>
-        <div className="macro-field">
-          <span className="macro-field__label-group">
-            <img src={fatIcon} alt="" className="macro-field__icon" />
-            <span className="macro-field__label">ЖИРЫ, Г</span>
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            className="weight-num-input"
-            value={fat}
-            min="0"
-            placeholder="0"
-            onChange={(e) => onFat(e.target.value)}
-          />
-        </div>
-        <div className="macro-field">
-          <span className="macro-field__label-group">
-            <img src={carbsIcon} alt="" className="macro-field__icon" />
-            <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            className="weight-num-input"
-            value={carbs}
-            min="0"
-            placeholder="0"
-            onChange={(e) => onCarbs(e.target.value)}
-          />
-        </div>
+      <div className="macro-cols">
+        <MacroCol
+          icon={carbsIcon} label="УГЛЕВОДЫ"
+          current={todayMacros?.carbs_g || 0} delta={carbs} target={macroTargets?.carbs_g}
+          onChangeDelta={onCarbs}
+        />
+        <MacroCol
+          icon={proteinIcon} label="БЕЛКИ"
+          current={todayMacros?.protein_g || 0} delta={protein} target={macroTargets?.protein_g}
+          onChangeDelta={onProtein}
+        />
+        <MacroCol
+          icon={fatIcon} label="ЖИРЫ"
+          current={todayMacros?.fat_g || 0} delta={fat} target={macroTargets?.fat_g}
+          onChangeDelta={onFat}
+        />
       </div>
+    </div>
+  )
+}
+
+function MacroCol({ icon, label, current, delta, target, onChangeDelta }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const display = current + (parseFloat(delta) || 0)
+
+  function startEdit() {
+    setDraft(delta || '')
+    setEditing(true)
+  }
+
+  function commit() {
+    onChangeDelta(draft)
+    setEditing(false)
+  }
+
+  return (
+    <div className="macro-col">
+      <span className="macro-col__label-group">
+        <img src={icon} alt="" className="macro-col__icon" />
+        <span className="macro-col__label">{label}</span>
+      </span>
+      {editing ? (
+        <input
+          type="number"
+          inputMode="decimal"
+          autoFocus
+          className="macro-col__edit-input"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
+        />
+      ) : (
+        <button type="button" className="macro-col__value" onClick={startEdit}>
+          {Math.round(display)}{target ? `/${target}` : ''}г
+        </button>
+      )}
     </div>
   )
 }
@@ -418,6 +424,14 @@ function formatSleepMinutes(mins) {
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return `${h}:${String(m).padStart(2, '0')}`
+}
+
+function parseSleepMinutes(str) {
+  const m = str.trim().match(/^(\d{1,2}):?(\d{0,2})$/)
+  if (!m) return NaN
+  const h = parseInt(m[1], 10)
+  const mm = m[2] ? parseInt(m[2], 10) : 0
+  return h * 60 + mm
 }
 
 function SleepInput({ hours, minutes, onHours, onMinutes }) {
@@ -446,7 +460,7 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
             className={`sleep-btn sleep-btn--${h} ${hours === h && minutes === 0 ? 'sleep-btn--active' : ''}`}
             onClick={() => pickQuick(h)}
           >
-            {h}ч
+            {h}
           </button>
         ))}
       </div>
@@ -458,7 +472,7 @@ function SleepInput({ hours, minutes, onHours, onMinutes }) {
         max={16 * 60}
         step={15}
         format={formatSleepMinutes}
-        unit="ч"
+        parse={parseSleepMinutes}
       />
     </div>
   )
