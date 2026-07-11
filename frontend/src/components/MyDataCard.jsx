@@ -1,52 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import client from '../api/client'
-import { getTodayTrackers } from '../api/trackers'
 import mvpLogo from '../assets/mvp-logo-green.png'
 import { useProfile } from '../context/ProfileContext'
 import { useTelegram } from '../hooks/useTelegram'
 import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
-import ScrollPicker from './ScrollPicker'
-import TrackerModal from './TrackerModal'
 
 const AVATAR_MAX_DIMENSION = 300
-
-function HeightModal({ initialHeight, onClose, onSaved }) {
-  const [height, setHeight] = useState(initialHeight ?? 170)
-  const [saving, setSaving] = useState(false)
-  const overlayRef = useRef(null)
-
-  async function handleSave() {
-    setSaving(true)
-    try {
-      await client.patch('/profile/me', { height })
-      onSaved(height)
-    } catch (_) {
-      setSaving(false)
-    }
-  }
-
-  function handleOverlay(e) {
-    if (saving) return
-    if (e.target === overlayRef.current) onClose()
-  }
-
-  return (
-    <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
-      <div className="modal-sheet">
-        <div className="modal-header">
-          <span className="modal-title">РОСТ (ДЛЯ ИМТ)</span>
-          <button className="modal-close" onClick={onClose} disabled={saving}>✕</button>
-        </div>
-        <div className="tracker-input">
-          <ScrollPicker value={height} onChange={setHeight} min={100} max={230} step={1} decimals={0} unit="см" />
-        </div>
-        <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
-          {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 function fmtNum(value, decimals) {
   return Math.abs(value % 1) < 0.001 ? value.toFixed(0) : value.toFixed(decimals)
@@ -94,7 +53,7 @@ function resizeAvatar(file) {
   })
 }
 
-export default function MyDataCard({ onEditClick, onDataChanged }) {
+export default function MyDataCard({ onEditClick, trackers = {}, onOpenTracker, onOpenHeight }) {
   const { user } = useTelegram()
   const { profile, subscriptionType, refreshProfile } = useProfile()
 
@@ -102,24 +61,6 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
   const [imgFailed, setImgFailed] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef(null)
-
-  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
-  const [activeTracker, setActiveTracker] = useState(null)
-  const [heightModalOpen, setHeightModalOpen] = useState(false)
-  const [calorieLimit, setCalorieLimit] = useState(null)
-  const [macroTargets, setMacroTargets] = useState(null)
-
-  async function load() {
-    try {
-      const trackData = await getTodayTrackers()
-      const { calorie_limit, calories_meals, macro_targets, ...rest } = trackData
-      setTrackers(rest)
-      setCalorieLimit(calorie_limit ?? null)
-      setMacroTargets(macro_targets ?? null)
-    } catch (_) {}
-  }
-
-  useEffect(() => { load() }, [])
 
   const displayName = profile?.preferred_name
     || (user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'Пользователь')
@@ -200,51 +141,32 @@ export default function MyDataCard({ onEditClick, onDataChanged }) {
             <span className="data-row__label">{displayName.toUpperCase()}</span>
             <span className="data-row__value"><span>{tierLabel}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('weight')}>
+          <div className="data-row skew-chip" onClick={() => onOpenTracker('weight')}>
             <span className="data-row__label">ВЕС</span>
             <span className="data-row__value"><span>{formatValue('weight', trackers.weight) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setHeightModalOpen(true)}>
+          <div className="data-row skew-chip" onClick={onOpenHeight}>
             <span className="data-row__label">ИМТ</span>
             <span className="data-row__value"><span>{bmi ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('calories')}>
+          <div className="data-row skew-chip" onClick={() => onOpenTracker('calories')}>
             <span className="data-row__label">КАЛОРИИ</span>
             <span className="data-row__value"><span>{formatValue('calories', trackers.calories) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('sleep')}>
+          <div className="data-row skew-chip" onClick={() => onOpenTracker('sleep')}>
             <span className="data-row__label">СОН</span>
             <span className="data-row__value"><span>{formatValue('sleep', trackers.sleep) ?? '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('pulse')}>
+          <div className="data-row skew-chip" onClick={() => onOpenTracker('pulse')}>
             <span className="data-row__label">ПУЛЬС</span>
             <span className="data-row__value"><span>{pulseValue != null ? Math.round(pulseValue) : '—'}</span></span>
           </div>
-          <div className="data-row skew-chip" onClick={() => setActiveTracker('water')}>
+          <div className="data-row skew-chip" onClick={() => onOpenTracker('water')}>
             <span className="data-row__label">ВОДА</span>
             <span className="data-row__value"><span>{formatValue('water', trackers.water) ?? '—'}</span></span>
           </div>
         </div>
       </div>
-
-      {activeTracker && (
-        <TrackerModal
-          type={activeTracker}
-          todayData={trackers[activeTracker]}
-          calorieLimit={calorieLimit}
-          macroTargets={macroTargets}
-          onClose={() => setActiveTracker(null)}
-          onSaved={() => { setActiveTracker(null); load(); onDataChanged?.() }}
-        />
-      )}
-
-      {heightModalOpen && (
-        <HeightModal
-          initialHeight={profile?.height}
-          onClose={() => setHeightModalOpen(false)}
-          onSaved={() => { setHeightModalOpen(false); refreshProfile(); onDataChanged?.() }}
-        />
-      )}
     </div>
   )
 }

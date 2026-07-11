@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { saveTracker } from '../api/trackers'
 import ScrollPicker from './ScrollPicker'
-import waterBottleIcon from '../assets/water_bottle_бутылка_воды.png'
+import waterBottleEmpty from '../assets/water_bottle_бутылка_воды.png'
+import waterBottleFull from '../assets/Полная бутылка.png'
+import proteinIcon from '../assets/Белки.png'
+import fatIcon from '../assets/Жиры.png'
+import carbsIcon from '../assets/Углеводы.png'
 
 const GOAL_WATER = 2000
 const BOTTLE_ML = 500
 const BOTTLE_COUNT = 8   // 4L range — comfortably covers a typical day incl. overshoot
+const WATER_MANUAL_MAX_ML = 5000
 
 const TITLES = {
   weight:   'ЗАПИСАТЬ ВЕС',
@@ -16,7 +21,6 @@ const TITLES = {
 }
 
 export default function TrackerModal({ type, todayData, calorieLimit, macroTargets, onClose, onSaved }) {
-  const overlayRef = useRef(null)
   const [saving, setSaving] = useState(false)
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
@@ -70,21 +74,16 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
     }
   }
 
-  function handleOverlay(e) {
-    if (saving) return
-    if (e.target === overlayRef.current) onClose()
-  }
-
   const addLabel = type === 'water' || type === 'calories' ? 'ДОБАВИТЬ' : 'СОХРАНИТЬ'
 
   return (
-    <div className="modal-overlay" ref={overlayRef} onClick={handleOverlay}>
-      <div className="modal-sheet">
-        <div className="modal-header">
-          <span className="modal-title">{TITLES[type]}</span>
-          <button className="modal-close" onClick={onClose} disabled={saving}>✕</button>
-        </div>
+    <div className="page club-page">
+      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
 
+      <span className="tracker-page-title">{TITLES[type]}</span>
+      <div className="stripe-divider" />
+
+      <div className="tracker-page-body">
         {type === 'weight' && (
           <WeightInput value={weight} onChange={setWeight} />
         )}
@@ -160,29 +159,33 @@ function PulseInput({ value, onChange }) {
 }
 
 function WaterInput({ amount, onChange, total }) {
-  const [draft, setDraft] = useState('')
   const [unit, setUnit] = useState('ml')  // 'ml' | 'l'
+  // Bumped whenever a bottle tap changes `amount` externally, forcing the
+  // ScrollPicker to remount and re-sync its scroll position to the new
+  // value — it only reads `value` once, on mount.
+  const [resetSignal, setResetSignal] = useState(0)
   // Live preview: bar reflects saved + current draft
   const displayTotal = total + amount
   const filledCount = Math.min(Math.round(displayTotal / BOTTLE_ML), BOTTLE_COUNT)
 
   function addPreset(ml) {
-    const current = parseInt(draft, 10) || 0
     // Today's total (already-saved + this delta) can't go below 0.
-    const newVal = Math.max(current + ml, -total)
-    setDraft(String(newVal))
+    const newVal = Math.max(amount + ml, -total)
     onChange(newVal)
+    setResetSignal((s) => s + 1)
   }
 
-  function handleBlur() {
-    const n = parseFloat(draft)
-    if (!isNaN(n)) {
-      const ml = Math.max(Math.round(unit === 'l' ? n * 1000 : n), -total)
-      onChange(ml)
-      setDraft(String(unit === 'l' ? ml / 1000 : ml))
-    }
-    else setDraft('')
+  function handlePickerChange(v) {
+    const ml = Math.max(Math.round(unit === 'l' ? v * 1000 : v), -total)
+    onChange(ml)
   }
+
+  function switchUnit(next) {
+    if (next !== unit) { setUnit(next); setResetSignal((s) => s + 1) }
+  }
+
+  const pickerValue = unit === 'l' ? amount / 1000 : amount
+  const pickerMin = unit === 'l' ? -total / 1000 : -total
 
   return (
     <div className="tracker-input">
@@ -201,32 +204,31 @@ function WaterInput({ amount, onChange, total }) {
               onClick={() => addPreset(active ? -BOTTLE_ML : BOTTLE_ML)}
               title={active ? `Убрать ${BOTTLE_ML} мл` : `Добавить ${BOTTLE_ML} мл`}
             >
-              <span className="water-bottle__icon" style={{ WebkitMaskImage: `url(${waterBottleIcon})`, maskImage: `url(${waterBottleIcon})` }} />
+              <img src={active ? waterBottleFull : waterBottleEmpty} alt="" className="water-bottle__icon" />
               <span className="water-bottle__label">0.5Л</span>
             </button>
           )
         })}
       </div>
 
-      <div className="water-custom">
-        <input
-          type="number"
-          inputMode="decimal"
-          className="weight-num-input"
-          value={draft}
-          step={unit === 'l' ? '0.1' : '1'}
-          placeholder={unit === 'l' ? 'или введи ± л' : 'или введи ± мл'}
-          onChange={(e) => setDraft(e.target.value.replace(/^0+(?=\d)/, ''))}
-          onBlur={handleBlur}
+      <div className="water-manual">
+        <ScrollPicker
+          key={`${unit}-${resetSignal}`}
+          value={pickerValue}
+          onChange={handlePickerChange}
+          min={pickerMin}
+          max={unit === 'l' ? WATER_MANUAL_MAX_ML / 1000 : WATER_MANUAL_MAX_ML}
+          step={unit === 'l' ? 0.1 : 50}
+          decimals={unit === 'l' ? 1 : 0}
         />
-        <div className="water-unit-toggle">
+        <div className="water-unit-toggle water-unit-toggle--vertical">
           <button
             className={`water-unit-btn${unit === 'ml' ? ' water-unit-btn--active' : ''}`}
-            onClick={() => setUnit('ml')}
+            onClick={() => switchUnit('ml')}
           >МЛ</button>
           <button
             className={`water-unit-btn${unit === 'l' ? ' water-unit-btn--active' : ''}`}
-            onClick={() => setUnit('l')}
+            onClick={() => switchUnit('l')}
           >Л</button>
         </div>
       </div>
@@ -363,7 +365,10 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
 
       <div className="macro-row">
         <div className="macro-field">
-          <span className="macro-field__label">БЕЛКИ, Г</span>
+          <span className="macro-field__label-group">
+            <img src={proteinIcon} alt="" className="macro-field__icon" />
+            <span className="macro-field__label">БЕЛКИ, Г</span>
+          </span>
           <input
             type="number"
             inputMode="decimal"
@@ -375,7 +380,10 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
           />
         </div>
         <div className="macro-field">
-          <span className="macro-field__label">ЖИРЫ, Г</span>
+          <span className="macro-field__label-group">
+            <img src={fatIcon} alt="" className="macro-field__icon" />
+            <span className="macro-field__label">ЖИРЫ, Г</span>
+          </span>
           <input
             type="number"
             inputMode="decimal"
@@ -387,7 +395,10 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
           />
         </div>
         <div className="macro-field">
-          <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
+          <span className="macro-field__label-group">
+            <img src={carbsIcon} alt="" className="macro-field__icon" />
+            <span className="macro-field__label">УГЛЕВОДЫ, Г</span>
+          </span>
           <input
             type="number"
             inputMode="decimal"
@@ -403,76 +414,52 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
   )
 }
 
+function formatSleepMinutes(mins) {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return `${h}:${String(m).padStart(2, '0')}`
+}
+
 function SleepInput({ hours, minutes, onHours, onMinutes }) {
-  const [draftH, setDraftH] = useState(() => String(hours))
-  const [draftM, setDraftM] = useState(() => minutes > 0 ? String(minutes) : '')
+  const totalMinutes = hours * 60 + minutes
+  // Bumped on quick-button taps so the ScrollPicker (which only reads
+  // `value` once, on mount) remounts and re-syncs its scroll position.
+  const [resetSignal, setResetSignal] = useState(0)
 
-  // Sync drafts when preset buttons update the parent state
-  useEffect(() => { setDraftH(String(hours)) }, [hours])
-  useEffect(() => { setDraftM(minutes > 0 ? String(minutes) : '') }, [minutes])
-
-  function commitH() {
-    const n = parseInt(draftH, 10)
-    if (!isNaN(n) && n >= 0 && n <= 23) onHours(n)
-    else setDraftH(String(hours))  // revert on invalid
+  function handlePickerChange(mins) {
+    onHours(Math.floor(mins / 60))
+    onMinutes(mins % 60)
   }
 
-  function commitM() {
-    if (draftM === '') { onMinutes(0); return }
-    const n = parseInt(draftM, 10)
-    if (!isNaN(n) && n >= 0 && n <= 59) onMinutes(n)
-    else setDraftM('')  // revert to empty (= 0 minutes)
+  function pickQuick(h) {
+    onHours(h)
+    onMinutes(0)
+    setResetSignal((s) => s + 1)
   }
 
   return (
     <div className="tracker-input">
       <div className="sleep-quick">
-        {[6, 7, 8, 9].map((h) => (
+        {[5, 6, 7, 8, 9].map((h) => (
           <button
             key={h}
-            className={`sleep-btn ${hours === h && minutes === 0 ? 'sleep-btn--active' : ''}`}
-            onClick={() => { onHours(h); onMinutes(0) }}
+            className={`sleep-btn sleep-btn--${h} ${hours === h && minutes === 0 ? 'sleep-btn--active' : ''}`}
+            onClick={() => pickQuick(h)}
           >
             {h}ч
           </button>
         ))}
       </div>
-      <div className="sleep-inputs">
-        <div className="sleep-input-group">
-          <input
-            type="number"
-            inputMode="numeric"
-            className="weight-num-input"
-            value={draftH}
-            min="0"
-            max="23"
-            placeholder="ч"
-            onChange={(e) => setDraftH(e.target.value)}
-            onBlur={commitH}
-          />
-          <span className="weight-unit">ч</span>
-        </div>
-        <div className="sleep-input-group">
-          <input
-            type="number"
-            inputMode="numeric"
-            className="weight-num-input"
-            value={draftM}
-            min="0"
-            max="59"
-            step="15"
-            placeholder="0"
-            onChange={(e) => setDraftM(e.target.value)}
-            onBlur={commitM}
-          />
-          <span className="weight-unit">м</span>
-        </div>
-      </div>
-      {(hours > 0 || minutes > 0) && (
-        <p className="sleep-preview">
-          {hours}ч {minutes > 0 ? `${minutes}м` : ''}
-        </p>
-      )}
+      <ScrollPicker
+        key={resetSignal}
+        value={totalMinutes}
+        onChange={handlePickerChange}
+        min={0}
+        max={16 * 60}
+        step={15}
+        format={formatSleepMinutes}
+        unit="ч"
+      />
     </div>
   )
 }

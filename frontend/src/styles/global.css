@@ -1097,6 +1097,26 @@ html, body {
   color: var(--danger);
 }
 
+/* ── TrackerModal (full-page) ─────────────────────────── */
+
+.tracker-page-title {
+  display: block;
+  font-family: var(--font-accent);
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent-club);
+}
+
+.tracker-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
 /* ── TrackerModal ─────────────────────────────────────── */
 
 .modal-overlay {
@@ -1403,18 +1423,7 @@ html, body {
 .water-bottle__icon {
   width: 32px;
   height: 55px;
-  background-color: var(--border);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  transition: background-color 0.15s;
-}
-
-.water-bottle--active .water-bottle__icon {
-  background-color: var(--accent-club);
+  object-fit: contain;
 }
 
 .water-bottle__label {
@@ -1497,6 +1506,18 @@ html, body {
   text-align: center;
 }
 
+.macro-field__label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.macro-field__icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .macro-field__label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -1505,11 +1526,22 @@ html, body {
   color: var(--text-muted);
 }
 
+.water-manual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
 .water-unit-toggle {
   display: flex;
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
+}
+
+.water-unit-toggle--vertical {
+  flex-direction: column;
 }
 
 .water-unit-btn {
@@ -1553,6 +1585,13 @@ html, body {
   color: #8b5cf6;
   background: #1a0d3c;
 }
+
+/* Quick-pick duration quality hint — low end reads as a warning, high end
+   as healthy. Skipped when the button is the active selection so the
+   purple "selected" color always wins. */
+.sleep-btn--5:not(.sleep-btn--active) { border-color: #ef4444; color: #ef4444; }
+.sleep-btn--6:not(.sleep-btn--active) { border-color: #f59e0b; color: #f59e0b; }
+.sleep-btn--9:not(.sleep-btn--active) { border-color: #22c55e; color: #22c55e; }
 
 .sleep-inputs {
   display: flex;

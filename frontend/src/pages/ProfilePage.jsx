@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
+import { getTodayTrackers } from '../api/trackers'
 import myDataHeading from '../assets/8.png'
 import profileHeading from '../assets/7.png'
 import progressHeading from '../assets/12.png'
@@ -8,6 +9,8 @@ import CheckinCard from '../components/CheckinCard'
 import CheckinFlow from '../components/CheckinFlow'
 import MyDataCard from '../components/MyDataCard'
 import ProgressSection from '../components/ProgressSection'
+import ScrollPicker from '../components/ScrollPicker'
+import TrackerModal from '../components/TrackerModal'
 import { useProfile } from '../context/ProfileContext'
 import { useUniformChipWidth } from '../hooks/useUniformChipWidth'
 
@@ -84,6 +87,41 @@ const EVENING_TIMES = []
 for (let h = 18; h <= 23; h++) {
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:00`)
   EVENING_TIMES.push(`${String(h).padStart(2,'0')}:30`)
+}
+
+// ── РОСТ (для ИМТ) full-page screen ─────────────────────────────────────────────
+
+function HeightPage({ initialHeight, onClose, onSaved }) {
+  const [height, setHeight] = useState(initialHeight ?? 170)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await client.patch('/profile/me', { height })
+      onSaved(height)
+    } catch (_) {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="page club-page">
+      <button className="club-back" onClick={onClose} disabled={saving}>‹ НАЗАД</button>
+
+      <span className="tracker-page-title">РОСТ (ДЛЯ ИМТ)</span>
+      <div className="stripe-divider" />
+
+      <p className="progress-label" style={{ marginBottom: 8 }}>Показатель учитывается для расчёта ИМТ</p>
+
+      <div className="tracker-input">
+        <ScrollPicker value={height} onChange={setHeight} min={100} max={230} step={1} decimals={0} unit="см" />
+      </div>
+      <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
+        {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
+      </button>
+    </div>
+  )
 }
 
 // ── МОИ ДАННЫЕ summary screen ──────────────────────────────────────────────────
@@ -666,6 +704,22 @@ export default function ProfilePage() {
   const [activeFlow, setActiveFlow] = useState(null)
   const [editCheckin, setEditCheckin] = useState(null) // { type, id, data }
 
+  const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
+  const [calorieLimit, setCalorieLimit] = useState(null)
+  const [macroTargets, setMacroTargets] = useState(null)
+  const [activeTracker, setActiveTracker] = useState(null)
+  const [heightOpen, setHeightOpen] = useState(false)
+
+  async function loadTrackers() {
+    try {
+      const trackData = await getTodayTrackers()
+      const { calorie_limit, calories_meals, macro_targets, ...rest } = trackData
+      setTrackers(rest)
+      setCalorieLimit(calorie_limit ?? null)
+      setMacroTargets(macro_targets ?? null)
+    } catch (_) {}
+  }
+
   async function loadCheckins() {
     try {
       setCheckins(await getTodayCheckins())
@@ -673,7 +727,7 @@ export default function ProfilePage() {
     setCheckinsLoading(false)
   }
 
-  useEffect(() => { loadCheckins() }, [])
+  useEffect(() => { loadCheckins(); loadTrackers() }, [])
 
   if (activeFlow) {
     return (
@@ -718,6 +772,29 @@ export default function ProfilePage() {
     )
   }
 
+  if (activeTracker) {
+    return (
+      <TrackerModal
+        type={activeTracker}
+        todayData={trackers[activeTracker]}
+        calorieLimit={calorieLimit}
+        macroTargets={macroTargets}
+        onClose={() => setActiveTracker(null)}
+        onSaved={() => { setActiveTracker(null); loadTrackers(); setDataVersion((v) => v + 1) }}
+      />
+    )
+  }
+
+  if (heightOpen) {
+    return (
+      <HeightPage
+        initialHeight={profile?.height}
+        onClose={() => setHeightOpen(false)}
+        onSaved={() => { setHeightOpen(false); refreshProfile(); setDataVersion((v) => v + 1) }}
+      />
+    )
+  }
+
   if (trackerViewOpen) {
     return (
       <div className="page club-page">
@@ -746,7 +823,12 @@ export default function ProfilePage() {
     <div className="page club-page" style={{ position: 'relative' }}>
       <img src={profileHeading} alt="ПРОФИЛЬ" className="screen-title-img screen-title-img--hero" />
 
-      <MyDataCard onEditClick={() => setMyDataOpen(true)} onDataChanged={() => setDataVersion((v) => v + 1)} />
+      <MyDataCard
+        onEditClick={() => setMyDataOpen(true)}
+        trackers={trackers}
+        onOpenTracker={setActiveTracker}
+        onOpenHeight={() => setHeightOpen(true)}
+      />
 
       {!checkinsLoading && (
         <button

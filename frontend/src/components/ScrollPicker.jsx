@@ -6,7 +6,7 @@ const VISIBLE_PAD = 2  // empty rows above/below so the first/last value can rea
 // Vertical swipe/scroll number picker — snaps to each step, highlights the
 // value sitting in the center band. Used for weight/pulse instead of
 // tap-to-adjust buttons.
-export default function ScrollPicker({ value, onChange, min, max, step, decimals = 0, unit }) {
+export default function ScrollPicker({ value, onChange, min, max, step, decimals = 0, unit, format }) {
   const listRef = useRef(null)
   const rafRef = useRef(null)
   const inputRef = useRef(null)
@@ -112,7 +112,7 @@ export default function ScrollPicker({ value, onChange, min, max, step, decimals
               style={{ height: ITEM_HEIGHT }}
               onClick={i === centerIdx ? startEditing : undefined}
             >
-              {decimals > 0 ? v.toFixed(decimals) : v}
+              {format ? format(v) : (decimals > 0 ? v.toFixed(decimals) : v)}
             </div>
           ))}
           <div style={{ height: ITEM_HEIGHT * VISIBLE_PAD }} />
