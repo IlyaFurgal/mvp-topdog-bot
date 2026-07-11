@@ -1336,6 +1336,7 @@ html, body {
   font-weight: 700;
   font-style: italic;
   align-self: center;
+  margin-left: 16px;
 }
 
 .weight-controls {
@@ -1421,10 +1422,66 @@ html, body {
   letter-spacing: 0.06em;
 }
 
+.calorie-ring-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.calorie-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.calorie-side__label {
+  font-family: var(--font-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.calorie-side__value {
+  font-family: var(--font-accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-club);
+}
+
+.calorie-side__value--btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.calorie-side__edit-input {
+  width: 64px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--accent-club);
+  outline: none;
+  text-align: center;
+  font-family: var(--font-accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-club);
+}
+
 .calorie-ring {
   position: relative;
-  width: 280px;
-  height: 280px;
+  flex-shrink: 0;
+  width: 200px;
+  height: 200px;
   margin: 12px auto;
 }
 
@@ -1690,16 +1747,15 @@ html, body {
   outline-offset: -2px;
 }
 
-/* Quick-pick duration quality hint — low end reads as a warning, the
-   healthy 7-9h range gets a soft green fill. */
+/* Quick-pick duration quality hint — same treatment for the whole row:
+   dark surface background, only the border + digits carry the color. */
 .sleep-btn--5 { border-color: #ef4444; color: #ef4444; }
 .sleep-btn--6 { border-color: #f59e0b; color: #f59e0b; }
 .sleep-btn--7,
 .sleep-btn--8,
 .sleep-btn--9 {
-  border-color: #4ade8055;
-  color: #86efac;
-  background: #1c3324;
+  border-color: #4ade80;
+  color: #4ade80;
 }
 
 .sleep-inputs {
@@ -4136,6 +4192,30 @@ select optgroup {
   font-size: 0.9rem;
   line-height: 1.5;
   resize: vertical;
+}
+
+/* Workout note — starts as a single-line pill like the kcal input, grows
+   as the user types instead of opening as a tall multi-line box. */
+.wf-note-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 20px;
+  background: linear-gradient(100deg, #2a2a2a 0%, #161616 100%);
+  border: 1px solid #333;
+  border-radius: 24px;
+  color: var(--text);
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-size: 0.95rem;
+  text-align: center;
+  line-height: 1.4;
+  resize: none;
+}
+
+.wf-note-textarea::placeholder {
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 .field-input {

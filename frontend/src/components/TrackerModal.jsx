@@ -17,7 +17,7 @@ const TITLES = {
   pulse:    'ЗАПИСАТЬ ПУЛЬС',
 }
 
-export default function TrackerModal({ type, todayData, calorieLimit, macroTargets, onClose, onSaved }) {
+export default function TrackerModal({ type, todayData, calorieLimit, macroTargets, caloriesBurned, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
 
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
@@ -103,6 +103,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
             limit={calorieLimit ?? 2000}
             todayMacros={todayData}
             macroTargets={macroTargets}
+            burned={caloriesBurned}
             protein={protein}
             onProtein={setProtein}
             fat={fat}
@@ -285,13 +286,32 @@ function CalorieRing({ pct, overLimit, remaining, limit }) {
   )
 }
 
-function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, macroTargets, protein, onProtein, fat, onFat, carbs, onCarbs }) {
+function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, macroTargets, burned, protein, onProtein, fat, onFat, carbs, onCarbs }) {
   const [draft, setDraft] = useState('')
   // Live preview: ring reflects saved + current draft
   const displayTotal = total + amount
   const pct = Math.min((displayTotal / limit) * 100, 100)
   const overLimit = displayTotal > limit
   const remaining = Math.max(limit - displayTotal, 0)
+
+  // Server auto-calculates this from today's logged workouts (RPE × MET ×
+  // duration); tap to override the display — the auto value still wins
+  // next time RPE/duration change, this only overrides what's shown now.
+  const [burnedEditing, setBurnedEditing] = useState(false)
+  const [burnedDraft, setBurnedDraft] = useState('')
+  const [burnedOverride, setBurnedOverride] = useState(null)
+  const displayBurned = burnedOverride ?? burned ?? 0
+
+  function startBurnedEdit() {
+    setBurnedDraft(String(displayBurned))
+    setBurnedEditing(true)
+  }
+
+  function commitBurnedEdit() {
+    const n = parseInt(burnedDraft, 10)
+    if (!isNaN(n) && n >= 0) setBurnedOverride(n)
+    setBurnedEditing(false)
+  }
 
   function addPreset(kcal) {
     const current = parseInt(draft, 10) || 0
@@ -318,7 +338,34 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
         {' '}/ НОРМА {limit.toLocaleString('ru')} ККАЛ
       </p>
 
-      <CalorieRing pct={pct} overLimit={overLimit} remaining={remaining} limit={limit} />
+      <div className="calorie-ring-row">
+        <div className="calorie-side">
+          <span className="calorie-side__label">ПОТРЕБЛЕНО</span>
+          <span className="calorie-side__value">{Math.round(displayTotal).toLocaleString('ru')}</span>
+        </div>
+
+        <CalorieRing pct={pct} overLimit={overLimit} remaining={remaining} limit={limit} />
+
+        <div className="calorie-side">
+          <span className="calorie-side__label">СОЖЖЕНО</span>
+          {burnedEditing ? (
+            <input
+              type="number"
+              inputMode="numeric"
+              autoFocus
+              className="calorie-side__edit-input"
+              value={burnedDraft}
+              onChange={(e) => setBurnedDraft(e.target.value)}
+              onBlur={commitBurnedEdit}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
+            />
+          ) : (
+            <button type="button" className="calorie-side__value calorie-side__value--btn" onClick={startBurnedEdit}>
+              {Math.round(displayBurned).toLocaleString('ru')}
+            </button>
+          )}
+        </div>
+      </div>
 
       {overLimit && (
         <p className="progress-label" style={{ color: 'var(--text-muted)', marginTop: 4 }}>

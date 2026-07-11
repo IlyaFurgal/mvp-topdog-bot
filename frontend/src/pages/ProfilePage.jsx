@@ -203,7 +203,7 @@ function buildProfilePayload(s) {
   return {
     preferred_name:         s.preferredName || undefined,
     tone:                   s.tone || undefined,
-    goals:                  s.selectedGoals.length > 0 ? s.selectedGoals : undefined,
+    goals:                  s.selectedGoals,
     fitness_level:          s.fitnessLevel || undefined,
     neat_level:             s.neatLevel || undefined,
     sport_type:             s.sportType || undefined,
@@ -288,7 +288,9 @@ function MyDataView({ profile, onBack, onSaved }) {
   }
 
   function toggleGoal(key) {
-    setSelectedGoals((prev) => (prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]))
+    const next = selectedGoals.includes(key) ? selectedGoals.filter((g) => g !== key) : [...selectedGoals, key]
+    setSelectedGoals(next)
+    persist({ selectedGoals: next })
   }
 
   if (editField === 'name') {
@@ -552,16 +554,18 @@ export default function ProfilePage() {
   const [trackers, setTrackers] = useState({ weight: null, water: null, sleep: null, calories: null, pulse: null })
   const [calorieLimit, setCalorieLimit] = useState(null)
   const [macroTargets, setMacroTargets] = useState(null)
+  const [caloriesBurned, setCaloriesBurned] = useState(null)
   const [activeTracker, setActiveTracker] = useState(null)
   const [heightOpen, setHeightOpen] = useState(false)
 
   async function loadTrackers() {
     try {
       const trackData = await getTodayTrackers()
-      const { calorie_limit, calories_meals, macro_targets, ...rest } = trackData
+      const { calorie_limit, calories_meals, macro_targets, calories_burned, ...rest } = trackData
       setTrackers(rest)
       setCalorieLimit(calorie_limit ?? null)
       setMacroTargets(macro_targets ?? null)
+      setCaloriesBurned(calories_burned ?? null)
     } catch (_) {}
   }
 
@@ -614,6 +618,7 @@ export default function ProfilePage() {
         todayData={trackers[activeTracker]}
         calorieLimit={calorieLimit}
         macroTargets={macroTargets}
+        caloriesBurned={caloriesBurned}
         onClose={() => setActiveTracker(null)}
         onSaved={() => { setActiveTracker(null); loadTrackers(); setDataVersion((v) => v + 1) }}
       />

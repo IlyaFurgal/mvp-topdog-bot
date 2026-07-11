@@ -78,7 +78,7 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
 
         {/* RPE */}
         <div className="wf-section">
-          <label className="wf-label">RPE — НАСКОЛЬКО ТЯЖЕЛО ПРОШЛА (НЕОБЯЗАТЕЛЬНО)</label>
+          <label className="wf-label">RPE — НАСКОЛЬКО ТЯЖЕЛО ПРОШЛА</label>
           <input
             type="number"
             inputMode="numeric"
@@ -98,12 +98,12 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
 
         {/* note */}
         <div className="wf-section">
-          <label className="wf-label">ЗАМЕТКА</label>
+          <label className="wf-label">НАПИШИ ЗАМЕТКУ О ТРЕНИРОВКЕ</label>
           <textarea
-            className="additional-info-textarea"
-            placeholder="Напиши заметку о тренировке..."
+            className="wf-note-textarea"
+            placeholder="Добавить заметку..."
             value={note}
-            rows={3}
+            rows={1}
             onChange={e => setNote(e.target.value)}
           />
         </div>

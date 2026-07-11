@@ -10,6 +10,7 @@ const MAX_FILE_BYTES    = 15 * 1024 * 1024   // 15 МБ — жёсткий ли�
 const RESIZE_THRESHOLD  =  5 * 1024 * 1024   // 5 МБ  — порог ресайза изображений
 const MAX_DIMENSION     = 1920                // px    — максимальная сторона после ресайза
 const MAX_REC_SECONDS   = 120                 // 2 минуты — лимит записи голоса
+const MIN_HOLD_MS       = 400                 // короче этого — случайный тап, не запись
 
 async function resizeImageIfNeeded(file) {
   if (file.size <= RESIZE_THRESHOLD) {
@@ -86,6 +87,7 @@ export default function AiPage() {
   // a brief race window since it only updates on the next render.
   const sendingRef        = useRef(false)
   const micHoldRef        = useRef(false)   // true while finger is held on mic
+  const micPressStartRef  = useRef(0)       // Date.now() at pointerdown — guards against a plain tap
 
   // Scroll to bottom on initial load and whenever new messages arrive
   // (including ones appended by the background poll while this page is mounted)
@@ -284,13 +286,22 @@ export default function AiPage() {
     e.preventDefault()
     if (typing) return
     micHoldRef.current = true
+    micPressStartRef.current = Date.now()
     startRecording()
   }
 
   function handleMicPointerUp() {
     if (!micHoldRef.current) return
     micHoldRef.current = false
-    if (mediaRecorderRef.current) stopAndSend()
+    if (!mediaRecorderRef.current) return
+    // A plain tap (not a hold) would otherwise capture a near-empty clip
+    // that fails on the backend and shows up as an instant error bubble —
+    // treat anything shorter than MIN_HOLD_MS as a mis-tap and just cancel.
+    if (Date.now() - micPressStartRef.current < MIN_HOLD_MS) {
+      cancelRecording()
+      return
+    }
+    stopAndSend()
   }
 
   function handleMicPointerLeave() {
@@ -313,6 +324,14 @@ export default function AiPage() {
           ? 'Разреши доступ к микрофону в настройках'
           : 'Не удалось записать голосовое, попробуй ещё раз'
       )
+      return
+    }
+
+    // The finger may already be off the button by the time getUserMedia
+    // resolves (a quick tap) — don't start an orphaned recording nobody
+    // will stop until the 2-minute auto-cutoff.
+    if (!micHoldRef.current) {
+      stream.getTracks().forEach((t) => t.stop())
       return
     }
 

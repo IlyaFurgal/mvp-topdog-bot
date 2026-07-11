@@ -73,28 +73,25 @@ NEAT_COEFFICIENTS: dict[str, float] = {
     "very_active":  1.525,  # физический труд, весь день в движении
 }
 
-# RPE (из чекина после тренировки) -> MET, сетка завизирована методологом.
-# (верхняя_граница_RPE, MET) — первая подходящая по возрастанию.
-_RPE_MET_TABLE: list[tuple[int, float]] = [
-    (2, 3.0),
-    (4, 3.75),
-    (6, 5.0),
-    (8, 6.0),
-    (10, 8.0),
-]
+# RPE (из чекина после тренировки, или карточки "Тренировка на сегодня") -> MET.
+# ТЗ «авторасчёт расхода калорий тренировки» 2026-07-11: 1-2 и 5-6/7-8/9-10 —
+# плоские ступени, 3-4 — линейная интерполяция между 3.5 и 4.0.
+def _rpe_to_met(rpe: int) -> float:
+    if rpe <= 2:
+        return 3.0
+    if rpe <= 4:
+        return 3.5 + (rpe - 3) * 0.5
+    if rpe <= 6:
+        return 5.0
+    if rpe <= 8:
+        return 6.0
+    return 8.0
 
 # Чекин после тренировки не спрашивает длительность — фиксированный час на
 # тренировку (ТЗ допускает дефолт 60 мин при отсутствии поля).
 _DEFAULT_TRAINING_HOURS = 1.0
 
 _TRAINING_ADDITION_CAP_PCT = 0.40  # кап добавки: не более 40% от базовой цели дня
-
-
-def _rpe_to_met(rpe: int) -> float:
-    for upper, met in _RPE_MET_TABLE:
-        if rpe <= upper:
-            return met
-    return _RPE_MET_TABLE[-1][1]
 
 
 def calculate_base_calorie_target(profile, current_weight: float | None = None) -> int:
@@ -226,6 +223,24 @@ async def calculate_calorie_limit(
         return base_target
     addition = await _todays_training_addition(session, user_id, weight, base_target)
     return base_target + addition
+
+
+async def calculate_todays_training_burn(
+    session,
+    user_id: int,
+    profile,
+    current_weight: float | None = None,
+) -> int:
+    """Расход калорий за сегодняшние зафиксированные тренировки (та же
+    добавка, что calculate_calorie_limit прибавляет к базовой цели) —
+    для отдельного отображения "СОЖЖЕНО" на экране калорий."""
+    if not profile:
+        return 0
+    weight = current_weight or profile.weight
+    if not weight:
+        return 0
+    base_target = calculate_base_calorie_target(profile, current_weight)
+    return await _todays_training_addition(session, user_id, weight, base_target)
 
 
 def _today_start() -> datetime:
@@ -524,6 +539,7 @@ async def get_today_trackers(
 
     out["calorie_limit"] = await calculate_calorie_limit(session, user.id, profile, current_weight=current_weight)
     out["macro_targets"] = calculate_macro_targets(out["calorie_limit"], current_weight, profile)
+    out["calories_burned"] = await calculate_todays_training_burn(session, user.id, profile, current_weight=current_weight)
     return out
 
 
