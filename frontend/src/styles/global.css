@@ -443,13 +443,11 @@ html, body {
    regardless of source order, without touching border-color (kept in the
    plain .checkin-card rule above so .checkin-card--done/--empty can still
    override it). */
-/* Same gradient-sheen plate as .tracker-cta-btn/.tracker-page-title-plate
+/* Same gradient-plate art as .tracker-cta-btn/.tracker-page-title-plate
    instead of the page's own 4.png texture, which made the card blend into
    the background rather than read as a raised plate. */
 .checkin-card.skew-chip {
-  background:
-    linear-gradient(158deg, transparent 42%, rgba(255, 255, 255, 0.10) 54%, transparent 66%),
-    linear-gradient(105deg, #3a3a3a 0%, #202020 52%, #101010 100%);
+  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
 }
 
 .checkin-card:active {
@@ -950,9 +948,7 @@ html, body {
   border: none;
   padding: 22px 20px;
   cursor: pointer;
-  background:
-    linear-gradient(158deg, transparent 42%, rgba(255, 255, 255, 0.10) 54%, transparent 66%),
-    linear-gradient(105deg, #3a3a3a 0%, #202020 52%, #101010 100%);
+  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
 }
 
 .tracker-cta-btn:active {
@@ -1141,9 +1137,7 @@ html, body {
   padding: 16px 20px;
   margin-bottom: 20px;
   box-sizing: border-box;
-  background:
-    linear-gradient(158deg, transparent 38%, rgba(255, 255, 255, 0.18) 54%, transparent 70%),
-    linear-gradient(105deg, #4a4a4a 0%, #202020 48%, #0a0a0a 100%);
+  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
 }
 
 .tracker-page-title {
@@ -4000,10 +3994,9 @@ select optgroup {
 }
 
 .stripe-divider {
-  height: 8px;
-  width: 100%;
-  max-width: 220px;
-  background: url('../assets/Градиентная строка.png') left center / contain no-repeat;
+  height: 16px;
+  width: 118px;
+  background: url('../assets/5.png') left center / contain no-repeat;
   margin: 4px 0 20px;
 }
 
@@ -4015,34 +4008,38 @@ select optgroup {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--accent-club);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
   margin: 20px 0 8px;
 }
 
-/* Native <input>/<select> living inside a .data-row__value chip — reset
-   browser chrome so it reads as plain text (color/size come from the
-   existing ".data-row__value > *" rule) with the whole chip as tap target. */
-.data-row__input {
-  background: none;
-  border: none;
-  outline: none;
-  padding: 0;
-  width: 100%;
-  text-align: center;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
+/* Full-page single-select list (СТИЛЬ ОБЩЕНИЯ, ЧАСОВОЙ ПОЯС, ...) — a
+   vertical stack of rows, the current selection reads as a light plate. */
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
-.data-row__input--name {
+.option-list__item {
   text-align: left;
-  cursor: text;
-  flex: 1;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  padding: 14px 18px;
+  background: linear-gradient(100deg, #2b2b2b 0%, #161616 100%);
+  border: 1px solid #333;
+  border-radius: 4px;
   color: var(--text);
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.option-list__item--active {
+  background: linear-gradient(100deg, #d8d8d8 0%, #9a9a9a 100%);
+  color: #111;
+  border-color: #d8d8d8;
 }
 
 .additional-info-textarea {

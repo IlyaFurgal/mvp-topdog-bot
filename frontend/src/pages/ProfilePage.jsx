@@ -118,73 +118,106 @@ function HeightPage({ initialHeight, onClose, onSaved }) {
       <div className="tracker-input">
         <ScrollPicker value={height} onChange={setHeight} min={100} max={230} step={1} decimals={0} unit="см" />
       </div>
-      <button className="btn btn-accent" onClick={handleSave} disabled={saving}>
+      <button className="btn tracker-save-btn--side" onClick={handleSave} disabled={saving} style={{ marginTop: 16 }}>
         {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
       </button>
     </div>
   )
 }
 
-// ── МОИ ДАННЫЕ — single-page summary + inline editing ───────────────────────────
+// ── МОИ ДАННЫЕ — summary list + one dedicated edit page per field ───────────────
 
-function EditableRow({ label, value, onChange, placeholder, type = 'text', suffix }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-
-  function startEdit() {
-    setDraft(value ?? '')
-    setEditing(true)
-  }
-
-  function commit() {
-    onChange(draft)
-    setEditing(false)
-  }
-
+// Full-page text/number/multiline field editor — "РЕДАКТИРОВАТЬ ИМЯ",
+// "ВИД СПОРТА", "ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ" etc.
+function TextEditPage({ title, subtitle, value, onChange, placeholder, multiline, numeric, onBack, onSave, saving }) {
   return (
-    <div className="data-row skew-chip">
-      <span className="data-row__label">{label}</span>
-      <span className="data-row__value">
-        {editing ? (
-          <input
-            type={type}
-            inputMode={type === 'number' ? 'decimal' : undefined}
-            autoFocus
-            className="data-row__input"
-            value={draft}
-            placeholder={placeholder}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
-          />
-        ) : (
-          <span onClick={startEdit}>{value ? `${value}${suffix ?? ''}` : (placeholder ?? '+')}</span>
-        )}
-      </span>
+    <div className="page club-page">
+      <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
+
+      <div className="tracker-page-title-plate skew-chip">
+        <span className="tracker-page-title">{title}</span>
+      </div>
+
+      {subtitle && <p className="progress-label" style={{ textAlign: 'left', marginBottom: 8 }}>{subtitle}</p>}
+
+      {multiline ? (
+        <textarea
+          className="additional-info-textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          maxLength={1000}
+          rows={5}
+          placeholder={placeholder}
+          autoFocus
+        />
+      ) : (
+        <input
+          type={numeric ? 'number' : 'text'}
+          inputMode={numeric ? 'decimal' : undefined}
+          className="field-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoFocus
+        />
+      )}
+
+      <button className="btn tracker-save-btn--side" onClick={onSave} disabled={saving} style={{ marginTop: 16 }}>
+        {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
+      </button>
     </div>
   )
 }
 
-function ExpandableTextRow({ label, value, onChange }) {
-  const [open, setOpen] = useState(false)
+// Full-page single-select list — "СТИЛЬ ОБЩЕНИЯ", "ЧАСОВОЙ ПОЯС" etc.
+// Tapping an option commits immediately, no separate save step.
+function OptionEditPage({ title, options, value, onSelect, onBack, saving }) {
   return (
-    <>
-      <div className="data-row skew-chip" onClick={() => setOpen((v) => !v)}>
-        <span className="data-row__label">{label}</span>
-        <span className="data-row__value"><span>{value ? 'Изменить' : '+'}</span></span>
+    <div className="page club-page">
+      <button className="club-back" onClick={onBack} disabled={saving}>‹ НАЗАД</button>
+
+      <div className="tracker-page-title-plate skew-chip">
+        <span className="tracker-page-title">{title}</span>
       </div>
-      {open && (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          maxLength={1000}
-          rows={4}
-          placeholder={"Например:\nболит правое плечо\nизбегаю прыжков и тяжёлых приседаний"}
-          className="additional-info-textarea"
-        />
-      )}
-    </>
+
+      <div className="option-list">
+        {options.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={`option-list__item${key === value ? ' option-list__item--active' : ''}`}
+            onClick={() => onSelect(key)}
+            disabled={saving}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
+}
+
+function buildProfilePayload(s) {
+  const weightNum = s.weight !== '' ? parseFloat(String(s.weight).replace(',', '.')) : undefined
+  const heightNum = s.height !== '' ? parseInt(s.height, 10) : undefined
+  const workoutDaysNum = s.workoutDaysPerWeek !== '' ? parseInt(s.workoutDaysPerWeek, 10) : undefined
+  return {
+    preferred_name:         s.preferredName || undefined,
+    tone:                   s.tone || undefined,
+    goals:                  s.selectedGoals.length > 0 ? s.selectedGoals : undefined,
+    fitness_level:          s.fitnessLevel || undefined,
+    neat_level:             s.neatLevel || undefined,
+    sport_type:             s.sportType || undefined,
+    timezone:               s.tz || undefined,
+    morning_reminder_time:  s.morningTime || undefined,
+    evening_reminder_time:  s.eveningTime || undefined,
+    weight:                 (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
+    height:                 (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
+    workout_days_per_week:  (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
+    notifications_enabled:  s.notifEnabled,
+    resting_pulse_enabled:  s.restingPulseEnabled,
+    additional_info:        s.additionalInfo.trim() || null,
+  }
 }
 
 function MyDataView({ profile, onBack, onSaved }) {
@@ -241,51 +274,157 @@ function MyDataView({ profile, onBack, onSaved }) {
     setSelectedGoals((prev) => (prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]))
   }
 
-  function cycleTone() {
-    setTone((t) => (t === 'aggressive' ? 'soft' : 'aggressive'))
-  }
+  const [editField, setEditField] = useState(null)
 
-  function cycleFitness() {
-    const keys = FITNESS_OPTIONS.map(([k]) => k)
-    const idx = keys.indexOf(fitnessLevel)
-    setFitnessLevel(keys[(idx + 1) % keys.length])
-  }
-
-  function cycleNeat() {
-    const keys = NEAT_OPTIONS.map(([k]) => k)
-    const idx = keys.indexOf(neatLevel)
-    setNeatLevel(keys[(idx + 1) % keys.length])
-  }
-
-  async function handleSave() {
+  async function persist(overrides = {}) {
     setError(null)
     setSaving(true)
+    const snapshot = {
+      preferredName, tone, selectedGoals, fitnessLevel, neatLevel, sportType, tz,
+      morningTime, eveningTime, notifEnabled, restingPulseEnabled, weight, height,
+      workoutDaysPerWeek, additionalInfo, ...overrides,
+    }
     try {
-      const weightNum = weight !== '' ? parseFloat(String(weight).replace(',', '.')) : undefined
-      const heightNum = height !== '' ? parseInt(height, 10) : undefined
-      const workoutDaysNum = workoutDaysPerWeek !== '' ? parseInt(workoutDaysPerWeek, 10) : undefined
-      await client.patch('/profile/me', {
-        preferred_name:         preferredName || undefined,
-        tone:                   tone || undefined,
-        goals:                  selectedGoals.length > 0 ? selectedGoals : undefined,
-        fitness_level:          fitnessLevel || undefined,
-        neat_level:             neatLevel || undefined,
-        sport_type:             sportType || undefined,
-        timezone:               tz || undefined,
-        morning_reminder_time:  morningTime || undefined,
-        evening_reminder_time:  eveningTime || undefined,
-        weight:                 (!isNaN(weightNum) && weightNum > 0) ? weightNum : undefined,
-        height:                 (!isNaN(heightNum) && heightNum > 0) ? heightNum : undefined,
-        workout_days_per_week:  (!isNaN(workoutDaysNum) && workoutDaysNum >= 1 && workoutDaysNum <= 7) ? workoutDaysNum : undefined,
-        notifications_enabled:  notifEnabled,
-        resting_pulse_enabled:  restingPulseEnabled,
-        additional_info:        additionalInfo.trim() || null,
-      })
+      await client.patch('/profile/me', buildProfilePayload(snapshot))
       onSaved()
+      setEditField(null)
+      return true
     } catch (e) {
       setError('Ошибка сохранения. Попробуй ещё раз.')
       setSaving(false)
+      return false
     }
+  }
+
+  function toggleGoal(key) {
+    setSelectedGoals((prev) => (prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key]))
+  }
+
+  if (editField === 'name') {
+    return (
+      <TextEditPage
+        title="РЕДАКТИРОВАТЬ ИМЯ" subtitle="ИМЯ"
+        value={preferredName} onChange={setPreferredName}
+        placeholder="Как к тебе обращаться?"
+        onBack={() => setEditField(null)} onSave={() => persist()} saving={saving}
+      />
+    )
+  }
+  if (editField === 'tone') {
+    return (
+      <OptionEditPage
+        title="СТИЛЬ ОБЩЕНИЯ"
+        options={[['soft', 'Мягкий'], ['aggressive', 'Жёсткий']]}
+        value={tone}
+        onSelect={(v) => { setTone(v); persist({ tone: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'fitness') {
+    return (
+      <OptionEditPage
+        title="УРОВЕНЬ ПОДГОТОВКИ"
+        options={FITNESS_OPTIONS}
+        value={fitnessLevel}
+        onSelect={(v) => { setFitnessLevel(v); persist({ fitnessLevel: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'neat') {
+    return (
+      <OptionEditPage
+        title="АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК"
+        options={NEAT_OPTIONS}
+        value={neatLevel}
+        onSelect={(v) => { setNeatLevel(v); persist({ neatLevel: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'sport') {
+    return (
+      <TextEditPage
+        title="ВИД СПОРТА"
+        value={sportType} onChange={setSportType}
+        placeholder="Фитнес, бег, бокс..."
+        onBack={() => setEditField(null)} onSave={() => persist()} saving={saving}
+      />
+    )
+  }
+  if (editField === 'timezone') {
+    return (
+      <OptionEditPage
+        title="ЧАСОВОЙ ПОЯС"
+        options={TIMEZONE_OPTIONS}
+        value={tz}
+        onSelect={(v) => { setTz(v); persist({ tz: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'morning') {
+    return (
+      <OptionEditPage
+        title="УТРЕННЕЕ НАПОМИНАНИЕ"
+        options={MORNING_TIMES.map((t) => [t, t])}
+        value={morningTime}
+        onSelect={(v) => { setMorningTime(v); persist({ morningTime: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'evening') {
+    return (
+      <OptionEditPage
+        title="ВЕЧЕРНЕЕ НАПОМИНАНИЕ"
+        options={EVENING_TIMES.map((t) => [t, t])}
+        value={eveningTime}
+        onSelect={(v) => { setEveningTime(v); persist({ eveningTime: v }) }}
+        onBack={() => setEditField(null)} saving={saving}
+      />
+    )
+  }
+  if (editField === 'weight') {
+    return (
+      <TextEditPage
+        title="ВЕС (СТАРТОВЫЙ, КГ)" numeric
+        value={weight} onChange={setWeight}
+        placeholder="Например: 75.5"
+        onBack={() => setEditField(null)} onSave={() => persist()} saving={saving}
+      />
+    )
+  }
+  if (editField === 'height') {
+    return (
+      <HeightPage
+        initialHeight={height ? parseFloat(height) : 170}
+        onClose={() => setEditField(null)}
+        onSaved={(v) => { setHeight(String(v)); onSaved(); setEditField(null) }}
+      />
+    )
+  }
+  if (editField === 'workoutDays') {
+    return (
+      <TextEditPage
+        title="ТРЕНИРОВОК В НЕДЕЛЮ" numeric
+        value={workoutDaysPerWeek} onChange={setWorkoutDaysPerWeek}
+        placeholder="Например: 4"
+        onBack={() => setEditField(null)} onSave={() => persist()} saving={saving}
+      />
+    )
+  }
+  if (editField === 'additional') {
+    return (
+      <TextEditPage
+        title="ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ" multiline
+        subtitle="Травмы, ограничения, пожелания — ИИ учтёт это в рекомендациях"
+        value={additionalInfo} onChange={setAdditionalInfo}
+        placeholder="Например: болит правое плечо..."
+        onBack={() => setEditField(null)} onSave={() => persist()} saving={saving}
+      />
+    )
   }
 
   return (
@@ -295,17 +434,12 @@ function MyDataView({ profile, onBack, onSaved }) {
       <img src={myDataHeading} alt="МОИ ДАННЫЕ" className="screen-title-img" />
       <div className="stripe-divider" />
 
-      <div className="data-row data-row--name skew-chip">
-        <input
-          className="data-row__input data-row__input--name"
-          value={preferredName}
-          placeholder="Как к тебе обращаться?"
-          onChange={(e) => setPreferredName(e.target.value)}
-        />
+      <div className="data-row skew-chip" onClick={() => setEditField('name')}>
+        <span className="data-row__label">{preferredName || 'ИМЯ'}</span>
         <span className="data-row__value"><span>{tierLabel}</span></span>
       </div>
 
-      <div className="data-row skew-chip" onClick={cycleTone}>
+      <div className="data-row skew-chip" onClick={() => setEditField('tone')}>
         <span className="data-row__label">ТОН ОБЩЕНИЯ</span>
         <span className="data-row__value"><span>{tone === 'aggressive' ? 'ЖЁСТКИЙ' : 'МЯГКИЙ'}</span></span>
       </div>
@@ -318,69 +452,67 @@ function MyDataView({ profile, onBack, onSaved }) {
         </div>
       ))}
 
-      <div className="data-row skew-chip" onClick={cycleFitness}>
+      <div className="data-row skew-chip" onClick={() => setEditField('fitness')}>
         <span className="data-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
         <span className="data-row__value"><span>{fitnessLabel}</span></span>
       </div>
 
-      <div className="data-row skew-chip" onClick={cycleNeat}>
+      <div className="data-row skew-chip" onClick={() => setEditField('neat')}>
         <span className="data-row__label">АКТИВНОСТЬ ВНЕ ТРЕНИРОВОК</span>
         <span className="data-row__value"><span>{neatLabel}</span></span>
       </div>
 
-      <EditableRow label="ВИД СПОРТА" value={sportType} onChange={setSportType} placeholder="Фитнес, бег, бокс..." />
+      <div className="data-row skew-chip" onClick={() => setEditField('sport')}>
+        <span className="data-row__label">ВИД СПОРТА</span>
+        <span className="data-row__value"><span>{sportType || '+'}</span></span>
+      </div>
 
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={() => setEditField('timezone')}>
         <span className="data-row__label">ЧАСОВОЙ ПОЯС</span>
-        <span className="data-row__value">
-          <select className="data-row__input" value={tz} onChange={(e) => setTz(e.target.value)}>
-            {!TIMEZONE_OPTIONS.some(([k]) => k === tz) && tz && <option value={tz}>{tz}</option>}
-            {TIMEZONE_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-          </select>
-        </span>
+        <span className="data-row__value"><span>{tz}</span></span>
       </div>
 
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={() => setEditField('morning')}>
         <span className="data-row__label">УТРЕННЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value">
-          <select className="data-row__input" value={morningTime} onChange={(e) => setMorningTime(e.target.value)}>
-            {!MORNING_TIMES.includes(morningTime) && morningTime && <option value={morningTime}>{morningTime}</option>}
-            {MORNING_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </span>
+        <span className="data-row__value"><span>{morningTime}</span></span>
       </div>
 
-      <div className="data-row skew-chip">
+      <div className="data-row skew-chip" onClick={() => setEditField('evening')}>
         <span className="data-row__label">ВЕЧЕРНЕЕ НАПОМИНАНИЕ</span>
-        <span className="data-row__value">
-          <select className="data-row__input" value={eveningTime} onChange={(e) => setEveningTime(e.target.value)}>
-            {!EVENING_TIMES.includes(eveningTime) && eveningTime && <option value={eveningTime}>{eveningTime}</option>}
-            {EVENING_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </span>
+        <span className="data-row__value"><span>{eveningTime}</span></span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setNotifEnabled((v) => !v)}>
+      <div className="data-row skew-chip" onClick={() => { setNotifEnabled((v) => !v); persist({ notifEnabled: !notifEnabled }) }}>
         <span className="data-row__label">УВЕДОМЛЕНИЯ</span>
         <span className="data-row__value"><span>{notifEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
       </div>
 
-      <div className="data-row skew-chip" onClick={() => setRestingPulseEnabled((v) => !v)}>
+      <div className="data-row skew-chip" onClick={() => { setRestingPulseEnabled((v) => !v); persist({ restingPulseEnabled: !restingPulseEnabled }) }}>
         <span className="data-row__label">ПУЛЬС ПОКОЯ</span>
         <span className="data-row__value"><span>{restingPulseEnabled ? 'ВКЛ.' : 'ВЫКЛ.'}</span></span>
       </div>
 
-      <EditableRow label="ВЕС (СТАРТОВЫЙ, КГ)" value={weight} onChange={setWeight} type="number" suffix=" КГ" placeholder="Например: 75.5" />
-      <EditableRow label="РОСТ (СМ)" value={height} onChange={setHeight} type="number" suffix=" СМ" placeholder="Например: 178" />
-      <EditableRow label="ТРЕНИРОВОК В НЕДЕЛЮ" value={workoutDaysPerWeek} onChange={setWorkoutDaysPerWeek} type="number" placeholder="Например: 4" />
+      <div className="data-row skew-chip" onClick={() => setEditField('weight')}>
+        <span className="data-row__label">ВЕС (СТАРТОВЫЙ, КГ)</span>
+        <span className="data-row__value"><span>{weight ? `${weight} КГ` : '+'}</span></span>
+      </div>
 
-      <ExpandableTextRow label="ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ" value={additionalInfo} onChange={setAdditionalInfo} />
+      <div className="data-row skew-chip" onClick={() => setEditField('height')}>
+        <span className="data-row__label">РОСТ (СМ)</span>
+        <span className="data-row__value"><span>{height ? `${height} СМ` : '+'}</span></span>
+      </div>
+
+      <div className="data-row skew-chip" onClick={() => setEditField('workoutDays')}>
+        <span className="data-row__label">ТРЕНИРОВОК В НЕДЕЛЮ</span>
+        <span className="data-row__value"><span>{workoutDaysPerWeek || '+'}</span></span>
+      </div>
+
+      <div className="data-row skew-chip" onClick={() => setEditField('additional')}>
+        <span className="data-row__label">ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ</span>
+        <span className="data-row__value"><span>{additionalInfo ? 'Изменить' : '+'}</span></span>
+      </div>
 
       {error && <p style={{ color: '#ff4444', fontSize: '0.85rem', marginTop: 8 }}>{error}</p>}
-
-      <button className="btn btn-accent" onClick={handleSave} disabled={saving} style={{ marginTop: 20 }}>
-        {saving ? 'СОХРАНЯЕМ...' : 'СОХРАНИТЬ'}
-      </button>
     </div>
   )
 }
