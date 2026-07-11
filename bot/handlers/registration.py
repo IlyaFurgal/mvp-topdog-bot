@@ -255,7 +255,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
                     reply_markup=ReplyKeyboardRemove(),
                 )
                 await message.answer(
-                    "▸ Открыть приложение",
+                    "👇",
                     reply_markup=_webapp_kb("▸ Открыть приложение"),
                 )
             else:
