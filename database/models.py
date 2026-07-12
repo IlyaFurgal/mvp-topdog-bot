@@ -394,7 +394,7 @@ class GcSubscription(Base):
     __tablename__ = "gc_subscriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    phone_normalized: Mapped[str] = mapped_column(String(10), nullable=False, unique=True, index=True)
+    phone_normalized: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
     email: Mapped[str | None] = mapped_column(String, nullable=True)
     tier: Mapped[GcTier] = mapped_column(Enum(GcTier, name="gctier"), nullable=False)
     status: Mapped[GcStatus] = mapped_column(
