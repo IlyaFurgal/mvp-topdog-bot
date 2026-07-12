@@ -47,7 +47,16 @@ async def sync_user_to_gc(
     group_name: str,
     addfields: dict,
 ) -> dict:
-    """Create or update a user in GetCourse and add them to a group."""
+    """Create or update a user in GetCourse and add them to a group.
+
+    GC identifies users by email; an empty email with refresh_if_exists=1
+    merges unrelated profiles instead of erroring (prod incident
+    2026-07-11 — see _register_in_getcourse in bot/handlers/registration.py
+    for the original occurrence). Refuse to send rather than risk it.
+    """
+    if not email:
+        logger.warning("GC sync_user_to_gc SKIPPED: empty email (first_name=%r)", first_name)
+        return {}
     params = {
         "user": {
             "email": email,
@@ -61,7 +70,16 @@ async def sync_user_to_gc(
 
 
 async def sync_progress_to_gc(*, email: str, addfields: dict) -> dict:
-    """Update extra (progress) fields for an existing GC user."""
+    """Update extra (progress) fields for an existing GC user.
+
+    Same email-required guard as sync_user_to_gc — the bot/scheduler.py
+    caller already filters User.email.isnot(None)/!="" before calling this,
+    but that's the caller's job, not this function's guarantee; refuse
+    defensively rather than trust every future call site to remember.
+    """
+    if not email:
+        logger.warning("GC sync_progress_to_gc SKIPPED: empty email")
+        return {}
     params = {
         "user": {
             "email": email,

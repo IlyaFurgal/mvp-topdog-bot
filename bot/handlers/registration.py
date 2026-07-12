@@ -183,15 +183,41 @@ async def _handle_promo(message: Message, code: str) -> None:
 
 
 async def _register_in_getcourse(user: User, profile: Profile) -> None:
-    """Send user data to GetCourse after registration. Silently skips if GC_API_KEY is empty."""
+    """Send user data to GetCourse after registration. Silently skips if GC_API_KEY is empty.
+
+    GC identifies users by email. Sending email=None with refresh_if_exists=1
+    causes GC to merge unrelated profiles (prod incident 2026-07-11: user
+    880895808's GC profile was overwritten with another user's first_name,
+    since GC matched the null-email request to whatever profile it landed
+    on next). Never send a request without a resolved email — our own
+    users.email is empty for virtually everyone (we don't collect it during
+    registration; identification on our side is by phone via
+    gc_subscriptions.phone_normalized), so fall back to the email GC itself
+    already has on file for this telegram_id via the payment webhook.
+    """
     if not settings.GC_API_KEY:
         return
+
+    async with AsyncSessionLocal() as session:
+        sub = (await session.execute(
+            select(GcSubscription).where(GcSubscription.telegram_id == user.telegram_id)
+        )).scalar_one_or_none()
+
+    email = (user.email or (sub.email if sub else None) or "").strip()
+    if not email:
+        logger.warning(
+            "GC registration SKIPPED for user %s: no email resolved "
+            "(user.email=%r, gc_sub=%s) — sending email=None would corrupt GC profiles",
+            user.telegram_id, user.email, "found" if sub else "missing",
+        )
+        return
+
     goals_str = ", ".join(profile.goals) if profile.goals else (
         profile.goal.value if profile.goal else ""
     )
     data = {
         "user": {
-            "email": None,
+            "email": email,
             "first_name": user.first_name or "",
             "addfields": {
                 "telegram_id": str(user.telegram_id),
@@ -214,7 +240,10 @@ async def _register_in_getcourse(user: User, profile: Profile) -> None:
                 params={"params": params_encoded},
             )
             resp.raise_for_status()
-            logger.info("GC registration: user %s sent to GC", user.telegram_id)
+            logger.info(
+                "GC registration: user %s sent to GC with email=%s",
+                user.telegram_id, email,
+            )
     except Exception as exc:
         logger.warning("GC registration failed for user %s: %s", user.telegram_id, exc)
 
@@ -429,6 +458,26 @@ async def _process_phone_check(message: Message, state: FSMContext, phone: str) 
         user.subscription_active = "active"
         user.subscription_expires_at = sub.expires_at
         user.subscription_status = SubscriptionStatus.premium
+
+        # Backfill users.email from the GC subscription (arrived via the
+        # payment webhook) so _register_in_getcourse / sync_progress_to_gc
+        # can identify this user by email later — our own registration flow
+        # never collects one. ix_users_email is UNIQUE; check for a
+        # conflicting owner first rather than letting the commit below
+        # raise IntegrityError, which would also roll back the subscription
+        # activation just set above.
+        if sub.email and not user.email:
+            conflict = (await session.execute(
+                select(User).where(User.email == sub.email, User.id != user.id)
+            )).scalar_one_or_none()
+            if conflict:
+                logger.warning(
+                    "users.email backfill skipped for user %s: email %r already used by user %s",
+                    user.id, sub.email, conflict.id,
+                )
+            else:
+                user.email = sub.email
+
         await session.commit()
 
         profile_res = await session.execute(

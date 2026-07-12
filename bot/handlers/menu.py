@@ -12,9 +12,7 @@ from bot.keyboards.reply import freemium_menu_kb, request_contact_kb
 from bot.services.push_media import send_push_video
 from bot.states import RegistrationForm
 from core.config import settings
-from database.crud import get_user_by_telegram_id
 from database.models import SubscriptionStatus
-from database.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -27,17 +25,6 @@ def _webapp_kb(text: str = "🚀 Открыть приложение") -> Inline
             web_app=WebAppInfo(url=settings.mini_app_url_versioned),
         )
     ]])
-
-
-def _plans_kb(tg_id: int | None = None) -> InlineKeyboardMarkup:
-    """Payment-link keyboard for the two plans.
-
-    Thin wrapper around funnel_content.tariffs_kb — single source of truth
-    for the URL-building logic (tg_id relay + UTM params), kept under this
-    name since registration.py and several handlers below already import
-    it as `_plans_kb`.
-    """
-    return tariffs_kb(tg_id)
 
 
 def _user_has_subscription(user) -> bool:
@@ -64,15 +51,6 @@ def _user_has_subscription(user) -> bool:
         has,
     )
     return has
-
-
-async def _has_subscription(telegram_id: int) -> bool:
-    """Async wrapper used by menu handlers."""
-    async with AsyncSessionLocal() as session:
-        user = await get_user_by_telegram_id(session, telegram_id)
-        if not user:
-            return False
-        return _user_has_subscription(user)
 
 
 # ── Freemium handlers ──────────────────────────────────────────────────────────
@@ -112,45 +90,3 @@ async def menu_support(message: Message) -> None:
 @router.message(F.text == "📖 FAQ")
 async def menu_faq(message: Message) -> None:
     await message.answer(FAQ_TEXT, reply_markup=faq_kb(message.from_user.id))
-
-
-# ── Main menu handlers (for subscribed users) ─────────────────────────────────
-
-@router.message(F.text == "🤖 ИИ-ассистент")
-async def menu_ai(message: Message) -> None:
-    if not await _has_subscription(message.from_user.id):
-        await message.answer("Оформи подписку для доступа к ИИ-ассистенту 👇", reply_markup=_plans_kb())
-        return
-    await message.answer("🤖 ИИ-ассистент — в разработке.")
-
-
-@router.message(F.text == "📊 Мой прогресс")
-async def menu_progress(message: Message) -> None:
-    if not await _has_subscription(message.from_user.id):
-        await message.answer("Оформи подписку для доступа 👇", reply_markup=_plans_kb())
-        return
-    await message.answer("📊 Открой приложение для просмотра прогресса.", reply_markup=_webapp_kb())
-
-
-@router.message(F.text == "✅ Чекин")
-async def menu_checkin(message: Message) -> None:
-    if not await _has_subscription(message.from_user.id):
-        await message.answer("Оформи подписку для доступа 👇", reply_markup=_plans_kb())
-        return
-    await message.answer("✅ Открой приложение для чекина.", reply_markup=_webapp_kb())
-
-
-@router.message(F.text == "👤 Мой профиль")
-async def menu_profile(message: Message) -> None:
-    if not await _has_subscription(message.from_user.id):
-        await message.answer("Оформи подписку для доступа 👇", reply_markup=_plans_kb())
-        return
-    await message.answer("👤 Профиль — в разработке.")
-
-
-@router.message(F.text == "⚙️ Настройки")
-async def menu_settings(message: Message) -> None:
-    if not await _has_subscription(message.from_user.id):
-        await message.answer("Оформи подписку для доступа 👇", reply_markup=_plans_kb())
-        return
-    await message.answer("⚙️ Настройки", reply_markup=_webapp_kb())
