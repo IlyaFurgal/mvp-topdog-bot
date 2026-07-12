@@ -75,12 +75,32 @@ def _extract_json_markers(text: str, name: str) -> list[tuple[str, int, int]]:
                     break
         if end is None:
             # Unbalanced braces, no closing found at all — skip past this
-            # start so we don't loop forever, try the next occurrence.
+            # start so we don't loop forever, try the next occurrence. This
+            # was a silent loss (see ТЗ «фиксы парсера WORKOUT_PLANNED»,
+            # 2026-07-12, Фикс 4) — a marker whose JSON body never closes
+            # vanished with no log line unless it happened to be the only
+            # marker of that name in the whole webhook payload.
+            logger.warning(
+                "Suvvy %s marker: unbalanced braces, no closing '}' found | raw=%r",
+                name, text[m.start():m.start() + 200],
+            )
             pos = m.end()
             continue
         tail_end = end
         while tail_end < len(text) and text[tail_end] in ']} \t':
             tail_end += 1
+        tail = text[end:tail_end]
+        if tail != ']]':
+            # Correct termination is "}]]" — the "}" is already consumed as
+            # the JSON object's own closing brace (see `end` above), so a
+            # well-formed marker's tail here is exactly "]]". Anything else
+            # (e.g. mini's "}]" / "}}]") was tolerated silently before — log
+            # it so the frequency of malformed closes is visible (ТЗ «маркер
+            # WORKOUT (факт) + толерантность парсера», 2026-07-12, Задача 2).
+            logger.info(
+                "Suvvy %s marker: tolerated malformed marker tail: %r",
+                name, tail,
+            )
         spans.append((text[obj_start:end], m.start(), tail_end))
         pos = tail_end
     return spans
@@ -315,8 +335,64 @@ def _parse_workout_planned_markers(text: str) -> tuple[str, list[dict]]:
     return cleaned, planned
 
 
-def _meal_type_by_time(profile) -> str:
-    """Determine meal type from current local time in user's timezone."""
+def _parse_workout_markers(text: str) -> tuple[str, list[dict]]:
+    """
+    Extract [[WORKOUT:{"note","date","duration_min","rpe"}]] markers — a
+    *completed* workout (is_planned=False at write time), as opposed to
+    [[WORKOUT_PLANNED:...]] which is a future plan. All fields but `note`
+    are optional. Built on the same _extract_json_markers/_parse_marker
+    engine as every other marker (including the "}}]"-tolerant tail
+    handling) — see ТЗ «маркер WORKOUT (факт) + толерантность парсера»,
+    2026-07-12.
+
+    note   — required; missing/empty -> the whole marker is dropped (not
+             written as an empty-string row). Truncated to 2048 chars to
+             match Workout.note: String(2048).
+    date   — raw string or None, same split as WORKOUT_PLANNED: resolution
+             to an actual date (valid ISO vs local-today fallback) happens
+             at write time in suvvy_webhook, via _local_date().
+    duration_min — int 1-600, else None + warning.
+    rpe    — int 1-10, else None + warning.
+
+    Returns:
+        (cleaned_text, list_of_fact_dicts)
+        Each fact_dict: {"date": str|None, "note": str, "duration_min": int|None, "rpe": int|None}
+    """
+    facts: list[dict] = []
+
+    def _int_in_range(payload: dict, key: str, lo: int, hi: int) -> int | None:
+        val = payload.get(key)
+        if val is None:
+            return None
+        if not isinstance(val, (int, float)) or isinstance(val, bool):
+            logger.warning("WORKOUT marker: non-numeric %s=%r, dropping field", key, val)
+            return None
+        val_i = int(val)
+        if not (lo <= val_i <= hi):
+            logger.warning("WORKOUT marker: %s=%r out of range [%d, %d], dropping field", key, val_i, lo, hi)
+            return None
+        return val_i
+
+    def _handle(payload: dict) -> None:
+        note_raw = payload.get("note")
+        if not isinstance(note_raw, str) or not note_raw.strip():
+            raise ValueError("missing or empty note — marker dropped")
+        date_raw = payload.get("date")
+        facts.append({
+            "date": date_raw.strip() if isinstance(date_raw, str) and date_raw.strip() else None,
+            "note": note_raw.strip()[:2048],
+            "duration_min": _int_in_range(payload, "duration_min", 1, 600),
+            "rpe": _int_in_range(payload, "rpe", 1, 10),
+        })
+
+    cleaned = _parse_marker(text, "WORKOUT", _handle)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+    return cleaned, facts
+
+
+def _local_offset_hours(profile) -> int:
+    """Parse profile.timezone (e.g. "UTC+3") into an hour offset from UTC.
+    Falls back to UTC+3 (system default, МСК) if missing/invalid."""
     offset = 3  # default МСК
     tz = getattr(profile, "timezone", None) if profile else None
     if tz and tz.startswith("UTC"):
@@ -324,6 +400,19 @@ def _meal_type_by_time(profile) -> str:
             offset = int(tz.replace("UTC", "").replace("+", "") or "0")
         except ValueError:
             offset = 3
+    return offset
+
+
+def _local_date(profile) -> date:
+    """Today's date in the resident's local timezone (same offset logic as
+    _local_offset_hours), not the server's UTC date."""
+    offset = _local_offset_hours(profile)
+    return (datetime.now(timezone.utc) + timedelta(hours=offset)).date()
+
+
+def _meal_type_by_time(profile) -> str:
+    """Determine meal type from current local time in user's timezone."""
+    offset = _local_offset_hours(profile)
     local_hour = (datetime.now(timezone.utc) + timedelta(hours=offset)).hour
     if local_hour < 6:
         return "snack"      # 00:00–05:59 — ночь/перекус
@@ -846,6 +935,7 @@ async def suvvy_webhook(
     cleaned_texts: list[str] = []
     all_meals: list[dict] = []
     all_workout_plans: list[dict] = []
+    all_workout_facts: list[dict] = []
     weight_kg: float | None = None
     water_ml: float | None = None
     sleep_h: float | None = None
@@ -859,9 +949,11 @@ async def suvvy_webhook(
         cleaned, pl = _parse_pulse_marker(cleaned)
         cleaned, hm = _parse_health_metrics_marker(cleaned)
         cleaned, plans = _parse_workout_planned_markers(cleaned)
+        cleaned, facts = _parse_workout_markers(cleaned)
         cleaned_texts.append(cleaned)   # may be empty string if text was only a marker
         all_meals.extend(meals)
         all_workout_plans.extend(plans)
+        all_workout_facts.extend(facts)
         if w is not None and weight_kg is None:
             weight_kg = w
         if wm is not None and water_ml is None:
@@ -959,10 +1051,20 @@ async def suvvy_webhook(
             # no category (category_id=NULL, see migration 0023) and no WorkoutEntry;
             # the full day's exercise list is written verbatim into note.
             if all_workout_plans:
-                today = datetime.now(timezone.utc).date()
+                plans_profile_result = await session.execute(
+                    select(Profile).where(Profile.user_id == user.id)
+                )
+                plans_profile = plans_profile_result.scalar_one_or_none()
+                local_today = _local_date(plans_profile)
+
+                # date:null plans are spread across consecutive days, in the
+                # order the markers appeared in text, independent of any
+                # explicit-date plans interleaved among them (ТЗ «фиксы
+                # парсера WORKOUT_PLANNED», 2026-07-12, Фикс 2) — e.g. 3
+                # markers all date:null -> today, today+1, today+2.
+                null_date_offset = 0
 
                 for plan in all_workout_plans:
-                    plan_date = today
                     if plan["date"]:
                         try:
                             plan_date = date.fromisoformat(plan["date"])
@@ -971,16 +1073,110 @@ async def suvvy_webhook(
                                 "WORKOUT_PLANNED: invalid date=%r, defaulting to today (user=%s)",
                                 plan["date"], chat_id,
                             )
+                            plan_date = local_today
+                    else:
+                        plan_date = local_today + timedelta(days=null_date_offset)
+                        null_date_offset += 1
+
+                    # Idempotency: a plan for the same user+date is updated in
+                    # place instead of duplicated. Scoped to is_planned=True
+                    # rows only so a real logged workout on that date is
+                    # never overwritten — same upsert-by-day pattern as the
+                    # WEIGHT/SLEEP/PULSE markers below (ТЗ «фиксы парсера
+                    # WORKOUT_PLANNED», Фикс 3, switched to the is_planned
+                    # flag per Фикс 5).
+                    existing_plan = (await session.execute(
+                        select(Workout).where(
+                            and_(
+                                Workout.user_id == user.id,
+                                Workout.date == plan_date,
+                                Workout.is_planned.is_(True),
+                            )
+                        ).limit(1)
+                    )).scalar_one_or_none()
+
+                    if existing_plan:
+                        existing_plan.note = plan["note"]
+                        logger.info(
+                            "Workout plan updated via marker: user=%s date=%s note=%r",
+                            chat_id, plan_date, plan["note"],
+                        )
+                        continue
 
                     session.add(Workout(
                         user_id=user.id,
                         date=plan_date,
                         category_id=None,
                         note=plan["note"],
+                        is_planned=True,
                     ))
                     logger.info(
                         "Workout planned via marker: user=%s date=%s note=%r",
                         chat_id, plan_date, plan["note"],
+                    )
+
+            # Completed workouts from [[WORKOUT:]] marker(s) — is_planned=False,
+            # as opposed to the plan rows above. rpe (when present) feeds
+            # _todays_training_addition()'s calorie-budget recalculation, by
+            # design (ТЗ «маркер WORKOUT (факт)», 2026-07-12) — not touched here.
+            if all_workout_facts:
+                facts_profile_result = await session.execute(
+                    select(Profile).where(Profile.user_id == user.id)
+                )
+                facts_profile = facts_profile_result.scalar_one_or_none()
+                facts_local_today = _local_date(facts_profile)
+
+                for fact in all_workout_facts:
+                    if fact["date"]:
+                        try:
+                            fact_date = date.fromisoformat(fact["date"])
+                        except ValueError:
+                            logger.warning(
+                                "WORKOUT: invalid date=%r, defaulting to today (user=%s)",
+                                fact["date"], chat_id,
+                            )
+                            fact_date = facts_local_today
+                    else:
+                        fact_date = facts_local_today
+
+                    # Idempotency: a fact for the same user+date is updated in
+                    # place instead of duplicated. Scoped to is_planned=False
+                    # rows only so a plan on the same date is left untouched
+                    # (plans and facts coexist independently on one date).
+                    existing_fact = (await session.execute(
+                        select(Workout).where(
+                            and_(
+                                Workout.user_id == user.id,
+                                Workout.date == fact_date,
+                                Workout.is_planned.is_(False),
+                            )
+                        ).limit(1)
+                    )).scalar_one_or_none()
+
+                    if existing_fact:
+                        existing_fact.note = fact["note"]
+                        if fact["duration_min"] is not None:
+                            existing_fact.duration_min = fact["duration_min"]
+                        if fact["rpe"] is not None:
+                            existing_fact.rpe = fact["rpe"]
+                        logger.info(
+                            "Workout fact updated via marker: user=%s date=%s note=%r duration_min=%s rpe=%s",
+                            chat_id, fact_date, fact["note"], fact["duration_min"], fact["rpe"],
+                        )
+                        continue
+
+                    session.add(Workout(
+                        user_id=user.id,
+                        date=fact_date,
+                        category_id=None,
+                        note=fact["note"],
+                        duration_min=fact["duration_min"],
+                        rpe=fact["rpe"],
+                        is_planned=False,
+                    ))
+                    logger.info(
+                        "Workout fact logged via marker: user=%s date=%s note=%r duration_min=%s rpe=%s",
+                        chat_id, fact_date, fact["note"], fact["duration_min"], fact["rpe"],
                     )
 
             # Upsert weight tracker from [[WEIGHT:]] marker

@@ -294,6 +294,12 @@ class Workout(Base):
     # 1-10, для добавки к цели калорий по факту тренировки (MET по RPE ×
     # вес × duration_min) — см. ТЗ «правки раунд 3» 2026-07-10, п.8/9.
     rpe: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # True — строка создана ИИ-планом ([[WORKOUT_PLANNED]]), False — реально
+    # выполненная тренировка (ручной ввод POST /workouts или факт-маркер).
+    # Разделяет план и факт в одном журнале — план не должен учитываться в
+    # Дисциплине/календаре как выполненная тренировка. См. ТЗ «фиксы
+    # парсера WORKOUT_PLANNED», 2026-07-12, Фикс 5.
+    is_planned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped["WorkoutCategory | None"] = relationship(back_populates="workouts")
