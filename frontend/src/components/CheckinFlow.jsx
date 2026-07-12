@@ -196,6 +196,7 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
     const newData = skipKey
       ? { ...data }
       : { ...data, [currentStep.key]: value }
+    const currentKey = currentStep.key
     setData(newData)
     setCustomMode(false)
 
@@ -203,8 +204,19 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
     setTimeout(() => {
       setAnimating(false)
       setInputVal('')
-      if (stepIndex + 1 < activeSteps.length) {
-        setStepIndex(stepIndex + 1)
+      // Recompute against newData, not the stale `activeSteps` from this
+      // render's closure — answering a question can hide later steps
+      // (e.g. plan_completed==='skipped' drops rpe/feeling_after/note), and
+      // comparing stepIndex+1 to the OLD (pre-answer) length let it advance
+      // past the end of the NEW, shorter list. currentStep then read as
+      // undefined and the component rendered a blank screen instead of
+      // finishing. Locating the next step by key instead of raw index
+      // stays correct regardless of how many steps just got hidden.
+      const newActiveSteps = allSteps.filter((s) => !s.condition || s.condition(newData, ctx))
+      const currentPos = newActiveSteps.findIndex((s) => s.key === currentKey)
+      const nextPos = currentPos + 1
+      if (nextPos < newActiveSteps.length) {
+        setStepIndex(nextPos)
       } else {
         finish(newData)
       }
