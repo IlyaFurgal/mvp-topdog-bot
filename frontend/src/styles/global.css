@@ -477,6 +477,13 @@ html, body {
    the background rather than read as a raised plate. */
 .checkin-card.skew-chip {
   background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  /* Same double-transform fix as .tracker-cta-btn — the asset's own cut
+     shouldn't get skewed a second time (ТЗ «дизайн-правки», п.19). */
+  transform: none;
+}
+
+.checkin-card.skew-chip > * {
+  transform: none;
 }
 
 .checkin-card:active {
@@ -984,6 +991,15 @@ html, body {
   padding: 22px 20px;
   cursor: pointer;
   background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  /* Градиентная строка.png already has its own diagonal cut baked in on
+     the right edge — .skew-chip's shared skewX(-10deg) on top of that
+     double-transformed it into a distorted, wandering angle instead of
+     the single clean cut from the asset (ТЗ «дизайн-правки», п.14/16/19). */
+  transform: none;
+}
+
+.tracker-cta-btn.skew-chip > * {
+  transform: none;
 }
 
 .tracker-cta-btn:active {
@@ -1173,6 +1189,11 @@ html, body {
   margin-bottom: 20px;
   box-sizing: border-box;
   background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  transform: none;
+}
+
+.tracker-page-title-plate.skew-chip > * {
+  transform: none;
 }
 
 .tracker-page-title {
@@ -1913,9 +1934,16 @@ html, body {
   padding: 8px 20px 9px 34px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1px;
   text-align: left;
   width: 60%;
+  /* Locks the box to the outline PNG's own ratio (724x224) so
+     `background-size: 100% 100%` below never has to stretch it
+     disproportionately — that stretch (auto height varying with content
+     length) was what made the slant angle "wander" between cards with
+     different text lengths (ТЗ «дизайн-правки», п.11/12). */
+  aspect-ratio: 724 / 224;
   box-sizing: border-box;
 }
 
