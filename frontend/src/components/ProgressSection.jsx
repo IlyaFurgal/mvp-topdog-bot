@@ -10,6 +10,7 @@ import waterTitle from '../assets/14.png'
 import caloriesTitle from '../assets/15.png'
 import sleepTitle from '../assets/16.png'
 import loadTitle from '../assets/Нагрузка.png'
+import { useProfile } from '../context/ProfileContext'
 import WorkoutCalendar from './WorkoutCalendar'
 
 const PERIODS = [
@@ -26,8 +27,9 @@ const TOOLTIP_STYLE = {
   fontFamily: 'Barlow Condensed',
 }
 
-const CHART_GREEN = '#B0F326'
-const CHART_RED = '#ff3b3b'
+const CHART_GREEN = '#B2F526'
+const CHART_YELLOW = '#FFD900'
+const CHART_RED = '#E30000'
 const AXIS_TICK = { fill: CHART_GREEN, fontSize: 10 }
 
 function SquareDot({ cx, cy, r = 7, fill = CHART_GREEN }) {
@@ -36,12 +38,60 @@ function SquareDot({ cx, cy, r = 7, fill = CHART_GREEN }) {
   return <rect x={cx - r} y={cy - r} width={s} height={s} fill={fill} />
 }
 
-// The whole chart turns red when TODAY's live total exceeds the goal
-// (stats.<metric>.today vs stats.<metric>.goal) — not per historical point,
-// since only today's status is actionable.
-function todayColor(statBlock) {
-  const over = statBlock?.today != null && statBlock?.goal != null && statBlock.today > statBlock.goal
-  return over ? CHART_RED : CHART_GREEN
+// ── Traffic-light zone coloring (ТЗ «дизайн-правки», п.13) ──────────────────
+// Each point computes its own zone independently — both undershoot and
+// overshoot of a target can be "bad", not just one direction.
+
+function zoneColorByPct(pct, greenLo, greenHi, yellowLo, yellowHi) {
+  if (pct == null) return CHART_GREEN
+  if (pct >= greenLo && pct <= greenHi) return CHART_GREEN
+  if (pct >= yellowLo && pct <= yellowHi) return CHART_YELLOW
+  return CHART_RED
+}
+
+function zoneColorWater(value, goal = 2000) {
+  if (value == null || !goal) return CHART_GREEN
+  return zoneColorByPct((value / goal) * 100, 90, 115, 70, 130)
+}
+
+function zoneColorSleep(hours) {
+  if (hours == null) return CHART_GREEN
+  return zoneColorByPct(hours, 7, 9, 6, 10)
+}
+
+// No dedicated КБЖУ corridor (min/max) is exposed via the trackers API yet —
+// only a single daily `goal` number. Approximating the corridor as goal ±10%
+// (green), extending to ±25% (yellow) until that field ships as its own
+// backend ticket (per the ТЗ's own note on this point).
+function zoneColorCalories(value, goal) {
+  if (value == null || !goal) return CHART_GREEN
+  const diffPct = (Math.abs(value - goal) / goal) * 100
+  if (diffPct <= 10) return CHART_GREEN
+  if (diffPct <= 25) return CHART_YELLOW
+  return CHART_RED
+}
+
+// Simplified to day-over-day change (not a full weekly rolling average —
+// not otherwise computed on the frontend today) relative to the profile's
+// goal direction. Movement toward the goal is always green regardless of
+// magnitude; only movement against it is graded by size.
+function zoneColorWeight(value, prevValue, goalDirection) {
+  if (value == null || prevValue == null || !prevValue) return CHART_GREEN
+  const diffPct = ((value - prevValue) / prevValue) * 100
+  if (Math.abs(diffPct) <= 1) return CHART_GREEN
+  const movingAgainstGoal =
+    goalDirection === 'loss' ? diffPct > 0 :
+    goalDirection === 'gain' ? diffPct < 0 :
+    false
+  if (!movingAgainstGoal) return CHART_GREEN
+  return Math.abs(diffPct) <= 3 ? CHART_YELLOW : CHART_RED
+}
+
+function weightGoalDirection(profile) {
+  const goals = profile?.goals ?? (profile?.goal ? [profile.goal] : [])
+  if (goals.includes('weight_loss')) return 'loss'
+  if (goals.includes('muscle_gain')) return 'gain'
+  return null
 }
 
 function fmtDate(str) {
@@ -141,6 +191,8 @@ function calcRecoveryPct(checkins) {
 }
 
 export default function ProgressSection({ refreshKey }) {
+  const { profile } = useProfile()
+  const goalDirection = weightGoalDirection(profile)
   const [view, setView]           = useState('state')  // 'state' | 'workouts'
   const [periodIdx, setPeriodIdx] = useState(0)
 
@@ -328,8 +380,19 @@ export default function ProgressSection({ refreshKey }) {
                     dataKey="value"
                     stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={<SquareDot />}
-                    activeDot={<SquareDot r={9} />}
+                    dot={(props) => (
+                      <SquareDot
+                        {...props}
+                        fill={zoneColorWeight(props.payload?.value, weightData[props.index - 1]?.value, goalDirection)}
+                      />
+                    )}
+                    activeDot={(props) => (
+                      <SquareDot
+                        {...props}
+                        r={9}
+                        fill={zoneColorWeight(props.payload?.value, weightData[props.index - 1]?.value, goalDirection)}
+                      />
+                    )}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -380,10 +443,14 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={todayColor(stats?.water)}
+                    stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={<SquareDot fill={todayColor(stats?.water)} />}
-                    activeDot={<SquareDot r={9} fill={todayColor(stats?.water)} />}
+                    dot={(props) => (
+                      <SquareDot {...props} fill={zoneColorWater(props.payload?.value, stats?.water?.goal)} />
+                    )}
+                    activeDot={(props) => (
+                      <SquareDot {...props} r={9} fill={zoneColorWater(props.payload?.value, stats?.water?.goal)} />
+                    )}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -437,10 +504,14 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={todayColor(stats?.calories)}
+                    stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={<SquareDot fill={todayColor(stats?.calories)} />}
-                    activeDot={<SquareDot r={9} fill={todayColor(stats?.calories)} />}
+                    dot={(props) => (
+                      <SquareDot {...props} fill={zoneColorCalories(props.payload?.value, stats?.calories?.goal)} />
+                    )}
+                    activeDot={(props) => (
+                      <SquareDot {...props} r={9} fill={zoneColorCalories(props.payload?.value, stats?.calories?.goal)} />
+                    )}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -497,8 +568,12 @@ export default function ProgressSection({ refreshKey }) {
                     dataKey="value"
                     stroke={CHART_GREEN}
                     strokeWidth={2}
-                    dot={<SquareDot />}
-                    activeDot={<SquareDot r={9} />}
+                    dot={(props) => (
+                      <SquareDot {...props} fill={zoneColorSleep(props.payload?.value)} />
+                    )}
+                    activeDot={(props) => (
+                      <SquareDot {...props} r={9} fill={zoneColorSleep(props.payload?.value)} />
+                    )}
                   />
                 </LineChart>
               </ResponsiveContainer>
