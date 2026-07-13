@@ -692,6 +692,18 @@ html, body {
   color: var(--danger);
 }
 
+/* wellbeing scale (самочувствие) only — 10 = отлично, so high reads good
+   and low reads bad, the inverse of --high/--mid above. */
+.checkin-flow__rpe-btn--good {
+  border-color: var(--accent-club);
+  color: var(--accent-club);
+}
+
+.checkin-flow__rpe-btn--bad {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .checkin-flow__rpe-btn:active {
   opacity: 0.75;
 }
@@ -903,12 +915,6 @@ html, body {
 
 /* Post-workout only: points to the AI chat as where to flag pain/discomfort
    now that it's no longer a structured checkin question. */
-.checkin-flow__aftercare-hint {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-top: 16px;
-}
-
 /* ── Tracker tip ─────────────────────────────────────── */
 
 .tracker-tip {
@@ -4203,7 +4209,11 @@ select optgroup {
 
 /* Workout note — starts as a single-line pill like the kcal input, grows
    as the user types instead of opening as a tall multi-line box. */
-.wf-note-textarea {
+/* Tap target that opens the dedicated full-page note editor — same pill
+   look the inline textarea used to have, but a single-line button since
+   editing now happens on its own screen (see ТЗ «дизайн-правки»,
+   2026-07-13, «Заметка о тренировке»). */
+.wf-note-pill {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -4217,10 +4227,13 @@ select optgroup {
   font-size: 0.95rem;
   text-align: center;
   line-height: 1.4;
-  resize: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.wf-note-textarea::placeholder {
+.wf-note-pill--placeholder {
   color: var(--text-muted);
   text-transform: uppercase;
 }

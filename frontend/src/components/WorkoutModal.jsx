@@ -14,6 +14,12 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
     editWorkout?.duration_min != null ? String(editWorkout.duration_min) : ''
   )
   const [rpe, setRpe] = useState(editWorkout?.rpe ?? null)
+  // Training notes are often multi-line structured text ("C1. Push Press —
+  // 3x6 | 70,70,70кг"), which was unreadable/uneditable in a single-line
+  // pill. Tap opens a dedicated full-page editor instead; the pill itself
+  // stays as-is until then. See ТЗ «дизайн-правки», 2026-07-13, «Заметка о
+  // тренировке» — по максимуму: провалиться в заметку отдельным экраном.
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false)
 
   async function handleSubmit() {
     if (!date) return
@@ -38,6 +44,35 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
       setError('Не удалось сохранить. Попробуй ещё раз.')
       setSaving(false)
     }
+  }
+
+  if (noteEditorOpen) {
+    return (
+      <div className="page club-page workout-page-overlay">
+        <button className="club-back" onClick={() => setNoteEditorOpen(false)}>‹ НАЗАД</button>
+
+        <div className="tracker-page-title-plate skew-chip">
+          <span className="tracker-page-title">ЗАМЕТКА О ТРЕНИРОВКЕ</span>
+        </div>
+
+        <textarea
+          className="additional-info-textarea"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          rows={12}
+          autoFocus
+          placeholder={'Например:\nC1. Push Press — 3x6 | 70, 70, 70кг\nC2. Face Pull — 3x15 с резиной'}
+        />
+
+        <button
+          className="btn tracker-save-btn--side"
+          onClick={() => setNoteEditorOpen(false)}
+          style={{ marginTop: 16 }}
+        >
+          ГОТОВО
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -99,13 +134,13 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
         {/* note */}
         <div className="wf-section">
           <label className="wf-label">НАПИШИ ЗАМЕТКУ О ТРЕНИРОВКЕ</label>
-          <textarea
-            className="wf-note-textarea"
-            placeholder="Добавить заметку..."
-            value={note}
-            rows={1}
-            onChange={e => setNote(e.target.value)}
-          />
+          <button
+            type="button"
+            className={`wf-note-pill${note ? '' : ' wf-note-pill--placeholder'}`}
+            onClick={() => setNoteEditorOpen(true)}
+          >
+            {note ? note.split('\n')[0] : 'Добавить заметку...'}
+          </button>
         </div>
 
         {error && <p className="wf-error">{error}</p>}

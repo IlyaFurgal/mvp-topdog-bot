@@ -153,6 +153,13 @@ export default function ProgressSection({ refreshKey }) {
   const [checkins, setCheckins]         = useState([])
   const [insight, setInsight]           = useState(null)
   const [loading, setLoading]           = useState(true)
+  // Only the very first load shows the "Загрузка..." placeholder in place
+  // of the whole state-tab content. Re-fetching on a period switch used to
+  // re-trigger that same collapse — the page height dropped to one short
+  // line, the browser clamped scrollY to fit, and restoring the real
+  // content afterwards didn't bring the scroll position back, which read
+  // as "jumps to the top" when switching to 90 дней / Всё время.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
   const days = PERIODS[periodIdx].days
 
@@ -176,7 +183,7 @@ export default function ProgressSection({ refreshKey }) {
         if (ch.status === 'fulfilled' && Array.isArray(ch.value)) setCheckins(ch.value)
         if (ins.status === 'fulfilled') setInsight(ins.value)
       })
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setHasLoadedOnce(true) })
   }, [periodIdx, refreshKey])
 
   const postWorkouts = checkins.filter((c) => c.type === 'post_workout')
@@ -246,7 +253,7 @@ export default function ProgressSection({ refreshKey }) {
         ))}
       </div>
 
-      {loading ? (
+      {loading && !hasLoadedOnce ? (
         <div className="card"><p className="card-muted">Загрузка...</p></div>
       ) : (
         <>

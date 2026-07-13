@@ -38,6 +38,11 @@ const STEPS = {
       question: 'Как твоё самочувствие?',
       type: 'rpe',
       scaleHint: '1 — очень плохо, 10 — отлично',
+      // Only this scale is "higher = better" (10 = отлично) — stress/RPE
+      // elsewhere on the same 1-10 buttons mean "higher = worse/harder",
+      // so they keep the default color scheme. See ТЗ «дизайн-правки»,
+      // 2026-07-13, «RPE color scheme... only for самочувствие».
+      colorScheme: 'wellbeing',
     },
     {
       key: 'recovered',
@@ -313,11 +318,6 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
             <span className="checkin-flow__check">✓</span>
           </div>
           <img src={stripesImg} alt="" className="checkin-flow__stripes-img" />
-          {type === 'post_workout' && (
-            <p className="checkin-flow__aftercare-hint">
-              Если что-то беспокоит, просто напиши здесь
-            </p>
-          )}
         </div>
       </div>
     )
@@ -358,15 +358,24 @@ export default function CheckinFlow({ type, onClose, ctx = {}, editMode = false,
               <p className="checkin-flow__hint">{currentStep.scaleHint}</p>
             )}
             <div className="checkin-flow__rpe">
-            {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+            {[1,2,3,4,5,6,7,8,9,10].map((n) => {
+              // wellbeing (самочувствие): 10 = отлично, so high numbers read
+              // as good (green) and low as bad (red) — the inverse of the
+              // default scale used by RPE-difficulty/stress, where high
+              // numbers mean harder/worse and stay red.
+              const colorClass = currentStep.colorScheme === 'wellbeing'
+                ? (n >= 8 ? 'checkin-flow__rpe-btn--good' : n <= 3 ? 'checkin-flow__rpe-btn--bad' : '')
+                : (n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : '')
+              return (
               <button
                 key={n}
-                className={`checkin-flow__rpe-btn ${n >= 8 ? 'checkin-flow__rpe-btn--high' : n >= 5 ? 'checkin-flow__rpe-btn--mid' : ''}${editMode && data[currentStep.key] === n ? ' checkin-flow__rpe-btn--selected' : ''}`}
+                className={`checkin-flow__rpe-btn ${colorClass}${editMode && data[currentStep.key] === n ? ' checkin-flow__rpe-btn--selected' : ''}`}
                 onClick={() => handleSelect(n)}
               >
                 {n}
               </button>
-            ))}
+              )
+            })}
             </div>
             {editMode
               ? <button className="checkin-flow__keep-btn" onClick={skipStep}>Оставить →</button>

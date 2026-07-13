@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { getTodayCheckins } from '../api/checkins'
 import { getTodayTrackers } from '../api/trackers'
+import { trackUpgradeIntent } from '../api/trackUpgrade'
 import goalsHeading from '../assets/Цели.png'
 import myDataHeading from '../assets/8.png'
 import profileHeading from '../assets/7.png'
@@ -12,6 +13,7 @@ import MyDataCard from '../components/MyDataCard'
 import ProgressSection from '../components/ProgressSection'
 import ScrollPicker from '../components/ScrollPicker'
 import TrackerModal from '../components/TrackerModal'
+import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 import { useProfile } from '../context/ProfileContext'
 
 const CHECKIN_TYPES = ['morning', 'post_workout', 'evening']
@@ -240,6 +242,14 @@ function MyDataView({ profile, onBack, onSaved }) {
     profile?.workout_days_per_week != null ? String(profile.workout_days_per_week) : ''
   )
   const [additionalInfo, setAdditionalInfo] = useState(profile?.additional_info ?? '')
+  const [proUrl, setProUrl] = useState(PAYMENT_URLS.pro1m)
+
+  useEffect(() => {
+    fetch('/api/config/public')
+      .then((r) => r.json())
+      .then((data) => { if (data.getcourse_pro_url) setProUrl(data.getcourse_pro_url) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -451,6 +461,19 @@ function MyDataView({ profile, onBack, onSaved }) {
 
       <div className="data-row skew-chip" onClick={() => setEditField('name')}>
         <span className="data-row__label data-row__label--big">{preferredName || 'ИМЯ'}</span>
+      </div>
+
+      <div
+        className="data-row skew-chip"
+        onClick={() => {
+          if (profile?.subscription_type === 'plus') {
+            trackUpgradeIntent()
+            openPaymentLink(proUrl)
+          }
+          // subscription_type === 'pro' (or no subscription) -> no-op
+        }}
+      >
+        <span className="data-row__label data-row__label--big">ПОДПИСКА</span>
         <span className="data-row__value data-row__value--fixed"><span>{tierLabel}</span></span>
       </div>
 
