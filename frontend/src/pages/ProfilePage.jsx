@@ -586,6 +586,23 @@ export default function ProfilePage() {
   const [activeTracker, setActiveTracker] = useState(null)
   const [heightOpen, setHeightOpen] = useState(false)
 
+  // Tapping the ПРОФИЛЬ tab while already on it doesn't change route, so
+  // without this a user stuck in a sub-view (МОИ ДАННЫЕ, a tracker, a
+  // checkin flow...) had no way back except closing/reopening the app.
+  useEffect(() => {
+    function handleTopNavReset(e) {
+      if (e.detail !== '/profile') return
+      setMyDataOpen(false)
+      setTrackerViewOpen(false)
+      setActiveFlow(null)
+      setEditCheckin(null)
+      setActiveTracker(null)
+      setHeightOpen(false)
+    }
+    window.addEventListener('topnav-reset', handleTopNavReset)
+    return () => window.removeEventListener('topnav-reset', handleTopNavReset)
+  }, [])
+
   async function loadTrackers() {
     try {
       const trackData = await getTodayTrackers()

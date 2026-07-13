@@ -390,6 +390,16 @@ export default function AiPage() {
       return
     }
 
+    // MediaRecorder always reports the format it actually ended up using
+    // here, even when the constructor was called with no mimeType (e.g.
+    // Safari, which doesn't support any of the webm/ogg options above and
+    // silently falls back to its own mp4/aac). Capture it before recorder
+    // resets are possible, instead of trusting chunks[0].type (empty on
+    // some browsers) or hardcoding 'audio/webm' — the earlier hardcoded
+    // fallback mislabeled Safari recordings as webm, which the <audio>
+    // playback element then failed to decode ("Ошибка" on the bubble).
+    const recorderMimeType = recorder.mimeType
+
     // Ждём финального flush данных
     await new Promise((resolve) => {
       recorder.addEventListener('stop', resolve, { once: true })
@@ -407,7 +417,7 @@ export default function AiPage() {
       return
     }
 
-    const mimeType = chunks[0].type || 'audio/webm'
+    const mimeType = recorderMimeType || chunks[0].type || 'audio/webm'
     const blob = new Blob(chunks, { type: mimeType })
 
     if (blob.size > MAX_FILE_BYTES) {
