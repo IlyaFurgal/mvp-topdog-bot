@@ -319,7 +319,7 @@ html, body {
   font-style: italic;
   letter-spacing: 0;
   text-transform: uppercase;
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
@@ -3601,7 +3601,7 @@ html, body {
   font-style: italic;
   letter-spacing: 0;
   text-transform: uppercase;
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
@@ -4125,6 +4125,13 @@ select optgroup {
   flex-shrink: 0;
 }
 
+/* Selected goal's "−" reads as an inactive/neutral action (tap to remove),
+   not an accent one — kept visually distinct from the green "+" on
+   unselected goals. See ТЗ «дизайн-правки», 2026-07-13, п.17. */
+.flat-row__value--inactive {
+  color: var(--text-muted);
+}
+
 .goals-heading-img {
   display: block;
   height: 28px;
@@ -4419,12 +4426,20 @@ select optgroup {
   color: var(--accent-text);
 }
 
+/* Was a normal in-flow element, so it scrolled away with the rest of the
+   page content underneath the fixed .nav — read as "the stripe disappears"
+   on any tab (Чат, Профиль, ...) once you scrolled. Sticking it right
+   below .nav keeps it visible regardless of scroll position. See ТЗ
+   «дизайн-правки», 2026-07-13, п.1/7. */
 .mvp-ribbon {
   display: block;
   width: 100%;
   height: auto;
   margin: 0;
   flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--nav-height) + env(safe-area-inset-top));
+  z-index: 90;
 }
 
 /* ── AI chat chips ────────────────────────────────────── */

@@ -483,12 +483,17 @@ function MyDataView({ profile, onBack, onSaved }) {
       </div>
 
       <img src={goalsHeading} alt="ЦЕЛИ" className="goals-heading-img" />
-      {GOAL_OPTIONS.map(([key, label]) => (
-        <div key={key} className="flat-row" onClick={() => toggleGoal(key)}>
-          <span className="flat-row__label">{label.toUpperCase()}</span>
-          <span className="flat-row__value">{selectedGoals.includes(key) ? '−' : '+'}</span>
-        </div>
-      ))}
+      {GOAL_OPTIONS.map(([key, label]) => {
+        const isSelected = selectedGoals.includes(key)
+        return (
+          <div key={key} className="flat-row" onClick={() => toggleGoal(key)}>
+            <span className="flat-row__label">{label.toUpperCase()}</span>
+            <span className={`flat-row__value${isSelected ? ' flat-row__value--inactive' : ''}`}>
+              {isSelected ? '−' : '+'}
+            </span>
+          </div>
+        )
+      })}
 
       <div className="flat-row" onClick={() => setEditField('fitness')}>
         <span className="flat-row__label">УРОВЕНЬ ПОДГОТОВКИ</span>
