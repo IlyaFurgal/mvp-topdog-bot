@@ -11,6 +11,21 @@
   font-display: swap;
 }
 
+/* Regular face was sitting unused in public/fonts — only the Bold Slanted
+   variant was ever registered under the 'Gramatika' family, so *every*
+   element using --font-accent rendered italic/bold regardless of its own
+   font-style/font-weight (nothing else to fall back to within the family).
+   Registering this lets font-style:normal/font-weight:400 actually resolve
+   to a real upright face instead of silently keeping the slanted one. See
+   ТЗ «дизайн-правки», 2026-07-13, п.3. */
+@font-face {
+  font-family: 'Gramatika';
+  src: url('/fonts/Gramatika-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Free Montserrat 700 Italic as the working fallback until (if) Gramatika
    is licensed — real cyrillic glyphs and a real oblique, so no synthetic
    skew is needed on top (that would double the slant). */
@@ -2287,7 +2302,16 @@ html, body {
 .ai-page {
   display: flex;
   flex-direction: column;
+  /* 100vh on mobile browsers/WebViews is the height with the address bar
+     collapsed — as it shows/hides during scroll, a height locked to plain
+     vh doesn't match the real visible viewport, so this box (and anything
+     sized relative to it, like the sticky .mvp-ribbon above it) can shift
+     or clip inconsistently. 100dvh tracks the actual visible viewport;
+     kept as a progressive-enhancement override, same pattern .main-content
+     already uses. See ТЗ «дизайн-правки», 2026-07-13, п.1 (полоска "то
+     есть, то нет" в чате). */
   height: calc(100vh - var(--nav-height));
+  height: calc(100dvh - var(--nav-height));
   overflow: hidden;
 }
 
@@ -2360,6 +2384,8 @@ html, body {
   background: var(--surface-2);
   border-radius: 14px 14px 4px 14px;
   color: var(--text);
+  font-style: normal;
+  font-weight: 400;
 }
 
 .ai-msg__bubble p      { margin: 0 0 6px 0; }
@@ -2771,7 +2797,8 @@ html, body {
   color: var(--text);
   font-family: var(--font-accent);
   font-size: 0.82rem;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.04em;
   line-height: 1.4;
   padding: 0 8px;
@@ -4450,6 +4477,24 @@ select optgroup {
   gap: 8px;
   padding: 12px 0;
   margin-top: auto;
+}
+
+/* Pinned above the input bar, always visible (not scrolled away with the
+   message list) — single row, horizontal scroll if it doesn't fit at
+   320px instead of wrapping/stacking. */
+.ai-chips--pinned {
+  flex-direction: row;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 0 16px 10px;
+  margin-top: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ai-chips--pinned .ai-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ai-chip {

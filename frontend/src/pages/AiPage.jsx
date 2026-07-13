@@ -549,27 +549,6 @@ export default function AiPage() {
             </div>
           </div>
         )}
-        {messages.length === 1 && messages[0].from === 'ai' && historyLoaded && !typing && (
-          <div className="ai-chips">
-            {[
-              'Как поднять энергию?',
-              'Составь план тренировок на неделю',
-              'Что приготовить на ужин в рамках КБЖУ',
-              'Болит колено после бега — что делать',
-            ].map((text) => (
-              <button
-                key={text}
-                className="ai-chip"
-                onClick={() => {
-                  setInput(text)
-                  setTimeout(() => textareaRef.current?.focus(), 0)
-                }}
-              >
-                {text}
-              </button>
-            ))}
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
 
@@ -589,6 +568,28 @@ export default function AiPage() {
       )}
       {fileError && <div className="ai-image-error">{fileError}</div>}
       {voiceError && <div className="ai-voice-error">{voiceError}</div>}
+
+      {/* Quick-reply chips — always shown above the input bar regardless of
+          chat state (empty, mid-conversation, AI typing, after send), not
+          just on the very first empty screen. See ТЗ «дизайн-правки»,
+          2026-07-13, п.4. Hidden only while actively recording voice, to
+          not clutter that UI. */}
+      {!recording && (
+        <div className="ai-chips ai-chips--pinned">
+          {['Составь план тренировок', 'Собери корзину продуктов', 'Посмотри мои анализы'].map((text) => (
+            <button
+              key={text}
+              className="ai-chip"
+              onClick={() => {
+                setInput(text)
+                setTimeout(() => textareaRef.current?.focus(), 0)
+              }}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Attach menu — static, pushes input bar down, doesn't overlay messages */}
       {attachOpen && !recording && (
@@ -646,9 +647,13 @@ export default function AiPage() {
               <span className="ai-record-timer">{formatRecTime(recSeconds)}</span>
               <span className="ai-record-limit">/ {formatRecTime(MAX_REC_SECONDS)}</span>
             </div>
-            <button className="ai-record-send" onClick={stopAndSend}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+            <button className="ai-record-send" onClick={stopAndSend} title="Остановить и отправить">
+              {/* Filled square reads unambiguously as "stop recording" —
+                  an up-arrow here was easy to misread as "send an
+                  unfinished clip" rather than "stop, this ends and sends
+                  it". See ТЗ «дизайн-правки», 2026-07-13, п.5. */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="5" y="5" width="14" height="14" rx="2" />
               </svg>
             </button>
           </div>
