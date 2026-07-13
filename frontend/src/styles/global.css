@@ -324,12 +324,16 @@ html, body {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 12px 2px;
+  /* Less vertical padding + bigger text so the label fills most of the
+     chip's height instead of floating in the middle (ТЗ «дизайн-правки»,
+     2026-07-13, п.2). If "ВСЁ ВРЕМЯ" clips on a 320px screen at this
+     size, report it rather than silently shrinking the font back down. */
+  padding: 8px 2px;
   background: none;
   border: none;
   color: var(--text);
   font-family: var(--font-accent);
-  font-size: 1.08rem;
+  font-size: 1.22rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: 0;
@@ -3646,12 +3650,12 @@ html, body {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 13px 4px;
+  padding: 9px 4px;
   background: none;
   border: none;
   color: var(--text);
   font-family: var(--font-accent);
-  font-size: 1.24rem;
+  font-size: 1.32rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: 0;
@@ -4340,7 +4344,11 @@ select optgroup {
 .my-data-body {
   display: flex;
   gap: 12px;
-  align-items: stretch;
+  /* Was `stretch`, which forced the avatar frame to match whatever height
+     the row list happened to add up to — its aspect ratio distorted with
+     every change in label wrapping/row count. The frame now sizes itself
+     via a fixed aspect-ratio below instead (ТЗ «дизайн-правки», п.6/8/9). */
+  align-items: flex-start;
 }
 
 .my-data-avatar-col {
@@ -4358,9 +4366,11 @@ select optgroup {
 .my-data-avatar-wrap {
   position: relative;
   width: 100%;
-  flex: 1;
-  padding: 3px;
-  background: var(--accent-neon);
+  /* Exact ratio + border from the Figma layer inspector — not to be
+     eyeballed or re-derived (ТЗ «дизайн-правки», 2026-07-13, п.1). */
+  aspect-ratio: 276 / 462.07;
+  padding: 3.56px;
+  background: #9ADB00;
   clip-path: polygon(74px 0, 100% 0, 100% 100%, 0 100%, 0 26px, 74px 26px);
   border-radius: 3px;
   box-sizing: border-box;
@@ -4420,7 +4430,7 @@ select optgroup {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 9px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -4428,9 +4438,11 @@ select optgroup {
    0 100% — bottom-left pivot), despite this comment's claim otherwise;
    that shifts the top edge left relative to the bottom, clipping the
    first character or two of the label at the old 14px padding. Bumped
-   left padding for clearance — see ТЗ «правки раунд 3» 2026-07-10, п.5. */
+   left padding for clearance — see ТЗ «правки раунд 3» 2026-07-10, п.5.
+   Vertical padding/gap kept to 4px multiples per the design system's
+   spacing rule (ТЗ «дизайн-правки», 2026-07-13). */
 .my-data-grid .data-row {
-  padding: 9px 0 9px 20px;
+  padding: 8px 0 8px 20px;
   margin-bottom: 0;
   cursor: pointer;
   background: linear-gradient(105deg, #2c2c2c 0%, #1a1a1a 55%, #121212 100%);
@@ -4453,7 +4465,7 @@ select optgroup {
 
 .my-data-grid .data-row__value {
   min-width: 96px;
-  margin: -9px 0;
+  margin: -8px 0;
   padding: 0 14px 0 26px;
 }
 
@@ -4508,28 +4520,27 @@ select optgroup {
 }
 
 /* Pinned above the input bar, always visible (not scrolled away with the
-   message list) — stacked one per line. */
+   message list) — stacked one per line, each pill sized to its own text
+   (not stretched full-width) and noticeably smaller than the input bar —
+   see ТЗ «дизайн-правки», 2026-07-13, п.1: they'd ballooned to nearly the
+   same height/width as the input row. */
 .ai-chips--pinned {
   flex-direction: column;
+  align-items: flex-start;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
   padding: 0 16px 10px;
   margin-top: 0;
-}
-
-.ai-chips--pinned .ai-chip {
-  width: 100%;
-  text-align: left;
 }
 
 .ai-chip {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 20px;
-  padding: 10px 16px;
+  border-radius: 14px;
+  padding: 7px 12px;
   color: var(--text);
   font-family: var(--font-accent);
-  font-size: 0.92rem;
+  font-size: 0.74rem;
   font-style: italic;
   font-weight: 600;
   letter-spacing: 0.01em;
