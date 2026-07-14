@@ -271,6 +271,18 @@ export default function ProgressSection({ refreshKey }) {
     .filter((d) => Number.isFinite(d.value) && d.value >= 1 && d.value <= 10)
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
+  // The whole line (not just its dots) reads as the latest value's zone —
+  // if the most recent point is red, the entire chart is red (ТЗ
+  // «дизайн-правки», 2026-07-13, п.2).
+  const weightLineColor = zoneColorWeight(
+    weightData[weightData.length - 1]?.value,
+    weightData[weightData.length - 2]?.value,
+    goalDirection,
+  )
+  const waterLineColor = zoneColorWater(waterData[waterData.length - 1]?.value, stats?.water?.goal)
+  const caloriesLineColor = zoneColorCalories(caloriesData[caloriesData.length - 1]?.value, stats?.calories?.goal)
+  const sleepLineColor = zoneColorSleep(sleepData[sleepData.length - 1]?.value)
+
   return (
     <>
       {/* ── View tabs ────────────────────────────────────── */}
@@ -378,21 +390,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke={weightLineColor}
                     strokeWidth={2}
-                    dot={(props) => (
-                      <SquareDot
-                        {...props}
-                        fill={zoneColorWeight(props.payload?.value, weightData[props.index - 1]?.value, goalDirection)}
-                      />
-                    )}
-                    activeDot={(props) => (
-                      <SquareDot
-                        {...props}
-                        r={9}
-                        fill={zoneColorWeight(props.payload?.value, weightData[props.index - 1]?.value, goalDirection)}
-                      />
-                    )}
+                    dot={(props) => <SquareDot {...props} fill={weightLineColor} />}
+                    activeDot={(props) => <SquareDot {...props} r={9} fill={weightLineColor} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -443,14 +444,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke={waterLineColor}
                     strokeWidth={2}
-                    dot={(props) => (
-                      <SquareDot {...props} fill={zoneColorWater(props.payload?.value, stats?.water?.goal)} />
-                    )}
-                    activeDot={(props) => (
-                      <SquareDot {...props} r={9} fill={zoneColorWater(props.payload?.value, stats?.water?.goal)} />
-                    )}
+                    dot={(props) => <SquareDot {...props} fill={waterLineColor} />}
+                    activeDot={(props) => <SquareDot {...props} r={9} fill={waterLineColor} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -504,14 +501,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke={caloriesLineColor}
                     strokeWidth={2}
-                    dot={(props) => (
-                      <SquareDot {...props} fill={zoneColorCalories(props.payload?.value, stats?.calories?.goal)} />
-                    )}
-                    activeDot={(props) => (
-                      <SquareDot {...props} r={9} fill={zoneColorCalories(props.payload?.value, stats?.calories?.goal)} />
-                    )}
+                    dot={(props) => <SquareDot {...props} fill={caloriesLineColor} />}
+                    activeDot={(props) => <SquareDot {...props} r={9} fill={caloriesLineColor} />}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -566,14 +559,10 @@ export default function ProgressSection({ refreshKey }) {
                   <Line
                     type="linear"
                     dataKey="value"
-                    stroke={CHART_GREEN}
+                    stroke={sleepLineColor}
                     strokeWidth={2}
-                    dot={(props) => (
-                      <SquareDot {...props} fill={zoneColorSleep(props.payload?.value)} />
-                    )}
-                    activeDot={(props) => (
-                      <SquareDot {...props} r={9} fill={zoneColorSleep(props.payload?.value)} />
-                    )}
+                    dot={(props) => <SquareDot {...props} fill={sleepLineColor} />}
+                    activeDot={(props) => <SquareDot {...props} r={9} fill={sleepLineColor} />}
                   />
                 </LineChart>
               </ResponsiveContainer>

@@ -155,6 +155,9 @@ const STEPS = {
       question: 'Настроение',
       type: 'rpe',
       scaleHint: '1 — очень плохое, 10 — отличное',
+      // Same "higher = better" semantics as самочувствие — see ТЗ
+      // «дизайн-правки», 2026-07-13, п.4.
+      colorScheme: 'wellbeing',
     },
     {
       key: 'note',

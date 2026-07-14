@@ -480,7 +480,13 @@ html, body {
    instead of the page's own 4.png texture, which made the card blend into
    the background rather than read as a raised plate. */
 .checkin-card.skew-chip {
-  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  /* right-center, not center: the source PNG (1431x184, ~7.8:1) is much
+     wider relative to its height than this card's own box, so
+     background-size:cover has to crop off one side to fill the box —
+     anchoring the crop window to the right edge keeps the asset's own
+     diagonal cut (which lives right at that edge) intact instead of
+     silently cropping it away into a plain rectangle. */
+  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
   /* Same double-transform fix as .tracker-cta-btn — the asset's own cut
      shouldn't get skewed a second time (ТЗ «дизайн-правки», п.19). */
   transform: none;
@@ -643,6 +649,7 @@ html, body {
 .checkin-flow__option:active {
   border-color: var(--accent);
   background: #1e2e00;
+  color: var(--accent);
 }
 
 .checkin-flow__option--selected {
@@ -994,7 +1001,11 @@ html, body {
   border: none;
   padding: 22px 20px;
   cursor: pointer;
-  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  /* right-center: see the identical comment on .checkin-card.skew-chip —
+     cover+center crops the source PNG's right-edge cut clean off, since
+     the image (1431x184) is much wider relative to its height than this
+     banner's own box. */
+  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
   /* Градиентная строка.png already has its own diagonal cut baked in on
      the right edge — .skew-chip's shared skewX(-10deg) on top of that
      double-transformed it into a distorted, wandering angle instead of
@@ -1192,7 +1203,9 @@ html, body {
   padding: 12px 20px;
   margin-bottom: 20px;
   box-sizing: border-box;
-  background: url('../assets/Градиентная строка.png') center / cover no-repeat, #161616;
+  /* right-center: see .checkin-card.skew-chip's comment — keeps the
+     asset's own right-edge cut from being cropped off by cover+center. */
+  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
   transform: none;
 }
 
@@ -1955,7 +1968,13 @@ html, body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, #262626 0%, #171717 60%, #101010 100%);
+  /* Same sheen texture as the other plates instead of a flat hand-rolled
+     gradient (ТЗ «дизайн-правки», 2026-07-13). left-center here, not
+     right — this fill sits inside the parallelogram outline (::after),
+     which already defines the card's cut; we just want the smoky texture
+     from the asset, not its own right-edge diagonal cut bleeding into
+     the middle of an already-slanted shape. */
+  background: url('../assets/Градиентная строка.png') left center / cover no-repeat, #171717;
   /* Slightly outside the measured opaque bounds so the fill reaches the
      neon line's anti-aliased edge (no inner gap); the outline sits on top
      and hides the couple-px overshoot, which is dark-on-dark anyway. */
@@ -2134,11 +2153,12 @@ html, body {
    below it and wraps over several lines. */
 .insight-block {
   position: relative;
-  background:
-    radial-gradient(ellipse 80% 42% at 78% 15%, rgba(255,255,255,0.20) 0%, transparent 72%),
-    linear-gradient(162deg, transparent 38%, rgba(255,255,255,0.16) 54%, rgba(255,255,255,0.08) 62%, transparent 76%),
-    linear-gradient(198deg, transparent 38%, rgba(255,255,255,0.13) 54%, rgba(255,255,255,0.06) 62%, transparent 76%),
-    #090909;
+  /* Same gradient-plate asset as tracker-cta-btn/checkin-card/
+     tracker-page-title-plate instead of a hand-rolled CSS sheen — one
+     shared source of truth for this "raised plate" look everywhere
+     (ТЗ «дизайн-правки», 2026-07-13). right-center crop keeps the
+     asset's own diagonal cut intact, see .checkin-card.skew-chip. */
+  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #090909;
   border: none;
   padding: 30px 18px 16px;
   margin-bottom: 16px;
@@ -4253,7 +4273,7 @@ select optgroup {
 
 .option-list__item--active {
   background: linear-gradient(100deg, #d8d8d8 0%, #9a9a9a 100%);
-  color: #111;
+  color: var(--accent-neon);
   border-color: #d8d8d8;
 }
 
