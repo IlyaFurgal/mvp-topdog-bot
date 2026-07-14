@@ -2156,9 +2156,14 @@ html, body {
   /* Same gradient-plate asset as tracker-cta-btn/checkin-card/
      tracker-page-title-plate instead of a hand-rolled CSS sheen — one
      shared source of truth for this "raised plate" look everywhere
-     (ТЗ «дизайн-правки», 2026-07-13). right-center crop keeps the
-     asset's own diagonal cut intact, see .checkin-card.skew-chip. */
-  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #090909;
+     (ТЗ «дизайн-правки», 2026-07-13). left-center, NOT right — this
+     block is much taller/more square than the thin banner elements, so
+     background-size:cover has to zoom in far more to cover its height,
+     which blows the crop window in until it's mostly the asset's own
+     transparent cut corner — showing as an unwanted black wedge instead
+     of texture. Same reasoning as .metric-card::before: no cut shape
+     needed here, texture only. */
+  background: url('../assets/Градиентная строка.png') left center / cover no-repeat, #090909;
   border: none;
   padding: 30px 18px 16px;
   margin-bottom: 16px;
