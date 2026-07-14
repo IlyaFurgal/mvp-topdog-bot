@@ -11,6 +11,7 @@ async def public_config() -> dict:
     return {
         "getcourse_plus_url": settings.GETCOURSE_PLUS_URL or settings.GC_PAYMENT_URL_PLUS,
         "getcourse_pro_url": settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO,
+        "getcourse_pro_upgrade_url": settings.GC_PAYMENT_URL_PRO_UPGRADE or settings.GETCOURSE_PRO_URL or settings.GC_PAYMENT_URL_PRO,
         "subscription_plus_1m_price": settings.SUBSCRIPTION_PLUS_1M_PRICE,
         "subscription_plus_6m_price": settings.SUBSCRIPTION_PLUS_6M_PRICE,
         "subscription_pro_1m_price": settings.SUBSCRIPTION_PRO_1M_PRICE,

@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     GC_PAYMENT_URL_PRO: str = ""
     GETCOURSE_PLUS_URL: str = ""
     GETCOURSE_PRO_URL: str = ""
+    # Separate link for the PLUS→PRO in-app upgrade button, distinct from the
+    # landing/bot PRO purchase links above (ТЗ «отдельная ссылка для УЛУЧШИТЬ ДО PRO»).
+    GC_PAYMENT_URL_PRO_UPGRADE: str = ""
 
     # Bot welcome video note (video_note file_id, optional)
     WELCOME_VIDEO_NOTE_FILE_ID: str = ""

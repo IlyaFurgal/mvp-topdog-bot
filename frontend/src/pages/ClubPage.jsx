@@ -7,13 +7,12 @@ import { trackUpgradeIntent } from '../api/trackUpgrade'
 import { openPaymentLink, PAYMENT_URLS } from '../config/payments'
 import { useProfile } from '../context/ProfileContext'
 
-// The VITE_GC_PAYMENT_URL_PRO / VITE_GETCOURSE_PRO_URL frontend env vars
-// this used to read were never actually configured in production — the
-// button silently fell through to '#'/a bounce landing. LandingPage.jsx
-// already solved this correctly: fetch the backend-resolved URL from
-// /api/config/public (same GC_PAYMENT_URL_PRO the bot's tariffs_kb() uses
-// and that's proven to work), falling back to the static PAYMENT_URLS
-// landing only if that fetch fails. See ТЗ «правки раунд 3», 2026-07-10, п.4.
+// Fetches the backend-resolved URL from /api/config/public, falling back to
+// the static PAYMENT_URLS landing only if that fetch fails. Uses
+// getcourse_pro_upgrade_url (GC_PAYMENT_URL_PRO_UPGRADE), a separate link
+// from the landing/bot PRO purchase URL — this button is a PLUS→PRO upgrade,
+// not a from-scratch PRO purchase. See ТЗ «отдельная ссылка для УЛУЧШИТЬ ДО
+// PRO», 2026-07-14.
 
 function CardArt({ img }) {
   return (
@@ -109,7 +108,7 @@ export default function ClubPage() {
   useEffect(() => {
     fetch('/api/config/public')
       .then((r) => r.json())
-      .then((data) => { if (data.getcourse_pro_url) setProUrl(data.getcourse_pro_url) })
+      .then((data) => { if (data.getcourse_pro_upgrade_url) setProUrl(data.getcourse_pro_upgrade_url) })
       .catch(() => {})
   }, [])
 
