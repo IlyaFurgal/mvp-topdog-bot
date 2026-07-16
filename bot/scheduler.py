@@ -361,10 +361,12 @@ async def check_reminders(bot: Bot) -> None:
                         )
 
                     if cal_limit > 0 and cal_today < cal_limit * 0.5:
+                        gender = profile.gender.value if profile and profile.gender else None
+                        ate_verb = "ела" if gender == "female" else "ел"
                         await bot.send_message(
                             chat_id=user.telegram_id,
                             text=(
-                                f"{name}, что ты сегодня ел(а)?\n\n"
+                                f"{name}, что ты сегодня {ate_verb}?\n\n"
                                 "Время заполнить трекер питания в приложении.\n\n"
                                 "Это поможет AI-ассистенту персонализировать советы для достижения твоих целей."
                             ),

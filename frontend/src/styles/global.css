@@ -490,15 +490,14 @@ html, body {
   /* Same double-transform fix as .tracker-cta-btn — the asset's own cut
      shouldn't get skewed a second time (ТЗ «дизайн-правки», п.19). */
   transform: none;
-  /* The asset's own cut edge isn't a clean transparent cut — sampling its
-     pixels shows a semi-transparent BLACK band (rgba(0,0,0,~0.8)) roughly
-     from 80%-95% of its width before it finally hits true alpha=0, a
-     baked-in soft shadow that reads as an ugly dark wedge once composited
-     on our own dark card background instead of blending away. Clipping
-     the container itself well before that band starts gives a clean,
-     genuinely transparent cut (the page's own background shows through)
-     instead of trusting the asset's alpha there. */
-  clip-path: polygon(0 0, 100% 0, 80% 100%, 0 100%);
+  /* Pixel-sampled the asset's actual alpha channel: the cut is a clean,
+     hard alpha=0 edge (no soft shadow band as previously assumed) running
+     from 100% width at the top to ~94.5% width at the bottom, dead
+     straight. Matching clip-path to this exact geometry makes the plate's
+     rendered edge track the source asset's real cut instead of guessing —
+     an earlier, steeper clip (80%) cut far more than the asset actually
+     does, producing an exaggerated, too-sharp wedge. */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .checkin-card.skew-chip > * {
@@ -1020,10 +1019,9 @@ html, body {
      double-transformed it into a distorted, wandering angle instead of
      the single clean cut from the asset (ТЗ «дизайн-правки», п.14/16/19). */
   transform: none;
-  /* Same fix as .checkin-card.skew-chip: the asset's own edge is a soft
-     semi-transparent black fade, not a clean cut — clip it away instead
-     of trusting the alpha there. */
-  clip-path: polygon(0 0, 100% 0, 80% 100%, 0 100%);
+  /* Same fix as .checkin-card.skew-chip: matches the asset's own
+     pixel-sampled cut geometry (100% width at top → 94.5% at bottom). */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .tracker-cta-btn.skew-chip > * {
@@ -1220,9 +1218,9 @@ html, body {
      asset's own right-edge cut from being cropped off by cover+center. */
   background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
   transform: none;
-  /* Same fix as .checkin-card.skew-chip: clip away the asset's own soft
-     semi-transparent black edge instead of trusting its alpha there. */
-  clip-path: polygon(0 0, 100% 0, 80% 100%, 0 100%);
+  /* Same fix as .checkin-card.skew-chip: matches the asset's own
+     pixel-sampled cut geometry (100% width at top → 94.5% at bottom). */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .tracker-page-title-plate.skew-chip > * {
@@ -2175,12 +2173,9 @@ html, body {
      (ТЗ «дизайн-правки», 2026-07-13). right-center to keep the asset's
      own diagonal cut intact, same as the other gradient plates. */
   background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #090909;
-  /* The asset's own cut edge has a wide semi-transparent black shadow
-     band baked in (roughly 80%-95% of its width) instead of a clean
-     alpha=0 cut — see .checkin-card.skew-chip for the pixel-sampled
-     root cause. Clip it away explicitly for a genuinely transparent
-     cut instead of trusting the asset's alpha there. */
-  clip-path: polygon(0 0, 100% 0, 80% 100%, 0 100%);
+  /* Same fix as .checkin-card.skew-chip: matches the asset's own
+     pixel-sampled cut geometry (100% width at top → 94.5% at bottom). */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
   border: none;
   padding: 30px 18px 16px;
   margin-bottom: 16px;
