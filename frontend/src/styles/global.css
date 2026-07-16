@@ -480,25 +480,18 @@ html, body {
    instead of the page's own 4.png texture, which made the card blend into
    the background rather than read as a raised plate. */
 .checkin-card.skew-chip {
-  /* right-center, not center: the source PNG (1431x184, ~7.8:1) is much
-     wider relative to its height than this card's own box, so
-     background-size:cover has to crop off one side to fill the box —
-     anchoring the crop window to the right edge keeps the asset's own
-     diagonal cut (which lives right at that edge) intact instead of
-     silently cropping it away into a plain rectangle. */
-  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
+  /* 100% 100% (stretch), not cover: the source PNG (1431x184, ~7.8:1) is
+     much wider relative to its height than this card's own box, so
+     background-size:cover has to zoom in and crop most of the width away
+     to fill the box height — which also zooms in on the asset's own
+     diagonal cut, blowing a thin ~5.5%-wide native taper up into a huge,
+     flat-looking wedge. Stretching to 100% 100% shows the whole image
+     (cut included) at its own true proportions — no cropping, so the cut
+     renders at the same subtle width it has in the source file. */
+  background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #161616;
   /* Same double-transform fix as .tracker-cta-btn — the asset's own cut
      shouldn't get skewed a second time (ТЗ «дизайн-правки», п.19). */
   transform: none;
-  /* No clip-path here: none of this element's ancestors (.page, .page-slide,
-     .main-content, .app) set their own background, so a clip-path "hole"
-     doesn't reveal transparency — it reveals <body>'s own fixed decorative
-     background image (4.png), which shows up as a stray dark/black shard
-     wherever that art happens to be busy at this spot on the page. The
-     asset's own alpha=0 corner combined with the solid #161616 fallback
-     already painted as the second background layer is enough: where the
-     PNG goes transparent, the fallback color shows through and blends with
-     the plate's own dark tones — no separate cut treatment needed. */
 }
 
 .checkin-card.skew-chip > * {
@@ -1010,21 +1003,15 @@ html, body {
   border: none;
   padding: 22px 20px;
   cursor: pointer;
-  /* right-center: see the identical comment on .checkin-card.skew-chip —
-     cover+center crops the source PNG's right-edge cut clean off, since
-     the image (1431x184) is much wider relative to its height than this
-     banner's own box. */
-  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
+  /* 100% 100% (stretch): see .checkin-card.skew-chip's comment — cover
+     zooms in and crops most of the width away, blowing the asset's thin
+     native diagonal taper up into an oversized flat wedge. */
+  background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #161616;
   /* Градиентная строка.png already has its own diagonal cut baked in on
      the right edge — .skew-chip's shared skewX(-10deg) on top of that
      double-transformed it into a distorted, wandering angle instead of
      the single clean cut from the asset (ТЗ «дизайн-правки», п.14/16/19). */
   transform: none;
-  /* No clip-path: see .checkin-card.skew-chip's comment — this element's
-     ancestors have no background of their own, so clipping would reveal
-     <body>'s decorative 4.png instead of a clean transparent cut. The
-     asset's own alpha=0 corner plus the #161616 fallback layer already
-     renders correctly on its own. */
 }
 
 .tracker-cta-btn.skew-chip > * {
@@ -1217,15 +1204,11 @@ html, body {
   padding: 12px 20px;
   margin-bottom: 20px;
   box-sizing: border-box;
-  /* right-center: see .checkin-card.skew-chip's comment — keeps the
-     asset's own right-edge cut from being cropped off by cover+center. */
-  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #161616;
+  /* 100% 100% (stretch): see .checkin-card.skew-chip's comment — keeps
+     the asset's own diagonal cut at its true, subtle native width instead
+     of cover's zoomed-in crop blowing it up into a flat wedge. */
+  background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #161616;
   transform: none;
-  /* No clip-path: see .checkin-card.skew-chip's comment — this element's
-     ancestors have no background of their own, so clipping would reveal
-     <body>'s decorative 4.png instead of a clean transparent cut. The
-     asset's own alpha=0 corner plus the #161616 fallback layer already
-     renders correctly on its own. */
 }
 
 .tracker-page-title-plate.skew-chip > * {
@@ -2175,14 +2158,11 @@ html, body {
   /* Same gradient-plate asset as tracker-cta-btn/checkin-card/
      tracker-page-title-plate instead of a hand-rolled CSS sheen — one
      shared source of truth for this "raised plate" look everywhere
-     (ТЗ «дизайн-правки», 2026-07-13). right-center to keep the asset's
-     own diagonal cut intact, same as the other gradient plates. */
-  background: url('../assets/Градиентная строка.png') right center / cover no-repeat, #090909;
-  /* No clip-path: see .checkin-card.skew-chip's comment — this element's
-     ancestors have no background of their own, so clipping would reveal
-     <body>'s decorative 4.png instead of a clean transparent cut. The
-     asset's own alpha=0 corner plus the #090909 fallback layer already
-     renders correctly on its own. */
+     (ТЗ «дизайн-правки», 2026-07-13). 100% 100% (stretch), not cover: see
+     .checkin-card.skew-chip's comment — keeps the asset's own diagonal
+     cut at its true, subtle native width instead of cover's zoomed-in
+     crop blowing it up into a flat wedge. */
+  background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #090909;
   border: none;
   padding: 30px 18px 16px;
   margin-bottom: 16px;
