@@ -492,6 +492,15 @@ html, body {
   /* Same double-transform fix as .tracker-cta-btn — the asset's own cut
      shouldn't get skewed a second time (ТЗ «дизайн-правки», п.19). */
   transform: none;
+  /* The image's own body is only ~80% opaque (alpha 204/255) everywhere,
+     so the #161616 backing is needed for the plate to read as solid —
+     but that same backing also fills the asset's alpha=0 cut corner with
+     flat, texture-less color instead of true transparency. Now that
+     background-size is 100% 100% (no cover-crop distortion), this
+     clip-path maps 1:1 onto the asset's own measured cut line (100%
+     width at top → 94.5% at bottom), removing just that sliver so the
+     real page behind shows through instead of a flat wedge. */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .checkin-card.skew-chip > * {
@@ -1012,6 +1021,11 @@ html, body {
      double-transformed it into a distorted, wandering angle instead of
      the single clean cut from the asset (ТЗ «дизайн-правки», п.14/16/19). */
   transform: none;
+  /* Same fix as .checkin-card.skew-chip: clip away just the asset's own
+     measured cut sliver (100% width at top → 94.5% at bottom) so the
+     real page shows through there instead of the flat #161616 backing
+     needed everywhere else for the plate to read as solid. */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .tracker-cta-btn.skew-chip > * {
@@ -1209,6 +1223,11 @@ html, body {
      of cover's zoomed-in crop blowing it up into a flat wedge. */
   background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #161616;
   transform: none;
+  /* Same fix as .checkin-card.skew-chip: clip away just the asset's own
+     measured cut sliver (100% width at top → 94.5% at bottom) so the
+     real page shows through there instead of the flat #161616 backing
+     needed everywhere else for the plate to read as solid. */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
 }
 
 .tracker-page-title-plate.skew-chip > * {
@@ -2163,6 +2182,11 @@ html, body {
      cut at its true, subtle native width instead of cover's zoomed-in
      crop blowing it up into a flat wedge. */
   background: url('../assets/Градиентная строка.png') 0 0 / 100% 100% no-repeat, #090909;
+  /* Same fix as .checkin-card.skew-chip: clip away just the asset's own
+     measured cut sliver (100% width at top → 94.5% at bottom) so the
+     real page shows through there instead of the flat #090909 backing
+     needed everywhere else for the plate to read as solid. */
+  clip-path: polygon(0 0, 100% 0, 94.5% 100%, 0 100%);
   border: none;
   padding: 30px 18px 16px;
   margin-bottom: 16px;
