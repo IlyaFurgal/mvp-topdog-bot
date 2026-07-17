@@ -1971,26 +1971,30 @@ html, body {
   justify-content: flex-start;
   gap: 0;
   text-align: left;
-  width: 38%;
+  width: 40%;
 }
 
+/* Re-measured by clustering the asset's green outline pixels row-by-row
+   (finer scan than the first pass) — each frame's own top edge and left
+   edge, so text starts right after its frame's own top-left corner
+   instead of drifting into the neighboring frame's territory. */
 .metric-card--load {
-  left: 11%;
-  top: 5%;
+  left: 10%;
+  top: 2%;
 }
 
 .metric-card--discipline {
   left: 30%;
-  top: 29%;
+  top: 26%;
 }
 
 .metric-card--recovery {
-  left: 49%;
-  top: 57%;
+  left: 55%;
+  top: 51%;
 }
 
 .metric-label {
-  font-size: 0.56rem;
+  font-size: 0.66rem;
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0.04em;
@@ -2004,7 +2008,7 @@ html, body {
 }
 
 .metric-value {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.01em;
