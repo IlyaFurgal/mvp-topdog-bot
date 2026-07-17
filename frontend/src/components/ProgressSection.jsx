@@ -327,19 +327,19 @@ export default function ProgressSection({ refreshKey }) {
               three happen to be null at once made the cards seem to
               "disappear" instead of showing an empty state. */}
           <div className="metrics-cards">
-            <div className="metric-card">
+            <div className="metric-card metric-card--load">
               <span className="metric-label">НАГРУЗКА</span>
               <span className="metric-value">
                 {avgRpe ?? '—'}
               </span>
             </div>
-            <div className="metric-card">
+            <div className="metric-card metric-card--discipline">
               <span className="metric-label">ДИСЦИПЛИНА</span>
               <span className="metric-value">
                 {displayedDiscipline !== null ? `${displayedDiscipline}%` : '—'}
               </span>
             </div>
-            <div className="metric-card">
+            <div className="metric-card metric-card--recovery">
               <span className="metric-label">ВОССТАНОВЛЕНИЕ</span>
               <span className="metric-value">
                 {recoveryPct !== null ? `${recoveryPct}%` : '—'}

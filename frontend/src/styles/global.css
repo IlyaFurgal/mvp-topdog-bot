@@ -1948,94 +1948,67 @@ html, body {
 
 /* ── Metrics cards ────────────────────────────────────── */
 
+/* Single baked-in reference asset (Восстановлени и нагрузка.png, 1318×429)
+   replaces the old per-card outline-PNG + CSS-staircase build entirely
+   (ТЗ «используй именно его, убери всё прошлое», 2026-07-19) — the three
+   staggered parallelogram frames (green outline, transparent outside,
+   dark fill inside) are already fully drawn in the image itself; only
+   the label/value text is overlaid live on top, absolutely positioned to
+   match each frame's location (measured by sampling the asset's pixels —
+   see the three .metric-card--* rules below for the resulting percentages). */
 .metrics-cards {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1318 / 429;
+  background: url('../assets/Восстановлени и нагрузка.png') center / 100% 100% no-repeat;
   margin: 8px 0 20px;
 }
 
-/* Two layers:
-   ::after  = the green-outline PNG, defining the card's whole visible
-     shape — fully transparent interior (no fill), matching the source
-     asset/reference exactly instead of a filled dark plate (ТЗ «асет для
-     восстановления — полностью прозрачный фон», 2026-07-19);
-   content  = label + value on top, with left padding that clears the
-     top-left slant so the first letter isn't cut.
-   isolation keeps each card's internal z-order from leaking into the
-   staircase (cards still stack by their own z-index). */
 .metric-card {
-  position: relative;
-  isolation: isolate;
-  border: none;
-  padding: 6px 20px 7px 30px;
+  position: absolute;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0;
   text-align: left;
-  /* Overall size + proportions per reference (2026-07-19): flatter —
-     wide but short, not the outline PNG's native 3.23:1. Since ::before's
-     fill is gone (removed in the transparent-bg change), only the
-     outline itself gets stretched now — no more fill-vs-outline
-     misalignment to worry about, so a non-native aspect-ratio is safe
-     here (unlike the old fill+outline combo, where stretching wandered
-     the slant against the fill). Widened further (92%) per "растяни
-     вправо". */
-  width: 92%;
-  aspect-ratio: 724 / 165;
-  box-sizing: border-box;
+  width: 38%;
 }
 
-.metric-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url('../assets/parallelogram-green-outline.png') center / 100% 100% no-repeat;
-  z-index: 1;
-  pointer-events: none;
+.metric-card--load {
+  left: 11%;
+  top: 5%;
 }
 
-.metric-card > * {
-  display: block;
-  position: relative;
-  z-index: 2;
+.metric-card--discipline {
+  left: 30%;
+  top: 29%;
 }
 
-/* Stagger shrunk to fit the wider (92%) card without running the 3rd
-   one off the right edge; margin-top pulled up tighter ("подтяни
-   вверх") for a closer vertical stack. */
-.metric-card:nth-child(2) {
-  margin-left: 3%;
-  margin-top: -18px;
-  z-index: 2;
-}
-
-.metric-card:nth-child(3) {
-  margin-left: 6%;
-  margin-top: -18px;
-  z-index: 3;
+.metric-card--recovery {
+  left: 49%;
+  top: 57%;
 }
 
 .metric-label {
-  font-size: 0.68rem;
+  font-size: 0.56rem;
   font-weight: 800;
   font-style: italic;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+  line-height: 1.1;
 }
 
 .metric-value {
-  font-size: 1.7rem;
+  font-size: 1.15rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.01em;
-  line-height: 1;
+  line-height: 1.05;
   color: #fff;
 }
 
