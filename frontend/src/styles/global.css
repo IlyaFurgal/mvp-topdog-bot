@@ -1968,13 +1968,17 @@ html, body {
   position: relative;
   isolation: isolate;
   border: none;
-  padding: 8px 20px 9px 34px;
+  padding: 10px 20px 11px 34px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 1px;
   text-align: left;
-  width: 60%;
+  /* Was 60% — too narrow for "ДИСЦИПЛИНА"/"ВОССТАНОВЛЕНИЕ" at readable
+     size, wrapping onto 2-3 lines and cramming into the staircase overlap
+     below. Widened to match the reference's proportions (ТЗ «сделай как
+     на референсе», 2026-07-19) — labels now fit on one line. */
+  width: 84%;
   /* Locks the box to the outline PNG's own ratio (724x224) so
      `background-size: 100% 100%` below never has to stretch it
      disproportionately — that stretch (auto height varying with content
@@ -1999,32 +2003,36 @@ html, body {
   z-index: 2;
 }
 
+/* Stagger shrunk from 20%/40% to match the wider (84%) card — the old
+   percentages were tuned for the narrower 60% card and would run the
+   3rd card off the right edge at this width (84% + 40% > 100%). */
 .metric-card:nth-child(2) {
-  margin-left: 20%;
-  margin-top: -20px;
+  margin-left: 8%;
+  margin-top: -16px;
   z-index: 2;
 }
 
 .metric-card:nth-child(3) {
-  margin-left: 40%;
-  margin-top: -20px;
+  margin-left: 16%;
+  margin-top: -16px;
   z-index: 3;
 }
 
 .metric-label {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 800;
   font-style: italic;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text);
-  overflow-wrap: break-word;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   width: 100%;
 }
 
 .metric-value {
-  font-size: 1.5rem;
+  font-size: 2.1rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.01em;
