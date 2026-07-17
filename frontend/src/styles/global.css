@@ -1976,25 +1976,27 @@ html, body {
 
 /* Re-measured by clustering the asset's green outline pixels row-by-row
    (finer scan than the first pass) — each frame's own top edge and left
-   edge, so text starts right after its frame's own top-left corner
-   instead of drifting into the neighboring frame's territory. */
+   edge. Nudged down a bit further from the frame's own top edge (per
+   feedback: text sat too high) — the reference shows the label starting
+   a little below the top edge, not flush against it, with the big value
+   filling most of the rest of the frame's height. */
 .metric-card--load {
   left: 10%;
-  top: 2%;
+  top: 6%;
 }
 
 .metric-card--discipline {
   left: 30%;
-  top: 26%;
+  top: 30%;
 }
 
 .metric-card--recovery {
   left: 55%;
-  top: 51%;
+  top: 55%;
 }
 
 .metric-label {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0.04em;
@@ -2008,7 +2010,7 @@ html, body {
 }
 
 .metric-value {
-  font-size: 1.35rem;
+  font-size: 1.6rem;
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.01em;
