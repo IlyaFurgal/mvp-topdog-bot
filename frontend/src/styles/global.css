@@ -1974,14 +1974,15 @@ html, body {
   justify-content: center;
   gap: 0;
   text-align: left;
-  /* Overall size + proportions per reference (2026-07-19): smaller than
-     the previous 84%, and flatter — wide but short, not the outline PNG's
-     native 3.23:1. Since ::before's fill is gone (removed in the
-     transparent-bg change), only the outline itself gets stretched now —
-     no more fill-vs-outline misalignment to worry about, so a non-native
-     aspect-ratio is safe here (unlike the old fill+outline combo, where
-     stretching wandered the slant against the fill). */
-  width: 72%;
+  /* Overall size + proportions per reference (2026-07-19): flatter —
+     wide but short, not the outline PNG's native 3.23:1. Since ::before's
+     fill is gone (removed in the transparent-bg change), only the
+     outline itself gets stretched now — no more fill-vs-outline
+     misalignment to worry about, so a non-native aspect-ratio is safe
+     here (unlike the old fill+outline combo, where stretching wandered
+     the slant against the fill). Widened further (92%) per "растяни
+     вправо". */
+  width: 92%;
   aspect-ratio: 724 / 165;
   box-sizing: border-box;
 }
@@ -2001,17 +2002,18 @@ html, body {
   z-index: 2;
 }
 
-/* Stagger re-tuned for the smaller (72%) card — the card is much
-   shorter now too, so the vertical overlap is shrunk to match. */
+/* Stagger shrunk to fit the wider (92%) card without running the 3rd
+   one off the right edge; margin-top pulled up tighter ("подтяни
+   вверх") for a closer vertical stack. */
 .metric-card:nth-child(2) {
-  margin-left: 8%;
-  margin-top: -10px;
+  margin-left: 3%;
+  margin-top: -18px;
   z-index: 2;
 }
 
 .metric-card:nth-child(3) {
-  margin-left: 16%;
-  margin-top: -10px;
+  margin-left: 6%;
+  margin-top: -18px;
   z-index: 3;
 }
 
