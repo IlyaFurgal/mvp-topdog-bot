@@ -28,6 +28,10 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
   // the current manual total so the field represents "the number", not a
   // delta (ТЗ «калории — замена, а не плюсовка», 2026-07-17).
   const [caloriesAmount, setCaloriesAmount] = useState(todayData?.manual_value ?? 0)
+  // Same replace-not-add fix as caloriesAmount: '' means "untouched, keep
+  // today's current total", a typed value is the new absolute total for
+  // that macro — not a delta added on top (ТЗ «БЖУ — замена, а не
+  // плюсовка», 2026-07-17).
   const [protein, setProtein] = useState('')
   const [fat, setFat] = useState('')
   const [carbs, setCarbs] = useState('')
@@ -59,13 +63,11 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
         await saveTracker('water', waterAmount, 'ml')
         onSaved('water')
       } else if (type === 'calories') {
-        // Macro fields are still edited as deltas on top of today's current
-        // aggregate (МакроCol shows current+delta) — convert to absolute
-        // totals here since the manual row they land on fully replaces the
-        // previous one, not adds to it.
-        const proteinTotal = (todayData?.protein_g || 0) + (protein ? parseFloat(protein) : 0)
-        const fatTotal = (todayData?.fat_g || 0) + (fat ? parseFloat(fat) : 0)
-        const carbsTotal = (todayData?.carbs_g || 0) + (carbs ? parseFloat(carbs) : 0)
+        // '' (untouched) keeps today's current aggregate; a typed value
+        // replaces it outright — same fix as caloriesAmount above.
+        const proteinTotal = protein !== '' ? parseFloat(protein) : (todayData?.protein_g || 0)
+        const fatTotal = fat !== '' ? parseFloat(fat) : (todayData?.fat_g || 0)
+        const carbsTotal = carbs !== '' ? parseFloat(carbs) : (todayData?.carbs_g || 0)
         await setCaloriesToday(caloriesAmount, undefined, {
           protein_g: proteinTotal || undefined,
           fat_g: fatTotal || undefined,
@@ -398,36 +400,38 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
       <div className="macro-cols">
         <MacroCol
           label="УГЛЕВОДЫ"
-          current={todayMacros?.carbs_g || 0} delta={carbs} target={macroTargets?.carbs_g}
-          onChangeDelta={onCarbs}
+          current={todayMacros?.carbs_g || 0} override={carbs} target={macroTargets?.carbs_g}
+          onChangeOverride={onCarbs}
         />
         <MacroCol
           label="БЕЛКИ"
-          current={todayMacros?.protein_g || 0} delta={protein} target={macroTargets?.protein_g}
-          onChangeDelta={onProtein}
+          current={todayMacros?.protein_g || 0} override={protein} target={macroTargets?.protein_g}
+          onChangeOverride={onProtein}
         />
         <MacroCol
           label="ЖИРЫ"
-          current={todayMacros?.fat_g || 0} delta={fat} target={macroTargets?.fat_g}
-          onChangeDelta={onFat}
+          current={todayMacros?.fat_g || 0} override={fat} target={macroTargets?.fat_g}
+          onChangeOverride={onFat}
         />
       </div>
     </div>
   )
 }
 
-function MacroCol({ label, current, delta, target, onChangeDelta }) {
+function MacroCol({ label, current, override, target, onChangeOverride }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const display = current + (parseFloat(delta) || 0)
+  // '' (untouched) shows today's current aggregate; a typed value replaces
+  // it outright, same as the calorie field above — not added on top.
+  const display = override !== '' ? parseFloat(override) : current
 
   function startEdit() {
-    setDraft(delta || '')
+    setDraft(override !== '' ? override : String(Math.round(current)))
     setEditing(true)
   }
 
   function commit() {
-    onChangeDelta(draft)
+    onChangeOverride(draft)
     setEditing(false)
   }
 
