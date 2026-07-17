@@ -1957,8 +1957,9 @@ html, body {
 
 /* Three layers so nothing clips the wrong thing:
    ::before = dark fill, clip-path traced to the neon line's measured
-     corners (PNG 724×224: TL 13.1%/4.5%, TR 94.8%, BR 86.6%, BL 5.4% at
-     95.5%) so it never overshoots the outline;
+     corners (PNG 724×224: TL 14%/5.5%, TR 94%, BR 86%, BL 6% at 94%,
+     inset slightly inside the actual line for a safety margin) so it
+     never overshoots the outline;
    ::after  = the green-outline PNG on top, UNCLIPPED, so the border stays
      whole on every side;
    content  = label + value on top of both, with left padding that clears
@@ -1996,10 +1997,14 @@ html, body {
      from the asset, not its own right-edge diagonal cut bleeding into
      the middle of an already-slanted shape. */
   background: url('../assets/Градиентная строка.png') left center / cover no-repeat, #171717;
-  /* Slightly outside the measured opaque bounds so the fill reaches the
-     neon line's anti-aliased edge (no inner gap); the outline sits on top
-     and hides the couple-px overshoot, which is dark-on-dark anyway. */
-  clip-path: polygon(11.5% 2%, 96.5% 2%, 88.5% 98%, 3.5% 98%);
+  /* Inset slightly INSIDE the measured opaque bounds of the outline PNG —
+     the neon line is a thin stroke, not a filled border, so it doesn't
+     actually cover any overshoot the way a thick border would; going
+     outside its real position left the fill visibly poking past the line
+     as a stray corner/stripe, especially on the topmost (uncovered) card
+     in the staircase. A small gap here is invisible (dark-on-dark); an
+     overshoot isn't. */
+  clip-path: polygon(14% 5.5%, 94% 5.5%, 86% 94%, 6% 94%);
   z-index: 0;
 }
 

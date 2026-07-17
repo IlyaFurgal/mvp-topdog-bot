@@ -41,7 +41,13 @@ export default function WorkoutModal({ editWorkout, initialDate, onClose, onSave
       }
       onSaved()
     } catch (e) {
-      setError('Не удалось сохранить. Попробуй ещё раз.')
+      const detail = e?.response?.data?.detail
+      const status = e?.response?.status
+      setError(
+        detail
+          ? `Не удалось сохранить: ${typeof detail === 'string' ? detail : JSON.stringify(detail)} (${status})`
+          : `Не удалось сохранить. Попробуй ещё раз.${status ? ` (${status})` : ''}`
+      )
       setSaving(false)
     }
   }
