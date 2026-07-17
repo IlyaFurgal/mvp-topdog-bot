@@ -297,6 +297,10 @@ async def update_workout(
     if body.rpe is not None:
         w.rpe = body.rpe
 
+    # Marks this row as user-owned so the AI chat webhook's marker upsert
+    # (same user+date+is_planned) stops overwriting it going forward.
+    w.user_edited = True
+
     if body.entries is not None:
         # Replace all entries
         for old_entry in list(w.entries):

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { saveTracker } from '../api/trackers'
+import { saveTracker, setCaloriesToday } from '../api/trackers'
 import waterBottleEmpty from '../assets/water_bottle_бутылка_воды.png'
 import waterBottleFull from '../assets/Полная бутылка.png'
 import ScrollPicker from './ScrollPicker'
@@ -23,7 +23,11 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
   const [weight, setWeight] = useState(todayData?.value ?? 70.0)
   const [pulse, setPulse] = useState(todayData?.value ?? 60)
   const [waterAmount, setWaterAmount] = useState(0)
-  const [caloriesAmount, setCaloriesAmount] = useState(0)
+  // Manual calorie entry replaces today's manually-logged total (like the
+  // МОИ ДАННЫЕ pencil-edit) rather than adding on top of it — prefilled with
+  // the current manual total so the field represents "the number", not a
+  // delta (ТЗ «калории — замена, а не плюсовка», 2026-07-17).
+  const [caloriesAmount, setCaloriesAmount] = useState(todayData?.manual_value ?? 0)
   const [protein, setProtein] = useState('')
   const [fat, setFat] = useState('')
   const [carbs, setCarbs] = useState('')
@@ -37,7 +41,12 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
   })
 
   const waterTotal = todayData?.value ?? 0
-  const caloriesTotal = todayData?.value ?? 0
+  // Photo-analyzed calories aren't touched by the manual replace call (the
+  // backend keeps source="photo" rows) — only the manual portion is being
+  // replaced, so the live preview adds the manual field on top of the
+  // untouched photo portion, not the whole existing total.
+  const caloriesManualTotal = todayData?.manual_value ?? 0
+  const caloriesPhotoTotal = (todayData?.value ?? 0) - caloriesManualTotal
 
   async function handleSave() {
     setSaving(true)
@@ -50,11 +59,17 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
         await saveTracker('water', waterAmount, 'ml')
         onSaved('water')
       } else if (type === 'calories') {
-        await saveTracker('calories', caloriesAmount, 'kcal', {
-          source: 'manual',
-          protein_g: protein ? parseFloat(protein) : undefined,
-          fat_g: fat ? parseFloat(fat) : undefined,
-          carbs_g: carbs ? parseFloat(carbs) : undefined,
+        // Macro fields are still edited as deltas on top of today's current
+        // aggregate (МакроCol shows current+delta) — convert to absolute
+        // totals here since the manual row they land on fully replaces the
+        // previous one, not adds to it.
+        const proteinTotal = (todayData?.protein_g || 0) + (protein ? parseFloat(protein) : 0)
+        const fatTotal = (todayData?.fat_g || 0) + (fat ? parseFloat(fat) : 0)
+        const carbsTotal = (todayData?.carbs_g || 0) + (carbs ? parseFloat(carbs) : 0)
+        await setCaloriesToday(caloriesAmount, undefined, {
+          protein_g: proteinTotal || undefined,
+          fat_g: fatTotal || undefined,
+          carbs_g: carbsTotal || undefined,
         })
         onSaved('calories')
       } else if (type === 'pulse') {
@@ -99,7 +114,7 @@ export default function TrackerModal({ type, todayData, calorieLimit, macroTarge
           <CaloriesInput
             amount={caloriesAmount}
             onChange={setCaloriesAmount}
-            total={caloriesTotal}
+            total={caloriesPhotoTotal}
             limit={calorieLimit ?? 2000}
             todayMacros={todayData}
             macroTargets={macroTargets}
@@ -287,8 +302,11 @@ function CalorieRing({ pct, overLimit, remaining, limit }) {
 }
 
 function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, macroTargets, burned, protein, onProtein, fat, onFat, carbs, onCarbs }) {
-  const [draft, setDraft] = useState('')
-  // Live preview: ring reflects saved + current draft
+  // Manual replace, not add-on-top — prefilled with the current manual
+  // total so editing it reads as "correct the number" rather than "log
+  // another delta" (matches `amount`'s new meaning, see handleSave).
+  const [draft, setDraft] = useState(() => amount > 0 ? String(amount) : '')
+  // Live preview: ring reflects the untouched photo portion + current draft
   const displayTotal = total + amount
   const pct = Math.min((displayTotal / limit) * 100, 100)
   const overLimit = displayTotal > limit
@@ -313,20 +331,11 @@ function CaloriesInput({ amount, onChange, total, limit = 2000, todayMacros, mac
     setBurnedEditing(false)
   }
 
-  function addPreset(kcal) {
-    const current = parseInt(draft, 10) || 0
-    // Today's total (already-saved + this delta) can't go below 0.
-    const newVal = Math.max(current + kcal, -total)
-    setDraft(String(newVal))
-    onChange(newVal)
-  }
-
   function handleBlur() {
     const n = parseInt(draft, 10)
-    if (!isNaN(n)) {
-      const kcal = Math.max(n, -total)
-      onChange(kcal)
-      setDraft(String(kcal))
+    if (!isNaN(n) && n >= 0) {
+      onChange(n)
+      setDraft(String(n))
     }
     else setDraft('')
   }

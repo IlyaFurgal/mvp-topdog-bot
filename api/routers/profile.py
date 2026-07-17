@@ -7,6 +7,7 @@ from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
+from api.services.telegram_avatar import fetch_telegram_avatar
 from database.models import FitnessLevel, NeatLevel, Profile, Tone, Tracker, TrackerType, UpgradeIntent, User
 from database.session import get_session
 
@@ -21,6 +22,15 @@ async def get_my_profile(
     profile = (await session.execute(
         select(Profile).where(Profile.user_id == user.id)
     )).scalar_one_or_none()
+
+    # Lazily fetch+cache the full-size Telegram photo the first time this
+    # user's profile is loaded (telegram_avatar_path is NULL only before
+    # the first attempt — "" means "checked, no photo" and is left alone
+    # so we don't hit the Bot API on every request). Skipped once the user
+    # has their own uploaded avatar_path, which always takes priority.
+    if profile and profile.avatar_path is None and profile.telegram_avatar_path is None:
+        profile.telegram_avatar_path = await fetch_telegram_avatar(user.telegram_id)
+        await session.commit()
 
     # goals: prefer new array field, fall back to legacy single goal
     goals = profile.goals if profile and profile.goals is not None else (
@@ -47,7 +57,7 @@ async def get_my_profile(
         "height":                profile.height if profile else None,
         "notifications_enabled": profile.notifications_enabled if profile else True,
         "additional_info":       profile.additional_info if profile else None,
-        "avatar_url":            profile.avatar_path if profile else None,
+        "avatar_url":            (profile.avatar_path or profile.telegram_avatar_path or None) if profile else None,
         "workout_days_per_week": profile.workout_days_per_week if profile else None,
         "resting_pulse_enabled": profile.resting_pulse_enabled if profile else False,
         # Subscription

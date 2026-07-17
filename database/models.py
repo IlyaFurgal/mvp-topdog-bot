@@ -155,6 +155,13 @@ class Profile(Base):
     resting_pulse_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='false')
     additional_info: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_path: Mapped[str | None] = mapped_column(String(255), nullable=True)  # "/uploads/<uuid>.jpg"
+    # Full-size Telegram profile photo, fetched once via Bot API
+    # getUserProfilePhotos/getFile and cached locally the same way as
+    # avatar_path — WebApp initData's user.photo_url is a small thumbnail
+    # that upscales blurry when rendered at the МОИ ДАННЫЕ avatar size.
+    # "" (not NULL) means "checked, user has no Telegram photo" so we don't
+    # re-fetch every profile load. See ТЗ «зернится фото из тг», 2026-07-17.
+    telegram_avatar_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -300,6 +307,14 @@ class Workout(Base):
     # Дисциплине/календаре как выполненная тренировка. См. ТЗ «фиксы
     # парсера WORKOUT_PLANNED», 2026-07-12, Фикс 5.
     is_planned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Set once the user manually edits this row via PUT /workouts/{id} (the
+    # calendar's "РЕДАКТИРОВАТЬ ТРЕНИРОВКУ" form). The webhook's marker
+    # upsert-by-(user, date, is_planned) skips rows flagged here instead of
+    # silently overwriting note/duration/rpe the next time the AI chat
+    # mentions the same date — otherwise a manual edit looked like it
+    # "didn't take" once the AI re-summarized the plan. See ТЗ «тренировки
+    # из чата нельзя отредактировать вручную», 2026-07-17.
+    user_edited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped["WorkoutCategory | None"] = relationship(back_populates="workouts")

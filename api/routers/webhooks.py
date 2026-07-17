@@ -1096,6 +1096,12 @@ async def suvvy_webhook(
                     )).scalar_one_or_none()
 
                     if existing_plan:
+                        if existing_plan.user_edited:
+                            logger.info(
+                                "Workout plan marker skipped, user-edited: user=%s date=%s",
+                                chat_id, plan_date,
+                            )
+                            continue
                         existing_plan.note = plan["note"]
                         logger.info(
                             "Workout plan updated via marker: user=%s date=%s note=%r",
@@ -1154,6 +1160,12 @@ async def suvvy_webhook(
                     )).scalar_one_or_none()
 
                     if existing_fact:
+                        if existing_fact.user_edited:
+                            logger.info(
+                                "Workout fact marker skipped, user-edited: user=%s date=%s",
+                                chat_id, fact_date,
+                            )
+                            continue
                         existing_fact.note = fact["note"]
                         if fact["duration_min"] is not None:
                             existing_fact.duration_min = fact["duration_min"]

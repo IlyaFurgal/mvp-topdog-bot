@@ -47,6 +47,9 @@ class WaterTodayUpdate(BaseModel):
 class CaloriesTodayUpdate(BaseModel):
     value: float
     meal_type: Optional[str] = None
+    protein_g: Optional[float] = None
+    fat_g:     Optional[float] = None
+    carbs_g:   Optional[float] = None
 
     @field_validator("meal_type")
     @classmethod
@@ -437,6 +440,9 @@ async def set_calories_today(
             unit="kcal",
             meal_type=body.meal_type,
             source="manual",
+            protein_g=body.protein_g,
+            fat_g=body.fat_g,
+            carbs_g=body.carbs_g,
         )
         session.add(new_tracker)
         await session.flush()
