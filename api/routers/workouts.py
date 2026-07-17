@@ -16,6 +16,19 @@ router = APIRouter(prefix="/workouts", tags=["workouts"])
 
 # ── Pydantic schemas ────────────────────────────────────────────────────────
 
+# Alias so a model field literally named "date" doesn't shadow the `date`
+# type in its own annotation. Pydantic v2 resolves annotations via
+# get_type_hints(cls, localns=vars(cls)) — once `date: Optional[date] = None`
+# assigns a class attribute named "date", that attribute shadows the type
+# during resolution, silently collapsing the field's type to NoneType (every
+# value except None then fails with "Input should be None" / none_required).
+# Confirmed via direct repro: `date: date` with no default resolves fine;
+# adding `= None` breaks it. Only classes that assign a default to a field
+# named "date" need this — WorkoutCreate.date has no default and is unaffected,
+# but uses it too for consistency/future-proofing.
+_DateType = date
+
+
 class EntryIn(BaseModel):
     item_id: Optional[int] = None
     weight_kg: Optional[float] = None
@@ -27,7 +40,7 @@ class EntryIn(BaseModel):
 
 
 class WorkoutCreate(BaseModel):
-    date: date
+    date: _DateType
     category_id: Optional[int] = None
     duration_min: Optional[int] = None
     note: Optional[str] = None
@@ -44,7 +57,7 @@ class WorkoutCreate(BaseModel):
 
 
 class WorkoutUpdate(BaseModel):
-    date: Optional[date] = None
+    date: Optional[_DateType] = None
     duration_min: Optional[int] = None
     note: Optional[str] = None
     entries: Optional[list[EntryIn]] = None
