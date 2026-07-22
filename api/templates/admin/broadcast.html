@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+{% block title %}Рассылка{% endblock %}
+{% block content %}
+<h1>📣 Массовая рассылка</h1>
+
+{% if error %}
+<div class="section" style="border-color:#5a1a1a;background:#2a1414;color:#ff8080;margin-bottom:20px">
+  {{ error }}
+</div>
+{% endif %}
+
+<div class="section" style="max-width:640px">
+  <h2>Новая рассылка</h2>
+  <form method="post" action="/admin/broadcast" id="broadcast-form">
+    <div style="margin-bottom:14px">
+      <textarea
+        name="text"
+        id="broadcast-text"
+        maxlength="{{ text_max }}"
+        rows="8"
+        placeholder="Текст сообщения..."
+        style="width:100%;background:#161616;border:1px solid #333;color:#e0e0e0;padding:10px 12px;border-radius:6px;font-size:14px;font-family:inherit;resize:vertical"
+        oninput="document.getElementById('char-count').textContent = this.value.length"
+      ></textarea>
+      <div style="text-align:right;font-size:12px;color:#666;margin-top:4px">
+        <span id="char-count">0</span> / {{ text_max }}
+      </div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:#ccc;cursor:pointer">
+      <input type="checkbox" name="with_button" value="true" checked style="width:16px;height:16px">
+      Добавить кнопку «Открыть приложение»
+    </label>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card__label">Получателей (активные пользователи)</div>
+      <div class="card__value">{{ recipient_count }}</div>
+    </div>
+
+    <input type="hidden" name="expected_recipients" value="{{ recipient_count }}">
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:#888;margin-bottom:6px">
+        Введите число получателей для подтверждения ({{ recipient_count }})
+      </label>
+      <input
+        type="number"
+        name="confirm_recipients"
+        required
+        style="background:#1e1e1e;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:6px;font-size:14px;width:200px"
+      >
+    </div>
+
+    <button type="submit" class="btn" onclick="return confirm('Отправить рассылку на {{ recipient_count }} получателей?')">
+      Запустить рассылку
+    </button>
+  </form>
+</div>
+
+<h2 style="margin-top:32px">История рассылок</h2>
+<div style="overflow-x:auto">
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Дата</th>
+      <th>Статус</th>
+      <th>Текст</th>
+      <th>Отправлено</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in history %}
+    <tr>
+      <td><a href="/admin/broadcast/{{ b.id }}">{{ b.id }}</a></td>
+      <td style="color:#666;font-size:12px;white-space:nowrap">{{ b.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+      <td>
+        {% if b.status.value == 'pending' %}
+          <span class="badge badge--inactive">Ожидает</span>
+        {% elif b.status.value == 'sending' %}
+          <span class="badge badge--pro">Отправляется</span>
+        {% elif b.status.value == 'done' %}
+          <span class="badge badge--active">Готово</span>
+        {% else %}
+          <span class="badge" style="background:#3a1414;color:#ff6b6b">Ошибка</span>
+        {% endif %}
+      </td>
+      <td style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ccc">
+        {{ b.text[:60] }}{% if b.text|length > 60 %}…{% endif %}
+      </td>
+      <td style="color:#888;white-space:nowrap">{{ b.sent }} / {{ b.total }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="5" style="text-align:center;color:#555;padding:32px">Рассылок пока не было</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

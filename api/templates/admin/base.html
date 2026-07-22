@@ -62,12 +62,14 @@
   .user-header h1{margin:0}
   .user-tg{color:#666;font-size:14px}
 </style>
+{% block head_extra %}{% endblock %}
 </head>
 <body>
 <nav>
   <div class="logo">TopDog Admin</div>
   <a href="/admin" class="{% if active == 'stats' %}active{% endif %}">📊 Статистика</a>
   <a href="/admin/users" class="{% if active == 'users' %}active{% endif %}">👥 Пользователи</a>
+  <a href="/admin/broadcast" class="{% if active == 'broadcast' %}active{% endif %}">📣 Рассылка</a>
 </nav>
 <main>
 {% block content %}{% endblock %}

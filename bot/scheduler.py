@@ -1,13 +1,15 @@
+import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 
 import pytz
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from sqlalchemy import and_, func, select, or_
+from sqlalchemy import and_, func, select, or_, update
 
 from api.deps import _is_eligible_for_pushes
 from api.routers.trackers import calculate_calorie_limit
@@ -15,8 +17,8 @@ from api.services.getcourse import sync_progress_to_gc
 from bot.funnel_content import send_nonpayer_10min, send_nonpayer_24h, send_nonpayer_3d
 from core.config import settings
 from database.models import (
-    Checkin, CheckinType, NonpayerIntent, Profile, Tracker, TrackerType, UpgradeIntent,
-    User, Workout,
+    Broadcast, BroadcastStatus, Checkin, CheckinType, NonpayerIntent, Profile, Tracker,
+    TrackerType, UpgradeIntent, User, Workout,
 )
 from database.session import AsyncSessionLocal
 
@@ -731,6 +733,76 @@ async def sync_progress_to_getcourse() -> None:
             logger.warning("GC progress sync failed for user %s: %s", user.telegram_id, exc)
 
 
+async def process_broadcasts(bot: Bot) -> None:
+    """Picks up one pending admin-triggered Broadcast (see /admin/broadcast)
+    and sends it to every active user, throttled to ~20 msg/sec. Runs every
+    10s but is a no-op unless a broadcast is actually queued."""
+    async with AsyncSessionLocal() as session:
+        broadcast = (await session.execute(
+            select(Broadcast)
+            .where(Broadcast.status == BroadcastStatus.pending)
+            .order_by(Broadcast.id.asc())
+            .limit(1)
+        )).scalar_one_or_none()
+        if broadcast is None:
+            return
+
+        broadcast.status = BroadcastStatus.sending
+        broadcast.started_at = datetime.now(timezone.utc)
+        await session.commit()
+
+        try:
+            recipients = (await session.execute(
+                select(User.id, User.telegram_id).where(User.is_active.is_(True))
+            )).all()
+            broadcast.total = len(recipients)
+            await session.commit()
+
+            logger.info("broadcast %s: starting, %s recipients", broadcast.id, broadcast.total)
+
+            keyboard = _webapp_kb() if broadcast.with_button else None
+
+            for i, (user_id, telegram_id) in enumerate(recipients, start=1):
+                try:
+                    try:
+                        await bot.send_message(chat_id=telegram_id, text=broadcast.text, reply_markup=keyboard)
+                    except TelegramRetryAfter as e:
+                        await asyncio.sleep(e.retry_after + 1)
+                        await bot.send_message(chat_id=telegram_id, text=broadcast.text, reply_markup=keyboard)
+                    broadcast.sent += 1
+                except TelegramForbiddenError:
+                    broadcast.blocked += 1
+                    await session.execute(
+                        update(User).where(User.id == user_id).values(is_active=False)
+                    )
+                except Exception as exc:
+                    broadcast.failed += 1
+                    logger.warning(
+                        "broadcast %s: send failed for telegram_id=%s: %s",
+                        broadcast.id, telegram_id, exc,
+                    )
+
+                if i % 50 == 0:
+                    await session.commit()
+
+                await asyncio.sleep(0.05)  # ~20 msg/sec throttle
+
+            broadcast.status = BroadcastStatus.done
+            broadcast.finished_at = datetime.now(timezone.utc)
+            await session.commit()
+
+            logger.info(
+                "broadcast %s: done — sent=%s failed=%s blocked=%s total=%s",
+                broadcast.id, broadcast.sent, broadcast.failed, broadcast.blocked, broadcast.total,
+            )
+        except Exception as exc:
+            broadcast.status = BroadcastStatus.failed
+            broadcast.error = str(exc)
+            broadcast.finished_at = datetime.now(timezone.utc)
+            await session.commit()
+            logger.error("broadcast %s: crashed — %s", broadcast.id, exc)
+
+
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=MOSCOW)
 
@@ -769,6 +841,17 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         sync_progress_to_getcourse,
         CronTrigger(hour=3, minute=0, timezone=MOSCOW),
         id="gc_progress_sync",
+    )
+
+    # Admin-triggered mass broadcast (/admin/broadcast) — picks up one
+    # pending row, no-op otherwise.
+    scheduler.add_job(
+        process_broadcasts,
+        IntervalTrigger(seconds=10),
+        args=[bot],
+        id="process_broadcasts",
+        max_instances=1,
+        coalesce=True,
     )
 
     return scheduler

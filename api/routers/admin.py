@@ -6,8 +6,8 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from database.models import (
-    AiMessage, Checkin, Profile, Tracker, User,
+    AiMessage, Broadcast, BroadcastStatus, Checkin, Profile, Tracker, User,
 )
 from database.session import get_session
 
@@ -421,5 +421,108 @@ async def admin_user_detail(
             "checkins":     checkins,
             "trackers":     trackers,
             "ai_messages":  list(reversed(ai_messages_desc)),
+        },
+    )
+
+
+# ── Page 4: /admin/broadcast — mass push ──────────────────────────────────────
+
+BROADCAST_TEXT_MAX = 4096
+
+
+@router.get("/admin/broadcast", response_class=HTMLResponse)
+async def admin_broadcast(
+    request: Request,
+    error: str = "",
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(check_auth),
+) -> HTMLResponse:
+    recipient_count = (await session.execute(
+        select(func.count()).select_from(User).where(User.is_active.is_(True))
+    )).scalar_one()
+
+    history = (await session.execute(
+        select(Broadcast).order_by(Broadcast.id.desc()).limit(20)
+    )).scalars().all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/broadcast.html",
+        context={
+            "active":          "broadcast",
+            "recipient_count": recipient_count,
+            "history":         history,
+            "error":           error,
+            "text_max":        BROADCAST_TEXT_MAX,
+        },
+    )
+
+
+@router.post("/admin/broadcast")
+async def admin_broadcast_create(
+    text: str = Form(...),
+    with_button: bool = Form(False),
+    expected_recipients: int = Form(...),
+    confirm_recipients: int = Form(...),
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(check_auth),
+):
+    text = text.strip()
+    if not text or len(text) > BROADCAST_TEXT_MAX:
+        return RedirectResponse(
+            f"/admin/broadcast?error=Текст+пустой+или+длиннее+{BROADCAST_TEXT_MAX}+символов",
+            status_code=303,
+        )
+
+    in_progress = (await session.execute(
+        select(Broadcast.id).where(
+            Broadcast.status.in_([BroadcastStatus.pending, BroadcastStatus.sending])
+        ).limit(1)
+    )).scalar_one_or_none()
+    if in_progress is not None:
+        return RedirectResponse(
+            "/admin/broadcast?error=Рассылка+уже+выполняется",
+            status_code=303,
+        )
+
+    if confirm_recipients != expected_recipients:
+        return RedirectResponse(
+            "/admin/broadcast?error=Число+получателей+не+совпадает",
+            status_code=303,
+        )
+
+    broadcast = Broadcast(
+        text=text,
+        status=BroadcastStatus.pending,
+        with_button=with_button,
+        total=expected_recipients,
+    )
+    session.add(broadcast)
+    await session.commit()
+    await session.refresh(broadcast)
+
+    return RedirectResponse(f"/admin/broadcast/{broadcast.id}", status_code=303)
+
+
+@router.get("/admin/broadcast/{broadcast_id}", response_class=HTMLResponse)
+async def admin_broadcast_detail(
+    request: Request,
+    broadcast_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(check_auth),
+) -> HTMLResponse:
+    broadcast = (await session.execute(
+        select(Broadcast).where(Broadcast.id == broadcast_id)
+    )).scalar_one_or_none()
+    if not broadcast:
+        raise HTTPException(status_code=404, detail="Broadcast not found")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/broadcast_detail.html",
+        context={
+            "active":    "broadcast",
+            "broadcast": broadcast,
+            "in_progress": broadcast.status in (BroadcastStatus.pending, BroadcastStatus.sending),
         },
     )

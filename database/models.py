@@ -437,3 +437,32 @@ class PushMediaCache(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class BroadcastStatus(str, enum.Enum):
+    pending = "pending"
+    sending = "sending"
+    done = "done"
+    failed = "failed"
+
+
+class Broadcast(Base):
+    """Admin-triggered mass push to all active users, processed by
+    bot/scheduler.py's process_broadcasts job (ТЗ «массовая рассылка через
+    админку», 2026-07-20)."""
+    __tablename__ = "broadcasts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[BroadcastStatus] = mapped_column(
+        Enum(BroadcastStatus, name="broadcaststatus"), nullable=False, default=BroadcastStatus.pending
+    )
+    with_button: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    blocked: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
