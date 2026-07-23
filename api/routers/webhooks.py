@@ -13,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.bot_sender import send_message, send_video_note, webapp_kb
 from api.services.getcourse import sync_user_to_gc
 from api.services.history import schedule_fold
+from api.services.subscriptions import apply_subscription_to_user
 from api.suvvy_queue import push
 from core.config import settings
 from core.utils.phone import normalize_phone
-from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, SubscriptionStatus, Tracker, TrackerType, User, Workout
+from database.models import AiMessage, GcSubscription, GcStatus, GcTier, HealthMetrics, Profile, Tracker, TrackerType, User, Workout
 from database.session import get_session
 
 logger = logging.getLogger(__name__)
@@ -573,28 +574,6 @@ def _resolve_offer(offer_code: str) -> tuple[str | None, int]:
 
 # ── GetCourse webhook ─────────────────────────────────────────────────────────
 
-def _apply_subscription_to_user(
-    user: User,
-    tier: str | None,
-    active: str,
-    expires_at: datetime | None = None,
-) -> None:
-    """Set the 4 User subscription fields consistently for payment and refund.
-
-    Gating checks by_active (subscription_active=="active") OR by_status
-    (subscription_status==premium) — both signals must move together, otherwise
-    a stale legacy status="premium" alone would keep access open after a refund.
-    """
-    was_active = (user.subscription_active == "active")
-    user.subscription_type = tier
-    user.subscription_active = active
-    user.subscription_expires_at = expires_at
-    user.subscription_status = SubscriptionStatus.premium if active == "active" else SubscriptionStatus.free
-    # Only stamp activation on the inactive/None → active transition, not on renewals
-    if active == "active" and not was_active:
-        user.subscription_activated_at = datetime.now(timezone.utc)
-
-
 @router.post("/getcourse")
 async def getcourse_webhook(
     request: Request,
@@ -704,7 +683,7 @@ async def getcourse_webhook(
             )
             user = user_res.scalar_one_or_none()
             if user:
-                _apply_subscription_to_user(user, tier.value, "active", expires_at)
+                apply_subscription_to_user(user, tier.value, "active", expires_at)
                 await session.commit()
                 logger.info("GC payment: updated User sub fields for tg_id=%s", effective_tg_id)
                 name = user.first_name or "друг"
@@ -734,7 +713,7 @@ async def getcourse_webhook(
                 )
                 user = user_res.scalar_one_or_none()
                 if user:
-                    _apply_subscription_to_user(user, None, "inactive")
+                    apply_subscription_to_user(user, None, "inactive")
                     await session.commit()
                     logger.info("GC refund: reset User sub fields for tg_id=%s", sub.telegram_id)
                 await _send_refund_notice(sub.telegram_id)

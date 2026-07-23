@@ -31,10 +31,11 @@ from core.utils.phone import normalize_phone
 from bot.states import RegistrationForm
 from core.config import settings
 from sqlalchemy import select
+from api.services.subscriptions import apply_subscription_to_user
 from database.crud import create_profile, create_user, get_user_by_telegram_id, update_user
 from database.models import (
     ActivityLevel, FitnessLevel, Gender, GcSubscription, Goal, NeatLevel, NonpayerIntent,
-    Profile, PromoActivation, PromoCode, SubscriptionStatus, Tone, Tracker, TrackerType, User,
+    Profile, PromoActivation, PromoCode, Tone, Tracker, TrackerType, User,
 )
 from database.session import AsyncSessionLocal
 
@@ -163,10 +164,7 @@ async def _handle_promo(message: Message, code: str) -> None:
 
         # Activate Pro
         expires = now + timedelta(days=promo.grant_days)
-        user.subscription_type = promo.grant_type          # "pro"
-        user.subscription_status = SubscriptionStatus.premium
-        user.subscription_active = "active"
-        user.subscription_expires_at = expires
+        apply_subscription_to_user(user, promo.grant_type, "active", expires)
         promo.used_count += 1
         session.add(PromoActivation(promo_code_id=promo.id, user_id=user.id))
         await session.commit()
@@ -463,10 +461,18 @@ async def _process_phone_check(message: Message, state: FSMContext, phone: str) 
         # Привязать и активировать
         sub.telegram_id = message.from_user.id
         user = await get_user_by_telegram_id(session, message.from_user.id)
-        user.subscription_type = sub.tier.value
-        user.subscription_active = "active"
-        user.subscription_expires_at = sub.expires_at
-        user.subscription_status = SubscriptionStatus.premium
+        # activated_at=sub.payed_at (not now()): the activation timestamp must
+        # reflect the real payment date, not whenever the user happens to open
+        # the bot — otherwise someone who paid a week ago and only just showed
+        # up would still fail the last_app_open_at < subscription_activated_at
+        # push gate (ТЗ «не терять subscription_activated_at», 2026-07-22).
+        apply_subscription_to_user(
+            user,
+            sub.tier.value,
+            "active",
+            sub.expires_at,
+            activated_at=sub.payed_at,
+        )
 
         # Backfill users.email from the GC subscription (arrived via the
         # payment webhook) so _register_in_getcourse / sync_progress_to_gc
